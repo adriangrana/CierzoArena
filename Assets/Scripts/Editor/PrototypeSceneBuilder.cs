@@ -49,10 +49,12 @@ namespace CierzoArena.EditorTools
             Material allyMaterial = CreateMaterial("Assets/Materials/Prototype_Azure.mat", new Color(0.08f, 0.35f, 0.9f));
             Material enemyMaterial = CreateMaterial("Assets/Materials/Prototype_Ember.mat", new Color(0.85f, 0.18f, 0.12f));
             Material ringMaterial = CreateMaterial("Assets/Materials/Prototype_Selection.mat", new Color(0.95f, 0.86f, 0.24f));
+            Material healthBackgroundMaterial = CreateMaterial("Assets/Materials/Prototype_HealthBackground.mat", new Color(0.08f, 0.08f, 0.08f));
+            Material healthFillMaterial = CreateMaterial("Assets/Materials/Prototype_HealthFill.mat", new Color(0.2f, 0.85f, 0.3f));
 
             CreateGround(groundMaterial);
-            GameObject player = CreateUnit("Azure Vanguard", new Vector3(-4f, 1f, -2f), TeamId.Azure, allyMaterial, ringMaterial, true, 500f);
-            CreateUnit("Ember Target", new Vector3(4f, 1f, 1f), TeamId.Ember, enemyMaterial, ringMaterial, false, 180f);
+            GameObject player = CreateUnit("Azure Vanguard", new Vector3(-4f, 1f, -2f), TeamId.Azure, allyMaterial, ringMaterial, healthBackgroundMaterial, healthFillMaterial, true, 500f);
+            CreateUnit("Ember Target", new Vector3(4f, 1f, 1f), TeamId.Ember, enemyMaterial, ringMaterial, healthBackgroundMaterial, healthFillMaterial, false, 180f);
             CreateLighting();
             CreateCamera(player.transform);
             CreateCommandController();
@@ -75,7 +77,7 @@ namespace CierzoArena.EditorTools
             ground.GetComponent<Renderer>().sharedMaterial = material;
         }
 
-        private static GameObject CreateUnit(string name, Vector3 position, TeamId team, Material bodyMaterial, Material ringMaterial, bool playerControlled, float maxHealth)
+        private static GameObject CreateUnit(string name, Vector3 position, TeamId team, Material bodyMaterial, Material ringMaterial, Material healthBackgroundMaterial, Material healthFillMaterial, bool playerControlled, float maxHealth)
         {
             GameObject unit = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             unit.name = name;
@@ -92,6 +94,14 @@ namespace CierzoArena.EditorTools
             SerializedObject healthObject = new SerializedObject(health);
             healthObject.FindProperty("maxHealth").floatValue = maxHealth;
             healthObject.ApplyModifiedPropertiesWithoutUndo();
+
+            DamageFlash damageFlash = unit.AddComponent<DamageFlash>();
+            SerializedObject flashObject = new SerializedObject(damageFlash);
+            flashObject.FindProperty("targetRenderer").objectReferenceValue = unit.GetComponent<Renderer>();
+            flashObject.ApplyModifiedPropertiesWithoutUndo();
+
+            unit.AddComponent<DamageNumberSpawner>();
+            CreateHealthBar(unit.transform, health, healthBackgroundMaterial, healthFillMaterial);
 
             if (playerControlled)
             {
@@ -127,6 +137,39 @@ namespace CierzoArena.EditorTools
             deathObject.ApplyModifiedPropertiesWithoutUndo();
 
             return unit;
+        }
+
+        private static void CreateHealthBar(Transform unit, Health health, Material backgroundMaterial, Material fillMaterial)
+        {
+            GameObject bar = new GameObject("Health Bar");
+            bar.layer = 2;
+            bar.transform.SetParent(unit);
+            bar.transform.localPosition = new Vector3(0f, 2.35f, 0f);
+            bar.transform.localRotation = Quaternion.identity;
+
+            GameObject background = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            background.name = "Health Bar Background";
+            background.layer = 2;
+            background.transform.SetParent(bar.transform);
+            background.transform.localPosition = Vector3.zero;
+            background.transform.localScale = new Vector3(1.5f, 0.18f, 0.03f);
+            background.GetComponent<Renderer>().sharedMaterial = backgroundMaterial;
+            Object.DestroyImmediate(background.GetComponent<Collider>());
+
+            GameObject fill = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            fill.name = "Health Bar Fill";
+            fill.layer = 2;
+            fill.transform.SetParent(bar.transform);
+            fill.transform.localPosition = new Vector3(0f, 0f, -0.03f);
+            fill.transform.localScale = new Vector3(1.5f, 0.12f, 0.03f);
+            fill.GetComponent<Renderer>().sharedMaterial = fillMaterial;
+            Object.DestroyImmediate(fill.GetComponent<Collider>());
+
+            WorldHealthBar healthBar = bar.AddComponent<WorldHealthBar>();
+            SerializedObject barObject = new SerializedObject(healthBar);
+            barObject.FindProperty("health").objectReferenceValue = health;
+            barObject.FindProperty("fill").objectReferenceValue = fill.transform;
+            barObject.ApplyModifiedPropertiesWithoutUndo();
         }
 
         private static void CreateLighting()
