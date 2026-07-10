@@ -1,4 +1,5 @@
 using CierzoArena.Core;
+using CierzoArena.Structures;
 using UnityEngine;
 
 namespace CierzoArena.Combat
@@ -45,7 +46,8 @@ namespace CierzoArena.Combat
 
         public bool CanAttack(Health target)
         {
-            if (health == null || !health.IsAlive || target == null || !target.IsAlive)
+            if (health == null || !health.IsAlive || target == null || !target.IsAlive ||
+                (MatchStateController.Active != null && !MatchStateController.Active.CanAcceptGameplay))
             {
                 return false;
             }
@@ -66,7 +68,17 @@ namespace CierzoArena.Combat
                 return false;
             }
 
-            target.ApplyDamage(damage);
+            if (target.TryGetComponent(out StructureEntity structure))
+            {
+                if (!structure.TryApplyDamage(teamMember, damage))
+                {
+                    return false;
+                }
+            }
+            else
+            {
+                target.ApplyDamage(damage);
+            }
             nextAttackTime = Time.time + 1f / attacksPerSecond;
             return true;
         }
@@ -79,7 +91,17 @@ namespace CierzoArena.Combat
             }
 
             float squaredRange = Range * Range;
-            return (target.transform.position - transform.position).sqrMagnitude <= squaredRange;
+            return (GetApproachPosition(target) - transform.position).sqrMagnitude <= squaredRange;
+        }
+
+        public Vector3 GetApproachPosition(Health target)
+        {
+            if (target != null && target.TryGetComponent(out StructureEntity structure))
+            {
+                return structure.GetApproachPoint(transform.position);
+            }
+
+            return target != null ? target.transform.position : transform.position;
         }
     }
 }

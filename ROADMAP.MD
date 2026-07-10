@@ -17,6 +17,7 @@ Objetivo final asumido: MOBA 3D original, competitivo, eventualmente 5v5 online,
 | M3B — Navegación a gran escala | Completed | Manual Play Mode + tests |
 | M3C — Greybox completo del mapa MOBA | Implemented | Pending manual validation |
 | M4 — Cámara MOBA real | Implemented | Automated tests (M4.1–M4.4) + pending manual validation |
+| M5 — Estructuras, torres y victoria | Implemented | Static compilation; pending Unity scene regeneration and test runner |
 
 ## Roadmap Principles
 
@@ -280,37 +281,20 @@ M4.4 integra la cámara MOBA en la greybox principal (`MobaGreyboxArena`) sustit
 
 Resultado: explorar el mapa como un MOBA real.
 
-### Milestone 5 — Sistema formal de unidades y estadísticas
+### Milestone 5 — Estructuras, torres y victoria
 
-Status: ⬜ Futuro
+Status: 🟡 Implementado / pendiente de regeneración y validación en Unity
 
-Antes de crear 100 cosas, necesitamos datos coherentes. Amplía el Milestone 2.3 hacia el sistema completo.
+- [x] Estructuras Azure y Ember reutilizando `Health` y `TeamMember`
+- [x] Torres autoritativas con selección determinista de enemigo cercano y cadencia configurable
+- [x] Progresión defensiva por línea: exterior → interior → puerta; núcleo protegido hasta derribar las puertas
+- [x] Núcleos Azure/Ember, vida, destrucción y feedback provisional
+- [x] Estado de partida autoritativo y victoria al destruir el núcleo enemigo
+- [x] Bloqueo de órdenes, ataques y nuevo daño después del final
+- [x] Replicación de estructuras y resultado mediante Netcode for GameObjects
+- [x] Integración en `MobaGreyboxArena` y `MultiplayerSpikeArena`
 
-- [ ] Vida máxima
-- [ ] Regeneración
-- [ ] Maná
-- [ ] Regeneración de maná
-- [ ] Daño mínimo/máximo
-- [ ] Armadura
-- [ ] Resistencia mágica
-- [ ] Velocidad de movimiento
-- [ ] Rango de ataque
-- [ ] Velocidad de ataque
-- [ ] Nivel
-- [ ] Equipo
-- [ ] Estado vivo/muerto
-
-Separar:
-
-```text
-Datos
-↓
-Simulación
-↓
-Presentación
-```
-
-Probablemente con assets de datos configurables, pero sin crear una catedral de abstracciones.
+Resultado: `La arena ya tiene objetivos defensivos y una condición de victoria funcional.`
 
 ---
 

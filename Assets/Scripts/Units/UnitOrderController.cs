@@ -1,5 +1,6 @@
 using CierzoArena.Combat;
 using CierzoArena.Core;
+using CierzoArena.Structures;
 using UnityEngine;
 
 namespace CierzoArena.Units
@@ -51,7 +52,7 @@ namespace CierzoArena.Units
                 return;
             }
 
-            mover.MoveTo(attackTarget.transform.position);
+            mover.MoveTo(basicAttack.GetApproachPosition(attackTarget));
         }
 
         public bool IssueMove(Vector3 destination)
@@ -100,7 +101,7 @@ namespace CierzoArena.Units
             }
         }
 
-        private bool CanAccept(in UnitOrderCommand command)
+        public bool CanAccept(in UnitOrderCommand command)
         {
             switch (command.Type)
             {
@@ -115,7 +116,8 @@ namespace CierzoArena.Units
             }
         }
 
-        private bool CanReceiveOrders => health != null && health.IsAlive;
+        private bool CanReceiveOrders => health != null && health.IsAlive &&
+            (MatchStateController.Active == null || MatchStateController.Active.CanAcceptGameplay);
 
         private void CancelAttack()
         {

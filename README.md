@@ -22,6 +22,7 @@ Prototipo en Unity 6 (`ProjectSettings/ProjectVersion.txt`: Unity 6000.5.3f1) co
 - **M4.2** — Cámara MOBA real, zoom y límites: zoom ortográfico limitado (rueda arriba = zoom in) y límites reales del mapa vía `CameraWorldBounds`. El clamp mantiene toda la región visible dentro del área permitida proyectando el viewport sobre un plano horizontal según la orientación real de la cámara, por lo que respeta zoom, aspect ratio e inclinación; si el viewport supera el mapa en un eje, ese eje se centra. Cubierto por tests deterministas (Edit Mode + Play Mode).
 - **M4.3** — Cámara MOBA real, seguimiento del héroe local: la cámara empieza siguiendo al héroe y Space recentra. Un `LocalHeroProvider` desacoplado (en Runtime, sin conocer Netcode) publica el héroe local; `NetworkUnitController` lo registra solo cuando es owner (nunca una unidad remota), tolerando spawn tardío y despawn, sin búsquedas globales por frame ni tráfico de red de cámara. El input manual real pasa la cámara a modo libre.
 - **M4.4** — Cámara MOBA real, integración y cierre: la cámara MOBA sustituye a la cámara técnica M3A en la greybox principal (`MobaGreyboxArena`), arrancando encuadrada y siguiendo a Azure (registrado vía `SceneLocalHeroRegistrar`), con bounds reales a ±86, zoom 12–55 y un `followPlaneOffset` que centra al héroe compensando la inclinación. La escena de red (`MultiplayerSpikeArena`) también usa la cámara MOBA con su propio `LocalHeroProvider`, de modo que host y cliente siguen cada uno su unidad owner. `IsometricCameraRig` permanece disponible para las escenas spike y sus tests. Implementado, pendiente de validación manual (local + host/cliente) y multi-resolución.
+- **M5** — Estructuras, torres y victoria: las torres detectan y atacan unidades enemigas con cadencia configurable. Por cada línea, solo la torre exterior puede dañarse al principio; desbloquea interior y luego puerta. El núcleo se vuelve vulnerable al caer las tres puertas. En red, el servidor decide objetivos, daño y ganador; los clientes solo reciben el estado replicado.
 
 La version real del proyecto esta en `ProjectSettings/ProjectVersion.txt`: Unity 6000.5.3f1.
 
@@ -42,6 +43,7 @@ La version real del proyecto esta en `ProjectSettings/ProjectVersion.txt`: Unity
 4. Haz clic derecho sobre el suelo para moverla o sobre el objetivo Ember para atacarlo.
 5. Comprueba que cada unidad tiene una barra de vida sobre ella y que cada impacto muestra dano flotante y un destello breve.
 6. Pulsa `S` para detener la orden actual.
+7. En `MobaGreyboxArena`, entra en el rango de una torre enemiga para comprobar su ataque. Destruir un núcleo muestra el ganador y bloquea el gameplay restante.
 
 ## Controles
 
@@ -58,4 +60,4 @@ La version real del proyecto esta en `ProjectSettings/ProjectVersion.txt`: Unity
 
 ## Estado del milestone
 
-Los Milestones 1 a 2.5, M3A y M3B están completados y validados. M3C (greybox del mapa MOBA) está implementado y pendiente de validación manual. M4 (cámara MOBA real) está implementado en sus cuatro sub-fases (M4.1 movimiento libre, M4.2 zoom y límites, M4.3 seguimiento del héroe local, M4.4 integración en escena y cierre) con tests automatizados; queda pendiente la validación manual (local + host/cliente) y multi-resolución. No avanzar al siguiente sub-milestone hasta recibir una nueva indicación.
+Los Milestones 1 a 5 están implementados. M5 añade torres y núcleos a la greybox, una victoria autoritativa y la correspondiente réplica para host/cliente. Para regenerar las escenas tras cambios de builders, usa los menús `Cierzo Arena > Create MOBA Greybox Arena` y `Cierzo Arena > Create Multiplayer Spike Scene`.

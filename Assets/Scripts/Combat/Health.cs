@@ -8,8 +8,27 @@ namespace CierzoArena.Combat
     {
         [SerializeField] private float maxHealth = 500f;
 
-        public float Current { get; private set; }
-        public float Max => maxHealth;
+        private float current;
+        private bool initialized;
+
+        public float Current
+        {
+            get
+            {
+                EnsureInitialized();
+                return current;
+            }
+            private set => current = value;
+        }
+
+        public float Max
+        {
+            get
+            {
+                EnsureInitialized();
+                return maxHealth;
+            }
+        }
         public bool IsAlive => Current > 0f;
 
         public event Action<Health> Died;
@@ -17,6 +36,21 @@ namespace CierzoArena.Combat
 
         private void Awake()
         {
+            EnsureInitialized();
+        }
+
+        /// <summary>
+        /// Makes the component safe for deterministic Edit Mode construction, where
+        /// Unity does not guarantee invoking Awake after AddComponent. Normal runtime
+        /// execution still initializes through Awake exactly once.
+        /// </summary>
+        public void EnsureInitialized()
+        {
+            if (initialized)
+            {
+                return;
+            }
+
             UnitDefinition definition = ResolveDefinition();
             if (definition != null)
             {
@@ -24,7 +58,8 @@ namespace CierzoArena.Combat
             }
 
             maxHealth = Mathf.Max(1f, maxHealth);
-            Current = maxHealth;
+            current = maxHealth;
+            initialized = true;
         }
 
         private UnitDefinition ResolveDefinition()
@@ -39,6 +74,7 @@ namespace CierzoArena.Combat
 
         public void ApplyDamage(float amount)
         {
+            EnsureInitialized();
             if (!IsAlive || amount <= 0f)
             {
                 return;
@@ -64,6 +100,7 @@ namespace CierzoArena.Combat
         /// </summary>
         public void ApplyAuthoritativeState(float authoritativeCurrent)
         {
+            EnsureInitialized();
             bool wasAlive = Current > 0f;
             Current = Mathf.Clamp(authoritativeCurrent, 0f, maxHealth);
             Changed?.Invoke(this, Current, maxHealth);
@@ -76,6 +113,7 @@ namespace CierzoArena.Combat
 
         public void RestoreFull()
         {
+            EnsureInitialized();
             Current = maxHealth;
             Changed?.Invoke(this, Current, maxHealth);
         }

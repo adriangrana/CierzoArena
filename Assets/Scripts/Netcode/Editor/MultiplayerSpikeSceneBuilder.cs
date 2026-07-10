@@ -2,6 +2,7 @@
 using CierzoArena.CameraSystem;
 using CierzoArena.Combat;
 using CierzoArena.Core;
+using CierzoArena.Structures;
 using CierzoArena.Netcode;
 using CierzoArena.Units;
 using Unity.Netcode;
@@ -61,17 +62,30 @@ namespace CierzoArena.Netcode.EditorTools
                 "EmberSkirmisherNetwork", "Ember Skirmisher", TeamId.Ember,
                 emberMaterial, ringMaterial, healthBackgroundMaterial, healthFillMaterial, emberDefinition);
 
+            string azureTowerPrefabPath = CreateNetworkStructurePrefab("AzureTowerNetwork", "Azure Tower", TeamId.Azure, StructureKind.Tower, StructureLane.Mid, StructureTier.Outer, azureMaterial, healthBackgroundMaterial, healthFillMaterial);
+            string emberTowerPrefabPath = CreateNetworkStructurePrefab("EmberTowerNetwork", "Ember Tower", TeamId.Ember, StructureKind.Tower, StructureLane.Mid, StructureTier.Outer, emberMaterial, healthBackgroundMaterial, healthFillMaterial);
+            // The compact spike has one lane only, so its cores remain immediately
+            // testable once its single outer tower has been removed.
+            string azureCorePrefabPath = CreateNetworkStructurePrefab("AzureCoreNetwork", "Azure Core", TeamId.Azure, StructureKind.Core, StructureLane.None, StructureTier.Core, azureMaterial, healthBackgroundMaterial, healthFillMaterial);
+            string emberCorePrefabPath = CreateNetworkStructurePrefab("EmberCoreNetwork", "Ember Core", TeamId.Ember, StructureKind.Core, StructureLane.None, StructureTier.Core, emberMaterial, healthBackgroundMaterial, healthFillMaterial);
+            string matchPrefabPath = CreateNetworkMatchPrefab();
+
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
 
             NetworkObject azurePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(azurePrefabPath).GetComponent<NetworkObject>();
             NetworkObject emberPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(emberPrefabPath).GetComponent<NetworkObject>();
+            NetworkObject azureTowerPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(azureTowerPrefabPath).GetComponent<NetworkObject>();
+            NetworkObject emberTowerPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(emberTowerPrefabPath).GetComponent<NetworkObject>();
+            NetworkObject azureCorePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(azureCorePrefabPath).GetComponent<NetworkObject>();
+            NetworkObject emberCorePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(emberCorePrefabPath).GetComponent<NetworkObject>();
+            NetworkObject matchPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(matchPrefabPath).GetComponent<NetworkObject>();
 
-            NetworkPrefabsList spikePrefabs = CreateNetworkPrefabsList(azurePrefab.gameObject, emberPrefab.gameObject);
+            NetworkPrefabsList spikePrefabs = CreateNetworkPrefabsList(azurePrefab.gameObject, emberPrefab.gameObject, azureTowerPrefab.gameObject, emberTowerPrefab.gameObject, azureCorePrefab.gameObject, emberCorePrefab.gameObject, matchPrefab.gameObject);
 
             CreateNetworkManager(spikePrefabs);
 
-            CreateConnectionBootstrap(azurePrefab, emberPrefab);
+            CreateConnectionBootstrap(azurePrefab, emberPrefab, matchPrefab, azureTowerPrefab, emberTowerPrefab, azureCorePrefab, emberCorePrefab);
             CreateLighting();
             CreateMobaCamera();
             CreateCommandController();
@@ -120,7 +134,7 @@ namespace CierzoArena.Netcode.EditorTools
             EditorUtility.SetDirty(networkManager);
         }
 
-        private static NetworkPrefabsList CreateNetworkPrefabsList(GameObject azurePrefab, GameObject emberPrefab)
+        private static NetworkPrefabsList CreateNetworkPrefabsList(params GameObject[] prefabs)
         {
             EnsureFolder("Assets", "Data");
             const string path = "Assets/Data/SpikeNetworkPrefabs.asset";
@@ -135,8 +149,10 @@ namespace CierzoArena.Netcode.EditorTools
             NetworkPrefabsList list = ScriptableObject.CreateInstance<NetworkPrefabsList>();
             AssetDatabase.CreateAsset(list, path);
 
-            list.Add(new NetworkPrefab { Prefab = azurePrefab });
-            list.Add(new NetworkPrefab { Prefab = emberPrefab });
+            foreach (GameObject prefab in prefabs)
+            {
+                list.Add(new NetworkPrefab { Prefab = prefab });
+            }
 
             EditorUtility.SetDirty(list);
             AssetDatabase.SaveAssets();
@@ -217,12 +233,123 @@ namespace CierzoArena.Netcode.EditorTools
             return unit;
         }
 
-        private static void CreateHealthBar(Transform unit, Health health, Material backgroundMaterial, Material fillMaterial)
+        private static string CreateNetworkStructurePrefab(string assetName, string displayName, TeamId team, StructureKind kind, StructureLane lane, StructureTier tier, Material material, Material healthBackgroundMaterial, Material healthFillMaterial)
+        {
+            EnsureFolder("Assets", "Prefabs");
+            EnsureFolder("Assets/Prefabs", "Network");
+            string path = $"Assets/Prefabs/Network/{assetName}.prefab";
+            GameObject root = BuildNetworkStructure(displayName, team, kind, lane, tier, material, healthBackgroundMaterial, healthFillMaterial);
+            PrefabUtility.SaveAsPrefabAsset(root, path);
+            Object.DestroyImmediate(root);
+            return path;
+        }
+
+        private static GameObject BuildNetworkStructure(string name, TeamId team, StructureKind kind, StructureLane lane, StructureTier tier, Material material, Material healthBackgroundMaterial, Material healthFillMaterial)
+        {
+            PrimitiveType primitive = kind == StructureKind.Core ? PrimitiveType.Cube : PrimitiveType.Cylinder;
+            GameObject structureObject = GameObject.CreatePrimitive(primitive);
+            structureObject.name = name;
+            structureObject.layer = 0;
+            structureObject.transform.localScale = kind == StructureKind.Core ? new Vector3(4.5f, 7f, 4.5f) : new Vector3(2.8f, 4f, 2.8f);
+            structureObject.transform.position = new Vector3(0f, kind == StructureKind.Core ? 3.5f : 2f, 0f);
+            structureObject.GetComponent<Renderer>().sharedMaterial = material;
+
+            structureObject.AddComponent<NetworkObject>();
+            structureObject.AddComponent<NetworkTransform>();
+            TeamMember teamMember = structureObject.AddComponent<TeamMember>();
+            SetEnum(teamMember, "team", (int)team);
+            Health health = structureObject.AddComponent<Health>();
+            SetFloat(health, "maxHealth", kind == StructureKind.Core ? 1000f : 400f);
+            health.RestoreFull();
+            StructureEntity entity = structureObject.AddComponent<StructureEntity>();
+            SetEnum(entity, "kind", (int)kind);
+            SetEnum(entity, "lane", (int)lane);
+            SetEnum(entity, "tier", (int)tier);
+
+            SerializedObject entityData = new SerializedObject(entity);
+            entityData.FindProperty("renderersToDisable").arraySize = 1;
+            entityData.FindProperty("renderersToDisable").GetArrayElementAtIndex(0).objectReferenceValue = structureObject.GetComponent<Renderer>();
+
+            GameObject target = new GameObject("Structure Target Collider");
+            target.layer = SelectableLayer;
+            target.transform.SetParent(structureObject.transform);
+            if (kind == StructureKind.Core)
+            {
+                // Counter-scale the selectable volume so a large core remains
+                // clickable on its actual visible body, not somewhere above it.
+                Vector3 scale = structureObject.transform.localScale;
+                target.transform.localPosition = Vector3.zero;
+                target.transform.localScale = new Vector3(1f / scale.x, 1f / scale.y, 1f / scale.z);
+                BoxCollider targetCollider = target.AddComponent<BoxCollider>();
+                targetCollider.size = new Vector3(4.5f, 7f, 4.5f);
+            }
+            else
+            {
+                target.transform.localPosition = Vector3.zero;
+                SphereCollider targetCollider = target.AddComponent<SphereCollider>();
+                targetCollider.radius = 1.5f;
+            }
+            Collider[] allColliders = structureObject.GetComponentsInChildren<Collider>();
+            entityData.FindProperty("collidersToDisable").arraySize = allColliders.Length;
+            for (int i = 0; i < allColliders.Length; i++)
+            {
+                entityData.FindProperty("collidersToDisable").GetArrayElementAtIndex(i).objectReferenceValue = allColliders[i];
+            }
+            entityData.ApplyModifiedPropertiesWithoutUndo();
+
+            CreateHealthBar(
+                structureObject.transform,
+                health,
+                healthBackgroundMaterial,
+                healthFillMaterial,
+                kind == StructureKind.Core ? 8f : 5f,
+                kind == StructureKind.Core ? 2.6f : 2f,
+                worldScale: true);
+            if (kind == StructureKind.Tower)
+            {
+                TowerController tower = structureObject.AddComponent<TowerController>();
+                SetFloat(tower, "range", 9f);
+                SetFloat(tower, "damage", 28f);
+                SetFloat(tower, "attackInterval", 1f);
+                SetFloat(tower, "searchInterval", 0.2f);
+                SetInt(tower, "targetMask", 1 << SelectableLayer);
+            }
+
+            structureObject.AddComponent<NetworkStructureController>();
+            return structureObject;
+        }
+
+        private static string CreateNetworkMatchPrefab()
+        {
+            EnsureFolder("Assets", "Prefabs");
+            EnsureFolder("Assets/Prefabs", "Network");
+            const string path = "Assets/Prefabs/Network/MatchStateNetwork.prefab";
+            GameObject match = new GameObject("Match State Controller");
+            match.AddComponent<NetworkObject>();
+            match.AddComponent<MatchStateController>();
+            match.AddComponent<StructureProgressionController>();
+            match.AddComponent<MatchVictoryDisplay>();
+            match.AddComponent<NetworkMatchStateController>();
+            PrefabUtility.SaveAsPrefabAsset(match, path);
+            Object.DestroyImmediate(match);
+            return path;
+        }
+
+        private static void CreateHealthBar(Transform unit, Health health, Material backgroundMaterial, Material fillMaterial, float localHeight = 2.35f, float width = 1.5f, bool worldScale = false)
         {
             GameObject bar = new GameObject("Health Bar");
             bar.layer = 2;
             bar.transform.SetParent(unit);
-            bar.transform.localPosition = new Vector3(0f, 2.35f, 0f);
+            if (worldScale)
+            {
+                Vector3 scale = unit.localScale;
+                bar.transform.localPosition = new Vector3(0f, localHeight / scale.y, 0f);
+                bar.transform.localScale = new Vector3(1f / scale.x, 1f / scale.y, 1f / scale.z);
+            }
+            else
+            {
+                bar.transform.localPosition = new Vector3(0f, localHeight, 0f);
+            }
             bar.transform.localRotation = Quaternion.identity;
 
             GameObject background = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -230,7 +357,7 @@ namespace CierzoArena.Netcode.EditorTools
             background.layer = 2;
             background.transform.SetParent(bar.transform);
             background.transform.localPosition = Vector3.zero;
-            background.transform.localScale = new Vector3(1.5f, 0.18f, 0.03f);
+            background.transform.localScale = new Vector3(width, 0.18f, 0.03f);
             background.GetComponent<Renderer>().sharedMaterial = backgroundMaterial;
             Object.DestroyImmediate(background.GetComponent<Collider>());
 
@@ -239,7 +366,7 @@ namespace CierzoArena.Netcode.EditorTools
             fill.layer = 2;
             fill.transform.SetParent(bar.transform);
             fill.transform.localPosition = new Vector3(0f, 0f, -0.03f);
-            fill.transform.localScale = new Vector3(1.5f, 0.12f, 0.03f);
+            fill.transform.localScale = new Vector3(width, 0.12f, 0.03f);
             fill.GetComponent<Renderer>().sharedMaterial = fillMaterial;
             Object.DestroyImmediate(fill.GetComponent<Collider>());
 
@@ -247,15 +374,21 @@ namespace CierzoArena.Netcode.EditorTools
             SerializedObject barObject = new SerializedObject(healthBar);
             barObject.FindProperty("health").objectReferenceValue = health;
             barObject.FindProperty("fill").objectReferenceValue = fill.transform;
+            barObject.FindProperty("width").floatValue = width;
             barObject.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        private static void CreateConnectionBootstrap(NetworkObject azurePrefab, NetworkObject emberPrefab)
+        private static void CreateConnectionBootstrap(NetworkObject azurePrefab, NetworkObject emberPrefab, NetworkObject matchPrefab, NetworkObject azureTowerPrefab, NetworkObject emberTowerPrefab, NetworkObject azureCorePrefab, NetworkObject emberCorePrefab)
         {
             GameObject bootstrapObject = new GameObject("Spike Connection Bootstrap");
             SpikeConnectionBootstrap bootstrap = bootstrapObject.AddComponent<SpikeConnectionBootstrap>();
             SetObjectReference(bootstrap, "azurePrefab", azurePrefab);
             SetObjectReference(bootstrap, "emberPrefab", emberPrefab);
+            SetObjectReference(bootstrap, "matchStatePrefab", matchPrefab);
+            SetObjectReference(bootstrap, "azureTowerPrefab", azureTowerPrefab);
+            SetObjectReference(bootstrap, "emberTowerPrefab", emberTowerPrefab);
+            SetObjectReference(bootstrap, "azureCorePrefab", azureCorePrefab);
+            SetObjectReference(bootstrap, "emberCorePrefab", emberCorePrefab);
         }
 
         private static void CreateLighting()
@@ -419,6 +552,13 @@ namespace CierzoArena.Netcode.EditorTools
         {
             SerializedObject serialized = new SerializedObject(target);
             serialized.FindProperty(propertyName).floatValue = value;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static void SetInt(Object target, string propertyName, int value)
+        {
+            SerializedObject serialized = new SerializedObject(target);
+            serialized.FindProperty(propertyName).intValue = value;
             serialized.ApplyModifiedPropertiesWithoutUndo();
         }
 

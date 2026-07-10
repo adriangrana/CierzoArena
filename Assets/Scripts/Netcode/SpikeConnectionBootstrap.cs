@@ -26,11 +26,19 @@ namespace CierzoArena.Netcode
     {
         [SerializeField] private NetworkObject azurePrefab;
         [SerializeField] private NetworkObject emberPrefab;
+        [SerializeField] private NetworkObject matchStatePrefab;
+        [SerializeField] private NetworkObject azureTowerPrefab;
+        [SerializeField] private NetworkObject emberTowerPrefab;
+        [SerializeField] private NetworkObject azureCorePrefab;
+        [SerializeField] private NetworkObject emberCorePrefab;
         [SerializeField] private Vector3 azureSpawnPosition = new Vector3(-4f, 1f, -2f);
         [SerializeField] private Vector3 emberSpawnPosition = new Vector3(4f, 1f, 1f);
 
         private NetworkObject azureInstance;
+        private readonly List<NetworkObject> matchInfrastructure = new List<NetworkObject>();
         private readonly Dictionary<ulong, NetworkObject> clientUnits = new Dictionary<ulong, NetworkObject>();
+        private GUIStyle labelStyle;
+        private GUIStyle buttonStyle;
 
         private void Start()
         {
@@ -68,6 +76,9 @@ namespace CierzoArena.Netcode
             // run and spawn the single server/host-controlled Azure unit.
             clientUnits.Clear();
             azureInstance = null;
+            matchInfrastructure.Clear();
+
+            SpawnMatchInfrastructure();
 
             if (azurePrefab == null)
             {
@@ -84,6 +95,32 @@ namespace CierzoArena.Netcode
         {
             azureInstance = null;
             clientUnits.Clear();
+            matchInfrastructure.Clear();
+        }
+
+        private void SpawnMatchInfrastructure()
+        {
+            // All M5 objects are ordinary dynamic network prefabs. This avoids
+            // in-scene NetworkObject hashes and deliberately leaves ownership on the
+            // server; neither towers nor cores belong to a player.
+            SpawnInfrastructure(matchStatePrefab, Vector3.zero);
+            SpawnInfrastructure(azureTowerPrefab, new Vector3(-5f, 2f, 0f));
+            SpawnInfrastructure(emberTowerPrefab, new Vector3(5f, 2f, 0f));
+            SpawnInfrastructure(azureCorePrefab, new Vector3(-13f, 3.5f, 0f));
+            SpawnInfrastructure(emberCorePrefab, new Vector3(13f, 3.5f, 0f));
+        }
+
+        private void SpawnInfrastructure(NetworkObject prefab, Vector3 position)
+        {
+            if (prefab == null)
+            {
+                Debug.LogWarning("[Spike] An M5 infrastructure prefab is not assigned.");
+                return;
+            }
+
+            NetworkObject instance = Instantiate(prefab, position, Quaternion.identity);
+            instance.Spawn();
+            matchInfrastructure.Add(instance);
         }
 
         private void OnClientConnected(ulong clientId)
@@ -146,21 +183,28 @@ namespace CierzoArena.Netcode
                 return;
             }
 
-            GUILayout.BeginArea(new Rect(12f, 12f, 220f, 180f));
+            EnsureGuiStyles();
+            // IMGUI coordinates are physical pixels. Scale the whole panel from a
+            // 1080p baseline so it remains usable at the 4K Game View and in builds.
+            float uiScale = Mathf.Max(1f, Screen.height / 1080f);
+            Matrix4x4 previousMatrix = GUI.matrix;
+            GUI.matrix = Matrix4x4.Scale(new Vector3(uiScale, uiScale, 1f));
+            GUILayout.BeginArea(new Rect(16f, 16f, 360f, 245f), GUI.skin.box);
 
             if (!manager.IsClient && !manager.IsServer)
             {
-                if (GUILayout.Button("Start Host (authoritative)"))
+                GUILayout.Label("Multiplayer Spike", labelStyle);
+                if (GUILayout.Button("Start Host (authoritative)", buttonStyle, GUILayout.Height(44f)))
                 {
                     manager.StartHost();
                 }
 
-                if (GUILayout.Button("Start Server"))
+                if (GUILayout.Button("Start Server", buttonStyle, GUILayout.Height(44f)))
                 {
                     manager.StartServer();
                 }
 
-                if (GUILayout.Button("Start Client"))
+                if (GUILayout.Button("Start Client", buttonStyle, GUILayout.Height(44f)))
                 {
                     manager.StartClient();
                 }
@@ -168,17 +212,38 @@ namespace CierzoArena.Netcode
             else
             {
                 string role = manager.IsHost ? "Host" : manager.IsServer ? "Server" : "Client";
-                GUILayout.Label($"Role: {role}");
-                GUILayout.Label($"Local client id: {manager.LocalClientId}");
-                GUILayout.Label($"Connected clients: {manager.ConnectedClientsIds.Count}");
+                GUILayout.Label($"Role: {role}", labelStyle);
+                GUILayout.Label($"Local client id: {manager.LocalClientId}", labelStyle);
+                GUILayout.Label($"Connected clients: {manager.ConnectedClientsIds.Count}", labelStyle);
 
-                if (GUILayout.Button("Shutdown"))
+                if (GUILayout.Button("Shutdown", buttonStyle, GUILayout.Height(44f)))
                 {
                     manager.Shutdown();
                 }
             }
 
             GUILayout.EndArea();
+            GUI.matrix = previousMatrix;
+        }
+
+        private void EnsureGuiStyles()
+        {
+            if (labelStyle != null && buttonStyle != null)
+            {
+                return;
+            }
+
+            labelStyle = new GUIStyle(GUI.skin.label)
+            {
+                fontSize = 20,
+                fontStyle = FontStyle.Bold,
+                normal = { textColor = Color.white }
+            };
+            buttonStyle = new GUIStyle(GUI.skin.button)
+            {
+                fontSize = 18,
+                fontStyle = FontStyle.Bold
+            };
         }
     }
 }

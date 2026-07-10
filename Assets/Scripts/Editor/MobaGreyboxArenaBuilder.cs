@@ -3,10 +3,12 @@ using CierzoArena.CameraSystem;
 using CierzoArena.Combat;
 using CierzoArena.Core;
 using CierzoArena.Navigation;
+using CierzoArena.Structures;
 using CierzoArena.Units;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.AI;
 using UnityEngine.SceneManagement;
 
 namespace CierzoArena.EditorTools
@@ -78,10 +80,11 @@ namespace CierzoArena.EditorTools
             BuildGroundAndRiver(groundMaterial, riverMaterial);
             BuildBridges(bridgeMaterial);
             BuildLanes(routeMaterial, routeMidMaterial);
-            BuildBases(azureBaseMaterial, emberBaseMaterial, markerMaterial);
+            CreateMatchController();
+            BuildBases(azureBaseMaterial, emberBaseMaterial, markerMaterial, healthBackgroundMaterial, healthFillMaterial);
             BuildObstacles(obstacleMaterial);
             BuildNeutralZones(neutralMaterial, markerMaterial);
-            BuildTowersAndSpawns(azureBaseMaterial, emberBaseMaterial, markerMaterial);
+            BuildTowersAndSpawns(azureBaseMaterial, emberBaseMaterial, markerMaterial, healthBackgroundMaterial, healthFillMaterial);
             BuildBoundary(boundaryMaterial);
 
             UnitDefinition azureDefinition = CreateOrLoadUnitDefinition(
@@ -210,15 +213,15 @@ namespace CierzoArena.EditorTools
 
         // ----- Bases ----------------------------------------------------------
 
-        private static void BuildBases(Material azureBaseMaterial, Material emberBaseMaterial, Material markerMaterial)
+        private static void BuildBases(Material azureBaseMaterial, Material emberBaseMaterial, Material markerMaterial, Material healthBackgroundMaterial, Material healthFillMaterial)
         {
             GameObject bases = new GameObject("Bases");
 
-            BuildBase(bases.transform, "Azure Base", AzureBaseCenter, azureBaseMaterial, markerMaterial);
-            BuildBase(bases.transform, "Ember Base", EmberBaseCenter, emberBaseMaterial, markerMaterial);
+            BuildBase(bases.transform, "Azure Base", AzureBaseCenter, TeamId.Azure, azureBaseMaterial, markerMaterial, healthBackgroundMaterial, healthFillMaterial);
+            BuildBase(bases.transform, "Ember Base", EmberBaseCenter, TeamId.Ember, emberBaseMaterial, markerMaterial, healthBackgroundMaterial, healthFillMaterial);
         }
 
-        private static void BuildBase(Transform parent, string name, Vector3 center, Material baseMaterial, Material markerMaterial)
+        private static void BuildBase(Transform parent, string name, Vector3 center, TeamId team, Material baseMaterial, Material markerMaterial, Material healthBackgroundMaterial, Material healthFillMaterial)
         {
             GameObject baseRoot = new GameObject(name);
             baseRoot.transform.SetParent(parent);
@@ -231,7 +234,8 @@ namespace CierzoArena.EditorTools
             // Tall solid central core structure (the nucleus to defend in later
             // milestones). Kept high so "this is the base" is unmistakable at play zoom.
             // The three lanes leave the base around this core, so it never blocks exits.
-            CreateObstacle(baseRoot.transform, name + " Core", new Vector3(center.x, 7f, center.z), new Vector3(9f, 14f, 9f), baseMaterial, 45f);
+            GameObject core = CreateObstacle(baseRoot.transform, name + " Core", new Vector3(center.x, 7f, center.z), new Vector3(9f, 14f, 9f), baseMaterial, 45f);
+            ConfigureStructure(core, team, StructureKind.Core, StructureLane.None, StructureTier.Core, 2000f, healthBackgroundMaterial, healthFillMaterial, 15.5f);
 
             // Bright cap crowning the core so the base nucleus pops from above.
             CreateMarker(baseRoot.transform, name + " Core Cap (marker)", new Vector3(center.x, 14.3f, center.z), markerMaterial, 6f);
@@ -290,7 +294,7 @@ namespace CierzoArena.EditorTools
 
         // ----- Towers + spawn points -----------------------------------------
 
-        private static void BuildTowersAndSpawns(Material azureMaterial, Material emberMaterial, Material capMaterial)
+        private static void BuildTowersAndSpawns(Material azureMaterial, Material emberMaterial, Material capMaterial, Material healthBackgroundMaterial, Material healthFillMaterial)
         {
             GameObject towers = new GameObject("Towers");
             GameObject spawns = new GameObject("Spawn Points");
@@ -301,11 +305,11 @@ namespace CierzoArena.EditorTools
             Vector3[] midLane = { AzureBaseCenter, EmberBaseCenter };
             Vector3[] topLane = { AzureBaseCenter, NorthWestCorner, EmberBaseCenter };
             Vector3[] botLane = { AzureBaseCenter, SouthEastCorner, EmberBaseCenter };
-            (string Lane, Vector3[] Path)[] lanes =
+            (StructureLane Lane, Vector3[] Path)[] lanes =
             {
-                ("Top", topLane),
-                ("Mid", midLane),
-                ("Bottom", botLane),
+                (StructureLane.Top, topLane),
+                (StructureLane.Mid, midLane),
+                (StructureLane.Bottom, botLane),
             };
 
             // Three tiers per lane and team: gate (near base), inner, and outer (near
@@ -316,12 +320,13 @@ namespace CierzoArena.EditorTools
             string[] towerTier = { "Gate", "Inner", "Outer" };
             const float spawnFraction = 0.09f;
 
-            foreach ((string lane, Vector3[] path) in lanes)
+            foreach ((StructureLane lane, Vector3[] path) in lanes)
             {
                 for (int i = 0; i < towerFraction.Length; i++)
                 {
-                    CreateTowerMarker(towers.transform, $"Azure {lane} Tower ({towerTier[i]})", PointAlong(path, towerFraction[i]), azureMaterial, capMaterial);
-                    CreateTowerMarker(towers.transform, $"Ember {lane} Tower ({towerTier[i]})", PointAlong(path, 1f - towerFraction[i]), emberMaterial, capMaterial);
+                    StructureTier tier = i == 0 ? StructureTier.Gate : i == 1 ? StructureTier.Inner : StructureTier.Outer;
+                    CreateTowerMarker(towers.transform, $"Azure {lane} Tower ({towerTier[i]})", PointAlong(path, towerFraction[i]), TeamId.Azure, lane, tier, azureMaterial, capMaterial, healthBackgroundMaterial, healthFillMaterial);
+                    CreateTowerMarker(towers.transform, $"Ember {lane} Tower ({towerTier[i]})", PointAlong(path, 1f - towerFraction[i]), TeamId.Ember, lane, tier, emberMaterial, capMaterial, healthBackgroundMaterial, healthFillMaterial);
                 }
 
                 CreateSpawnPoint(spawns.transform, $"Azure {lane} Spawn", PointAlong(path, spawnFraction), azureMaterial, capMaterial);
@@ -357,7 +362,7 @@ namespace CierzoArena.EditorTools
             return new Vector3(last.x, 0f, last.z);
         }
 
-        private static void CreateTowerMarker(Transform parent, string name, Vector3 groundPos, Material teamMaterial, Material capMaterial)
+        private static void CreateTowerMarker(Transform parent, string name, Vector3 groundPos, TeamId team, StructureLane lane, StructureTier tier, Material teamMaterial, Material capMaterial, Material healthBackgroundMaterial, Material healthFillMaterial)
         {
             GameObject root = new GameObject(name);
             root.transform.SetParent(parent);
@@ -394,6 +399,18 @@ namespace CierzoArena.EditorTools
             cap.transform.localScale = new Vector3(3.6f, 0.4f, 3.6f);
             cap.GetComponent<Renderer>().sharedMaterial = capMaterial;
             Object.DestroyImmediate(cap.GetComponent<Collider>());
+
+            CreateTowerNavigationBlocker(root.transform);
+            ConfigureStructure(root, team, StructureKind.Tower, lane, tier, 650f, healthBackgroundMaterial, healthFillMaterial, 9.2f);
+            TowerController tower = root.AddComponent<TowerController>();
+            SetFloat(tower, "range", 9f);
+            // Tuned for the one-hero local validation scene: Azure can destroy a
+            // tower while it is firing, making the destruction/victory path testable
+            // without a second local player or temporary cheats.
+            SetFloat(tower, "damage", 20f);
+            SetFloat(tower, "attackInterval", 1f);
+            SetFloat(tower, "searchInterval", 0.2f);
+            SetInt(tower, "targetMask", 1 << SelectableLayer);
         }
 
         private static void CreateSpawnPoint(Transform parent, string name, Vector3 groundPos, Material teamMaterial, Material capMaterial)
@@ -445,7 +462,7 @@ namespace CierzoArena.EditorTools
             ground.GetComponent<Renderer>().sharedMaterial = material;
         }
 
-        private static void CreateObstacle(Transform parent, string name, Vector3 center, Vector3 size, Material material, float yaw = 0f)
+        private static GameObject CreateObstacle(Transform parent, string name, Vector3 center, Vector3 size, Material material, float yaw = 0f)
         {
             // Tall cubes on the Ground layer: their steep sides exceed the agent slope,
             // so the NavMesh carves out their footprint and the agent routes around.
@@ -457,6 +474,31 @@ namespace CierzoArena.EditorTools
             obstacle.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
             obstacle.transform.localScale = size;
             obstacle.GetComponent<Renderer>().sharedMaterial = material;
+            return obstacle;
+        }
+
+        private static void CreateTowerNavigationBlocker(Transform tower)
+        {
+            // The old M3C marker intentionally had no collider. M5 towers are real
+            // structures: include a compact Ground-layer blocker before the runtime
+            // NavMesh bake so units route around them instead of walking through.
+            GameObject blocker = new GameObject("Navigation Blocker");
+            blocker.layer = GroundLayer;
+            blocker.transform.SetParent(tower);
+            blocker.transform.localPosition = new Vector3(0f, 3.5f, 0f);
+            CapsuleCollider collider = blocker.AddComponent<CapsuleCollider>();
+            collider.radius = 1.45f;
+            collider.height = 7f;
+
+            // NavMeshAgent does not collide physically with a CapsuleCollider. A
+            // carved obstacle is therefore the authoritative navigation block and
+            // keeps routes outside the tower footprint after the runtime bake.
+            NavMeshObstacle obstacle = blocker.AddComponent<NavMeshObstacle>();
+            obstacle.shape = NavMeshObstacleShape.Capsule;
+            obstacle.radius = collider.radius;
+            obstacle.height = collider.height;
+            obstacle.carving = true;
+            obstacle.carveOnlyStationary = false;
         }
 
         private static void CreateMarker(Transform parent, string name, Vector3 position, Material material, float diameter)
@@ -529,20 +571,32 @@ namespace CierzoArena.EditorTools
             return unit;
         }
 
-        private static void CreateHealthBar(Transform unit, Health health, Material backgroundMaterial, Material fillMaterial)
+        private static void CreateHealthBar(Transform unit, Health health, Material backgroundMaterial, Material fillMaterial, float localHeight = 2.35f, float width = 1.5f, bool worldSpaceAnchor = false)
         {
             GameObject bar = new GameObject("Health Bar");
             bar.layer = 2;
-            bar.transform.SetParent(unit);
-            bar.transform.localPosition = new Vector3(0f, 2.35f, 0f);
-            bar.transform.localRotation = Quaternion.identity;
+            if (worldSpaceAnchor)
+            {
+                // Structures are static but cores use a large scaled transform. Keep
+                // their UI in world units so it neither scales to a giant size nor
+                // ends up hundreds of units above the core.
+                bar.transform.SetParent(unit.parent);
+                bar.transform.position = unit.position + new Vector3(0f, localHeight, 0f);
+                bar.transform.rotation = Quaternion.identity;
+            }
+            else
+            {
+                bar.transform.SetParent(unit);
+                bar.transform.localPosition = new Vector3(0f, localHeight, 0f);
+                bar.transform.localRotation = Quaternion.identity;
+            }
 
             GameObject background = GameObject.CreatePrimitive(PrimitiveType.Cube);
             background.name = "Health Bar Background";
             background.layer = 2;
             background.transform.SetParent(bar.transform);
             background.transform.localPosition = Vector3.zero;
-            background.transform.localScale = new Vector3(1.5f, 0.18f, 0.03f);
+            background.transform.localScale = new Vector3(width, 0.18f, 0.03f);
             background.GetComponent<Renderer>().sharedMaterial = backgroundMaterial;
             Object.DestroyImmediate(background.GetComponent<Collider>());
 
@@ -551,7 +605,7 @@ namespace CierzoArena.EditorTools
             fill.layer = 2;
             fill.transform.SetParent(bar.transform);
             fill.transform.localPosition = new Vector3(0f, 0f, -0.03f);
-            fill.transform.localScale = new Vector3(1.5f, 0.12f, 0.03f);
+            fill.transform.localScale = new Vector3(width, 0.12f, 0.03f);
             fill.GetComponent<Renderer>().sharedMaterial = fillMaterial;
             Object.DestroyImmediate(fill.GetComponent<Collider>());
 
@@ -559,6 +613,7 @@ namespace CierzoArena.EditorTools
             SerializedObject barObject = new SerializedObject(healthBar);
             barObject.FindProperty("health").objectReferenceValue = health;
             barObject.FindProperty("fill").objectReferenceValue = fill.transform;
+            barObject.FindProperty("width").floatValue = width;
             barObject.ApplyModifiedPropertiesWithoutUndo();
         }
 
@@ -574,6 +629,85 @@ namespace CierzoArena.EditorTools
             serialized.FindProperty("mapCenter").vector3Value = Vector3.zero;
             serialized.FindProperty("mapSize").vector3Value = new Vector3(200f, 40f, 200f);
             serialized.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static void CreateMatchController()
+        {
+            GameObject matchObject = new GameObject("Match State Controller");
+            matchObject.AddComponent<MatchStateController>();
+            matchObject.AddComponent<StructureProgressionController>();
+            matchObject.AddComponent<MatchVictoryDisplay>();
+        }
+
+        private static void ConfigureStructure(GameObject structureObject, TeamId team, StructureKind kind, StructureLane lane, StructureTier tier, float maxHealth, Material healthBackgroundMaterial, Material healthFillMaterial, float healthBarHeight)
+        {
+            TeamMember teamMember = structureObject.AddComponent<TeamMember>();
+            SetEnum(teamMember, "team", (int)team);
+
+            Health health = structureObject.AddComponent<Health>();
+            SetFloat(health, "maxHealth", maxHealth);
+            health.RestoreFull();
+
+            StructureEntity structure = structureObject.AddComponent<StructureEntity>();
+            SetEnum(structure, "kind", (int)kind);
+            SetEnum(structure, "lane", (int)lane);
+            SetEnum(structure, "tier", (int)tier);
+
+            Renderer[] renderers = structureObject.GetComponentsInChildren<Renderer>();
+            Collider[] colliders = structureObject.GetComponentsInChildren<Collider>();
+            SerializedObject structureData = new SerializedObject(structure);
+            SerializedProperty rendererProperty = structureData.FindProperty("renderersToDisable");
+            rendererProperty.arraySize = renderers.Length;
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                rendererProperty.GetArrayElementAtIndex(i).objectReferenceValue = renderers[i];
+            }
+            SerializedProperty colliderProperty = structureData.FindProperty("collidersToDisable");
+            colliderProperty.arraySize = colliders.Length;
+            for (int i = 0; i < colliders.Length; i++)
+            {
+                colliderProperty.GetArrayElementAtIndex(i).objectReferenceValue = colliders[i];
+            }
+            structureData.ApplyModifiedPropertiesWithoutUndo();
+
+            // Targeting lives on a child Selectable collider: the original structure
+            // collider remains on Ground for the baked navigation footprint.
+            GameObject target = new GameObject("Structure Target Collider");
+            target.layer = SelectableLayer;
+            target.transform.SetParent(structureObject.transform);
+            if (kind == StructureKind.Core)
+            {
+                // The visual core is a heavily scaled cube. Counter-scale the child
+                // collider so it stays on the visible mesh instead of inheriting a
+                // giant offset/radius from the root transform.
+                Vector3 scale = structureObject.transform.localScale;
+                target.transform.localPosition = Vector3.zero;
+                target.transform.localScale = new Vector3(
+                    scale.x > 0f ? 1f / scale.x : 1f,
+                    scale.y > 0f ? 1f / scale.y : 1f,
+                    scale.z > 0f ? 1f / scale.z : 1f);
+                BoxCollider targetCollider = target.AddComponent<BoxCollider>();
+                targetCollider.size = new Vector3(9f, 14f, 9f);
+            }
+            else
+            {
+                target.transform.localPosition = new Vector3(0f, healthBarHeight * 0.45f, 0f);
+                SphereCollider targetCollider = target.AddComponent<SphereCollider>();
+                targetCollider.radius = 2.2f;
+            }
+
+            // Include the newly created selectable child in the destruction set too.
+            colliders = structureObject.GetComponentsInChildren<Collider>();
+            structureData.Update();
+            colliderProperty = structureData.FindProperty("collidersToDisable");
+            colliderProperty.arraySize = colliders.Length;
+            for (int i = 0; i < colliders.Length; i++)
+            {
+                colliderProperty.GetArrayElementAtIndex(i).objectReferenceValue = colliders[i];
+            }
+            structureData.ApplyModifiedPropertiesWithoutUndo();
+
+            CreateHealthBar(structureObject.transform, health, healthBackgroundMaterial, healthFillMaterial, healthBarHeight, kind == StructureKind.Core ? 3.4f : 2.4f, worldSpaceAnchor: true);
         }
 
         private static void CreateLighting()
@@ -761,6 +895,13 @@ namespace CierzoArena.EditorTools
         {
             SerializedObject serialized = new SerializedObject(target);
             serialized.FindProperty(propertyName).floatValue = value;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static void SetInt(Object target, string propertyName, int value)
+        {
+            SerializedObject serialized = new SerializedObject(target);
+            serialized.FindProperty(propertyName).intValue = value;
             serialized.ApplyModifiedPropertiesWithoutUndo();
         }
 
