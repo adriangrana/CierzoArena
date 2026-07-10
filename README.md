@@ -11,6 +11,7 @@ Esta primera version cubre el Milestone 1 de movimiento MOBA basico en Unity 6.5
 - Escena de prueba generada en `Assets/Scenes/PrototypeArena.unity`.
 - Plano simple, luz, camara isometrica y unidad aliada provisional.
 - Salud basica preparada para sistemas posteriores.
+- Verificado manualmente en Play Mode: seleccion, clic derecho, raycast al suelo, NavMesh y movimiento completan el flujo esperado.
 
 La version real del proyecto esta en `ProjectSettings/ProjectVersion.txt`: Unity 6000.5.3f1.
 
@@ -35,6 +36,6 @@ La version real del proyecto esta en `ProjectSettings/ProjectVersion.txt`: Unity
 - Clic izquierdo: seleccionar unidad.
 - Clic derecho en suelo: mover.
 
-## Siguiente objetivo recomendado
+## Estado del milestone
 
-No avanzar al Milestone 2 hasta verificar en Play Mode que la unidad se selecciona y se mueve correctamente por la NavMesh.
+El Milestone 1 esta verificado manualmente en Play Mode. No avanzar al Milestone 2 hasta recibir una nueva indicacion.
