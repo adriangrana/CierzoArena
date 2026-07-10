@@ -4,16 +4,19 @@ Prototipo MOBA 3D original inspirado en el genero, sin usar nombres, assets ni p
 
 ## Estado actual
 
-Esta primera version cubre el Milestone 1 de movimiento MOBA basico en Unity 6.5:
+Prototipo en Unity 6 (`ProjectSettings/ProjectVersion.txt`: Unity 6000.5.3f1) con el núcleo jugable local, una prueba de red autoritativa temprana y una cámara técnica para mapa grande:
 
-- Estructura profesional de carpetas.
-- Scripts modulares para unidad jugable, seleccion, ordenes de movimiento y ataque, NavMesh runtime, vida y camara isometrica.
-- Escena de prueba generada en `Assets/Scenes/PrototypeArena.unity`.
-- Plano simple, luz, camara isometrica y unidad aliada provisional.
-- Salud basica preparada para sistemas posteriores.
-- Verificado manualmente en Play Mode: seleccion, clic derecho, raycast al suelo, NavMesh y movimiento completan el flujo esperado.
-- Milestone 2 verificado manualmente: ataque a enemigos, persecucion hasta rango, cadencia configurable, dano, muerte y orden de parada.
-- Milestone 2.1 verificado manualmente: barras de vida world-space, numeros de dano, destello de impacto y muerte conservan el feedback visual esperado.
+- Estructura profesional de carpetas y scripts modulares (unidad jugable, selección, órdenes de movimiento y ataque, NavMesh runtime, vida, cámara isométrica).
+- Escena de prueba en `Assets/Scenes/PrototypeArena.unity`.
+- **M1** — Selección y movimiento (Manual Play Mode).
+- **M2** — Órdenes y combate básico: ataque, persecución, rango, cadencia, daño, muerte, stop (Manual Play Mode).
+- **M2.1** — Feedback visual mínimo: barras de vida world-space, números de daño, destello de impacto, ocultar al morir (Manual Play Mode).
+- **M2.2** — Baseline de QA automatizada.
+- **M2.3** — Datos y estado mínimo de unidad: `UnitDefinition` / `UnitDefinitionProvider`.
+- **M2.4** — Frontera de órdenes: `UnitOrderCommand` desacopla intención de ejecución (16/16 tests).
+- **M2.5** — Spike multijugador autoritativo (Netcode for GameObjects + Unity Transport) en `Assets/Scenes/MultiplayerSpikeArena.unity`: servidor autoritativo, órdenes de red, vida/daño/muerte replicados, el cliente no decide el daño (validado con dos instancias).
+- **M3A** — Cámara técnica isométrica para mapa grande: follow/free, recentrado, zoom y límites.
+- **M3B** — Spike de navegación a gran escala en `Assets/Scenes/NavigationScaleSpike.unity`: mapa amplio con dos regiones separadas por un barranco y unidas por un puente estrecho, obstáculos grandes, zona bloqueada y persecución a distancia. Valida que el NavMesh runtime escala con `LargeNavMeshBootstrap` (bake único de cobertura completa) e instrumentación de path (`NavPathProbe`).
 
 La version real del proyecto esta en `ProjectSettings/ProjectVersion.txt`: Unity 6000.5.3f1.
 
@@ -42,6 +45,12 @@ La version real del proyecto esta en `ProjectSettings/ProjectVersion.txt`: Unity
 - Clic derecho en enemigo: perseguir y atacar.
 - S: detener movimiento o ataque.
 
+### Cámara técnica (M3A)
+
+- WASD / flechas: mover la cámara libremente (pasa a modo libre).
+- Rueda del ratón: zoom con límites.
+- F: recentrar en la unidad y volver al seguimiento.
+
 ## Estado del milestone
 
-Los Milestones 1, 2 y 2.1 estan verificados manualmente en Play Mode. No avanzar al siguiente milestone hasta recibir una nueva indicacion.
+Los Milestones 1 a 2.5, M3A y M3B están completados y validados. No avanzar al siguiente milestone (M3C, greybox) hasta recibir una nueva indicación.
