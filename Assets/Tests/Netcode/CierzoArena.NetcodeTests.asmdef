@@ -3,7 +3,8 @@
   "rootNamespace": "CierzoArena.Netcode.Tests",
   "references": [
     "CierzoArena.Runtime",
-    "CierzoArena.Netcode"
+    "CierzoArena.Netcode",
+    "Unity.Netcode.Runtime"
   ],
   "optionalUnityReferences": [
     "TestAssemblies"

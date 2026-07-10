@@ -1,5 +1,6 @@
 using CierzoArena.Combat;
 using CierzoArena.Units;
+using CierzoArena.CameraSystem;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.AI;
@@ -31,6 +32,7 @@ namespace CierzoArena.Netcode
         private UnitOrderController orderController;
         private Health health;
         private AuthoritativeOrderProcessor processor;
+        private LocalHeroProvider localHeroProvider;
 
         private void Awake()
         {
@@ -58,6 +60,12 @@ namespace CierzoArena.Netcode
                 health.ApplyAuthoritativeState(replicatedHealth.Value);
                 replicatedHealth.OnValueChanged += OnReplicatedHealthChanged;
             }
+
+            // MOBA camera (M4.3): register this unit as the local hero only when this
+            // instance owns it, so no camera ever follows a remote unit. Resolved once
+            // here (not per frame) via the scene provider's small access point, keeping
+            // Runtime Netcode-agnostic.
+            RegisterAsLocalHeroIfOwner(LocalHeroProvider.Active, IsOwner);
         }
 
         public override void OnNetworkDespawn()
@@ -70,6 +78,56 @@ namespace CierzoArena.Netcode
             {
                 replicatedHealth.OnValueChanged -= OnReplicatedHealthChanged;
             }
+
+            // Clear the local-hero reference if this owned unit despawns, so the camera
+            // stops touching a transform that is about to be destroyed.
+            UnregisterAsLocalHero();
+        }
+
+        // ----- Local hero registration (M4.3) --------------------------------
+
+        /// <summary>
+        /// Pure decision: an instance registers a unit as its local hero exactly when it
+        /// owns that unit. Extracted so the ownership rule is testable without spinning
+        /// up a NetworkManager.
+        /// </summary>
+        public static bool ShouldRegisterAsLocalHero(bool isOwner)
+        {
+            return isOwner;
+        }
+
+        /// <summary>
+        /// Registers this unit's transform as the local hero in <paramref name="provider"/>
+        /// when <paramref name="isOwner"/> is true. No-ops on a null provider or a
+        /// non-owned unit, so remote units never become the local hero. This is the real
+        /// wiring called from <see cref="OnNetworkSpawn"/>; it is public so ownership
+        /// registration can be validated deterministically without live networking.
+        /// </summary>
+        public void RegisterAsLocalHeroIfOwner(LocalHeroProvider provider, bool isOwner)
+        {
+            if (provider == null || !ShouldRegisterAsLocalHero(isOwner))
+            {
+                return;
+            }
+
+            localHeroProvider = provider;
+            provider.Register(transform);
+        }
+
+        /// <summary>
+        /// Removes this unit from the local-hero provider it registered with, if any.
+        /// Safe to call when it never registered. Called from
+        /// <see cref="OnNetworkDespawn"/>.
+        /// </summary>
+        public void UnregisterAsLocalHero()
+        {
+            if (localHeroProvider == null)
+            {
+                return;
+            }
+
+            localHeroProvider.Unregister(transform);
+            localHeroProvider = null;
         }
 
         // ----- Client -> Server order requests -------------------------------

@@ -53,6 +53,17 @@ namespace CierzoArena.CameraSystem
             return Input.mouseScrollDelta.y;
         }
 
+        /// <summary>
+        /// Returns true on the frame the recenter key is pressed. Kept here so the
+        /// controller never touches the legacy <see cref="Input"/> API directly. The
+        /// key is configurable (defaulting to Space at the controller); F is avoided
+        /// because it belongs to the M3A technical camera.
+        /// </summary>
+        public bool ReadRecenterPressed(KeyCode recenterKey)
+        {
+            return Input.GetKeyDown(recenterKey);
+        }
+
         // ----- Pure logic (unit-testable, no Unity runtime required) ----------
 
         /// <summary>
