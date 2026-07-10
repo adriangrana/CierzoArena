@@ -18,7 +18,8 @@ Prototipo en Unity 6 (`ProjectSettings/ProjectVersion.txt`: Unity 6000.5.3f1) co
 - **M3A** — Cámara técnica isométrica para mapa grande: follow/free, recentrado, zoom y límites.
 - **M3B** — Spike de navegación a gran escala en `Assets/Scenes/NavigationScaleSpike.unity`: mapa amplio con dos regiones separadas por un barranco y unidas por un puente estrecho, obstáculos grandes, zona bloqueada y persecución a distancia. Valida que el NavMesh runtime escala con `LargeNavMeshBootstrap` (bake único de cobertura completa) e instrumentación de path (`NavPathProbe`).
 - **M3C** — Primer greybox completo del mapa MOBA en `Assets/Scenes/MobaGreyboxArena.unity` (builder por menú `Cierzo Arena → Create MOBA Greybox Arena`): bases Azure/Ember enfrentadas, rutas central/norte/sur, río técnico diagonal, puentes/chokepoints, zonas neutrales, obstáculos y límites. Solo formas y materiales técnicos, sin arte final. Implementado, pendiente de validación manual.
-- **M4.1** — Cámara MOBA real, movimiento libre: `MobaCameraController` (nuevo, independiente de la cámara técnica M3A) con paneo de teclado (WASD / flechas) y edge scrolling configurable, entrada encapsulada en `MobaCameraInput` y matemática pura testeable (17 tests Edit Mode + 2 Play Mode). Los límites del mapa y el zoom llegan en M4.2. Aún no integrado en escenas.
+- **M4.1** — Cámara MOBA real, movimiento libre: `MobaCameraController` (nuevo, independiente de la cámara técnica M3A) con paneo de teclado (WASD / flechas) y edge scrolling configurable, entrada encapsulada en `MobaCameraInput` y matemática pura testeable. Aún no integrado en escenas.
+- **M4.2** — Cámara MOBA real, zoom y límites: zoom ortográfico limitado (rueda arriba = zoom in) y límites reales del mapa vía `CameraWorldBounds`. El clamp mantiene toda la región visible dentro del área permitida proyectando el viewport sobre un plano horizontal según la orientación real de la cámara, por lo que respeta zoom, aspect ratio e inclinación; si el viewport supera el mapa en un eje, ese eje se centra. Cubierto por tests deterministas (Edit Mode + Play Mode). Aún no integrado en escenas.
 
 La version real del proyecto esta en `ProjectSettings/ProjectVersion.txt`: Unity 6000.5.3f1.
 
@@ -55,4 +56,4 @@ La version real del proyecto esta en `ProjectSettings/ProjectVersion.txt`: Unity
 
 ## Estado del milestone
 
-Los Milestones 1 a 2.5, M3A y M3B están completados y validados. M3C (greybox del mapa MOBA) está implementado y pendiente de validación manual. M4 (cámara MOBA real) está en progreso: M4.1 (movimiento libre) completado con tests; M4.2–M4.4 pendientes. No avanzar al siguiente sub-milestone hasta recibir una nueva indicación.
+Los Milestones 1 a 2.5, M3A y M3B están completados y validados. M3C (greybox del mapa MOBA) está implementado y pendiente de validación manual. M4 (cámara MOBA real) está en progreso: M4.1 (movimiento libre) y M4.2 (zoom limitado y límites reales) completados con tests; M4.3–M4.4 pendientes. No avanzar al siguiente sub-milestone hasta recibir una nueva indicación.

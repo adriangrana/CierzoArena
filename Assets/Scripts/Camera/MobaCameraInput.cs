@@ -42,6 +42,17 @@ namespace CierzoArena.CameraSystem
             return ComputeEdgeDirection(Input.mousePosition, Screen.width, Screen.height, borderPixels);
         }
 
+        /// <summary>
+        /// Reads the mouse wheel delta for zooming. Positive means the wheel was
+        /// scrolled up. Kept here so the controller never touches the legacy
+        /// <see cref="Input"/> API directly. The wheel is a discrete impulse, so the
+        /// controller applies it without <see cref="Time.deltaTime"/>.
+        /// </summary>
+        public float ReadScrollDelta()
+        {
+            return Input.mouseScrollDelta.y;
+        }
+
         // ----- Pure logic (unit-testable, no Unity runtime required) ----------
 
         /// <summary>
