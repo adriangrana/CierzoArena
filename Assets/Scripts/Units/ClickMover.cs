@@ -1,91 +1,75 @@
-using CierzoArena.Combat;
+using CierzoArena.Core;
 using UnityEngine;
+using UnityEngine.AI;
 
 namespace CierzoArena.Units
 {
-    [RequireComponent(typeof(BasicAttack))]
+    [RequireComponent(typeof(NavMeshAgent))]
     public sealed class ClickMover : MonoBehaviour
     {
         [SerializeField] private float moveSpeed = 5.5f;
         [SerializeField] private float stoppingDistance = 0.15f;
         [SerializeField] private float turnSpeed = 12f;
+        [SerializeField] private LayerMask navigationSourceMask = 1 << 6;
+        [SerializeField] private Vector3 runtimeNavMeshExtents = new Vector3(80f, 20f, 80f);
+        [SerializeField] private float navMeshSearchRadius = 3f;
 
-        private BasicAttack basicAttack;
-        private Vector3 destination;
-        private Health attackTarget;
-        private bool hasDestination;
+        private NavMeshAgent agent;
 
         private void Awake()
         {
-            basicAttack = GetComponent<BasicAttack>();
-            destination = transform.position;
+            if (!TryGetComponent(out agent))
+            {
+                agent = gameObject.AddComponent<NavMeshAgent>();
+            }
+
+            ConfigureAgent();
+            RuntimeNavMesh.EnsureBuilt(navigationSourceMask, new Bounds(transform.position, runtimeNavMeshExtents));
+            SnapAgentToNavMesh();
         }
 
-        private void Update()
+        private void OnValidate()
         {
-            if (attackTarget != null && attackTarget.IsAlive)
-            {
-                destination = attackTarget.transform.position;
-                hasDestination = true;
-
-                if (basicAttack.TryAttack(attackTarget))
-                {
-                    Face(destination);
-                }
-            }
-
-            if (!hasDestination)
+            if (agent == null && !TryGetComponent(out agent))
             {
                 return;
             }
 
-            Vector3 flatTarget = new Vector3(destination.x, transform.position.y, destination.z);
-            Vector3 delta = flatTarget - transform.position;
-            float distance = delta.magnitude;
-            float desiredStop = attackTarget != null ? basicAttack.Range * 0.9f : stoppingDistance;
-
-            if (distance <= desiredStop)
-            {
-                hasDestination = attackTarget != null;
-                return;
-            }
-
-            Vector3 direction = delta.normalized;
-            transform.position += direction * (moveSpeed * Time.deltaTime);
-            Face(transform.position + direction);
+            ConfigureAgent();
         }
 
         public void MoveTo(Vector3 worldPosition)
         {
-            attackTarget = null;
-            destination = worldPosition;
-            hasDestination = true;
-        }
-
-        public void AttackMove(Health target)
-        {
-            if (target == null || !basicAttack.CanAttack(target))
+            if (agent == null || !agent.isOnNavMesh)
             {
                 return;
             }
 
-            attackTarget = target;
-            destination = target.transform.position;
-            hasDestination = true;
+            if (NavMesh.SamplePosition(worldPosition, out NavMeshHit hit, 1.5f, NavMesh.AllAreas))
+            {
+                agent.SetDestination(hit.position);
+            }
         }
 
-        private void Face(Vector3 worldPosition)
+        private void ConfigureAgent()
         {
-            Vector3 look = worldPosition - transform.position;
-            look.y = 0f;
+            agent.speed = moveSpeed;
+            agent.stoppingDistance = stoppingDistance;
+            agent.angularSpeed = turnSpeed * 60f;
+            agent.updateRotation = true;
+        }
 
-            if (look.sqrMagnitude <= 0.001f)
+        private void SnapAgentToNavMesh()
+        {
+            if (agent.isOnNavMesh)
             {
                 return;
             }
 
-            Quaternion targetRotation = Quaternion.LookRotation(look.normalized, Vector3.up);
-            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, turnSpeed * Time.deltaTime);
+            if (NavMesh.SamplePosition(transform.position, out NavMeshHit hit, navMeshSearchRadius, NavMesh.AllAreas))
+            {
+                agent.Warp(hit.position);
+            }
         }
     }
 }

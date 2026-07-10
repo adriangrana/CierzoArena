@@ -6,6 +6,7 @@ using CierzoArena.Units;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.AI;
 using UnityEngine.SceneManagement;
 
 namespace CierzoArena.EditorTools
@@ -47,12 +48,10 @@ namespace CierzoArena.EditorTools
 
             Material groundMaterial = CreateMaterial("Assets/Materials/Prototype_Ground.mat", new Color(0.24f, 0.31f, 0.29f));
             Material allyMaterial = CreateMaterial("Assets/Materials/Prototype_Azure.mat", new Color(0.08f, 0.35f, 0.9f));
-            Material enemyMaterial = CreateMaterial("Assets/Materials/Prototype_Ember.mat", new Color(0.85f, 0.18f, 0.12f));
             Material ringMaterial = CreateMaterial("Assets/Materials/Prototype_Selection.mat", new Color(0.95f, 0.86f, 0.24f));
 
             CreateGround(groundMaterial);
-            GameObject player = CreateUnit("Azure Vanguard", new Vector3(-4f, 0.75f, -2f), TeamId.Azure, allyMaterial, ringMaterial, true);
-            CreateUnit("Ember Target", new Vector3(5f, 0.75f, 2f), TeamId.Ember, enemyMaterial, ringMaterial, false);
+            GameObject player = CreateUnit("Azure Vanguard", new Vector3(-4f, 1f, -2f), TeamId.Azure, allyMaterial, ringMaterial, true);
             CreateLighting();
             CreateCamera(player.transform);
             CreateCommandController();
@@ -89,7 +88,14 @@ namespace CierzoArena.EditorTools
             teamObject.ApplyModifiedPropertiesWithoutUndo();
 
             unit.AddComponent<Health>();
-            unit.AddComponent<BasicAttack>();
+            NavMeshAgent agent = unit.AddComponent<NavMeshAgent>();
+            agent.speed = 5.5f;
+            agent.angularSpeed = 720f;
+            agent.acceleration = 24f;
+            agent.stoppingDistance = 0.15f;
+            agent.radius = 0.45f;
+            agent.height = 2f;
+            agent.baseOffset = 1f;
             unit.AddComponent<ClickMover>();
 
             GameObject ring = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
@@ -186,7 +192,7 @@ namespace CierzoArena.EditorTools
 
             EditorBuildSettingsScene[] scenes = EditorBuildSettings.scenes;
             System.Array.Resize(ref scenes, scenes.Length + 1);
-            scenes[^1] = new EditorBuildSettingsScene(ScenePath, true);
+            scenes[scenes.Length - 1] = new EditorBuildSettingsScene(ScenePath, true);
             EditorBuildSettings.scenes = scenes;
         }
 

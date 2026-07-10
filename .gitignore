@@ -4,6 +4,8 @@
 [Oo]bj/
 [Bb]uild/
 [Bb]uilds/
+[Bb]uild[Rr]eports/
+[Aa]rtifacts/
 [Ll]ogs/
 [Uu]ser[Ss]ettings/
 [Mm]emoryCaptures/
@@ -21,6 +23,8 @@
 *.svd
 *.pdb
 *.mdb
+*.opendb
+*.VC.db
 
 # OS
 .DS_Store
@@ -29,3 +33,10 @@ Thumbs.db
 # Unity cache/crash files
 sysinfo.txt
 *.stackdump
+
+# Local secrets/config
+.env
+.env.*
+*.pem
+*.pfx
+*.key

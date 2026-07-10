@@ -1,4 +1,4 @@
-using CierzoArena.Combat;
+using CierzoArena.Core;
 using UnityEngine;
 
 namespace CierzoArena.Units
@@ -44,7 +44,7 @@ namespace CierzoArena.Units
             if (Physics.Raycast(ray, out RaycastHit hit, 500f, selectableMask))
             {
                 SelectableUnit unit = hit.collider.GetComponentInParent<SelectableUnit>();
-                Select(unit);
+                Select(IsPlayerControlled(unit) ? unit : null);
             }
         }
 
@@ -52,16 +52,6 @@ namespace CierzoArena.Units
         {
             Ray ray = commandCamera.ScreenPointToRay(Input.mousePosition);
             ClickMover mover = selectedUnit.GetComponent<ClickMover>();
-
-            if (Physics.Raycast(ray, out RaycastHit selectableHit, 500f, selectableMask))
-            {
-                Health target = selectableHit.collider.GetComponentInParent<Health>();
-                if (target != null)
-                {
-                    mover.AttackMove(target);
-                    return;
-                }
-            }
 
             if (Physics.Raycast(ray, out RaycastHit groundHit, 500f, groundMask))
             {
@@ -82,6 +72,17 @@ namespace CierzoArena.Units
             {
                 selectedUnit.SetSelected(true);
             }
+        }
+
+        private static bool IsPlayerControlled(SelectableUnit unit)
+        {
+            if (unit == null)
+            {
+                return false;
+            }
+
+            TeamMember teamMember = unit.GetComponent<TeamMember>();
+            return teamMember != null && teamMember.Team == TeamId.Azure;
         }
     }
 }
