@@ -16,6 +16,7 @@ Objetivo final asumido: MOBA 3D original, competitivo, eventualmente 5v5 online,
 | M3A — Cámara técnica para mapa grande | Completed | Manual Play Mode + tests |
 | M3B — Navegación a gran escala | Completed | Manual Play Mode + tests |
 | M3C — Greybox completo del mapa MOBA | Implemented | Pending manual validation |
+| M4 — Cámara MOBA real | In progress (M4.1) | Automated tests (M4.1) |
 
 ## Roadmap Principles
 
@@ -248,19 +249,28 @@ Resultado: escena técnica `MobaGreyboxArena` (builder por menú `Cierzo Arena �
 
 ### Milestone 4 — Cámara MOBA real
 
-Status: ⬜ Futuro
+Status: 🟡 En progreso (M4.1 completado)
 
-Aquí sí dejamos atrás la cámara técnica del Milestone 3A.
+Aquí sí dejamos atrás la cámara técnica del Milestone 3A. Se aborda en sub-fases verificables para no romper sistemas existentes:
 
-- [ ] Seguimiento del héroe
-- [ ] Cámara libre
-- [ ] Edge scrolling
-- [ ] Movimiento con teclado
-- [ ] Tecla para recentrar héroe
-- [ ] Zoom limitado
-- [ ] Límites del mapa
-- [ ] Velocidad configurable
-- [ ] Comportamiento consistente en distintas resoluciones
+- **M4.1 — Movimiento libre** ✅ (validado con tests automatizados)
+- **M4.2 — Zoom limitado y límites reales del mapa** ⬜
+- **M4.3 — Seguimiento y recentrado del héroe local** ⬜
+- **M4.4 — Integración en escena y validación en distintas resoluciones** ⬜
+
+Checklist global:
+
+- [ ] Seguimiento del héroe (M4.3)
+- [x] Cámara libre (M4.1)
+- [x] Edge scrolling (M4.1)
+- [x] Movimiento con teclado (M4.1)
+- [ ] Tecla para recentrar héroe (M4.3)
+- [ ] Zoom limitado (M4.2)
+- [ ] Límites del mapa (M4.2)
+- [x] Velocidad configurable (M4.1, ampliada en M4.2)
+- [ ] Comportamiento consistente en distintas resoluciones (M4.2 / M4.4)
+
+M4.1 introduce `MobaCameraController` (nuevo, independiente de `IsometricCameraRig`) con paneo de teclado (ejes Horizontal/Vertical) y edge scrolling configurable, entrada encapsulada en `MobaCameraInput` (el controlador no toca `Input`/`Screen`/`Application` directamente) y matemática pura testeable (17 tests Edit Mode + 2 Play Mode). Los límites del mapa se dejan deliberadamente para M4.2, donde el clamp tendrá en cuenta zoom, aspect ratio y la inclinación de la cámara ortográfica.
 
 Resultado: explorar el mapa como un MOBA real.
 
