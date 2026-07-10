@@ -1,0 +1,11 @@
+{
+  "name": "CierzoArena.NetcodeTests",
+  "rootNamespace": "CierzoArena.Netcode.Tests",
+  "references": [
+    "CierzoArena.Runtime",
+    "CierzoArena.Netcode"
+  ],
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ]
+}

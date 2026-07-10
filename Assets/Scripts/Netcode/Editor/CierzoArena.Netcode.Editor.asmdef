@@ -1,0 +1,14 @@
+{
+  "name": "CierzoArena.Netcode.Editor",
+  "rootNamespace": "CierzoArena.Netcode.EditorTools",
+  "references": [
+    "CierzoArena.Runtime",
+    "CierzoArena.Netcode",
+    "Unity.Netcode.Runtime",
+    "Unity.Netcode.Components",
+    "Unity.Networking.Transport"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ]
+}

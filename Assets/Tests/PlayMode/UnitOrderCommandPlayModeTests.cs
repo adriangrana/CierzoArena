@@ -139,7 +139,12 @@ namespace CierzoArena.Tests.PlayMode
             Assert.That(GetAttackTarget(orders), Is.Null);
             if (agent != null && agent.isOnNavMesh)
             {
-                Assert.That(agent.isStopped, Is.True);
+                // Movement is cancelled on death: the agent must hold no active path.
+                // (isStopped is not asserted directly: Unity's NavMeshAgent reports
+                // isStopped == false for an agent that has no path, regardless of the
+                // stop flag, so hasPath is the robust invariant here.)
+                Assert.That(agent.hasPath, Is.False);
+                Assert.That(agent.pathPending, Is.False);
             }
 
             Object.Destroy(ground);

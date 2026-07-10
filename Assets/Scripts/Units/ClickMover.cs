@@ -69,8 +69,11 @@ namespace CierzoArena.Units
                 return;
             }
 
-            agent.isStopped = true;
+            // ResetPath() (like SetDestination) resets isStopped back to false, so
+            // clear the path first and raise the stop flag afterwards. Otherwise the
+            // agent would report isStopped == false right after being told to stop.
             agent.ResetPath();
+            agent.isStopped = true;
         }
 
         private void ConfigureAgent()

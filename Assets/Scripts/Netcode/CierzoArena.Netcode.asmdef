@@ -1,0 +1,10 @@
+{
+  "name": "CierzoArena.Netcode",
+  "rootNamespace": "CierzoArena.Netcode",
+  "references": [
+    "CierzoArena.Runtime",
+    "Unity.Netcode.Runtime",
+    "Unity.Netcode.Components"
+  ],
+  "autoReferenced": true
+}
