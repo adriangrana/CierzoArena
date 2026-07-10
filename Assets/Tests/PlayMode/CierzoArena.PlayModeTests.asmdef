@@ -1,0 +1,9 @@
+{
+  "name": "CierzoArena.PlayModeTests",
+  "references": [
+    "CierzoArena.Runtime"
+  ],
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ]
+}

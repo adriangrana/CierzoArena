@@ -1,4 +1,6 @@
 ﻿<Solution>
-  <Project Path="Assembly-CSharp.csproj" />
-  <Project Path="Assembly-CSharp-Editor.csproj" />
+  <Project Path="CierzoArena.PlayModeTests.csproj" />
+  <Project Path="CierzoArena.Runtime.csproj" />
+  <Project Path="CierzoArena.Editor.csproj" />
+  <Project Path="CierzoArena.EditModeTests.csproj" />
 </Solution>

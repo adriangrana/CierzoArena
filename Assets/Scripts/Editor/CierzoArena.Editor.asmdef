@@ -1,0 +1,9 @@
+{
+  "name": "CierzoArena.Editor",
+  "references": [
+    "CierzoArena.Runtime"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ]
+}
