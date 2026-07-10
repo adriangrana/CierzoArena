@@ -13,7 +13,7 @@ Esta primera version cubre el Milestone 1 de movimiento MOBA basico en Unity 6.5
 - Salud basica preparada para sistemas posteriores.
 - Verificado manualmente en Play Mode: seleccion, clic derecho, raycast al suelo, NavMesh y movimiento completan el flujo esperado.
 - Milestone 2 verificado manualmente: ataque a enemigos, persecucion hasta rango, cadencia configurable, dano, muerte y orden de parada.
-- Milestone 2.1 implementado: barras de vida world-space, numeros de dano e impacto visual. Pendiente de validacion manual en Play Mode.
+- Milestone 2.1 verificado manualmente: barras de vida world-space, numeros de dano, destello de impacto y muerte conservan el feedback visual esperado.
 
 La version real del proyecto esta en `ProjectSettings/ProjectVersion.txt`: Unity 6000.5.3f1.
 
@@ -44,4 +44,4 @@ La version real del proyecto esta en `ProjectSettings/ProjectVersion.txt`: Unity
 
 ## Estado del milestone
 
-Los Milestones 1 y 2 estan verificados manualmente en Play Mode. El Milestone 2.1 requiere validacion manual antes de avanzar.
+Los Milestones 1, 2 y 2.1 estan verificados manualmente en Play Mode. No avanzar al siguiente milestone hasta recibir una nueva indicacion.
