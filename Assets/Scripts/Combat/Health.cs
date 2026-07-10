@@ -1,4 +1,5 @@
 using System;
+using CierzoArena.Core;
 using UnityEngine;
 
 namespace CierzoArena.Combat
@@ -16,8 +17,19 @@ namespace CierzoArena.Combat
 
         private void Awake()
         {
+            UnitDefinition definition = ResolveDefinition();
+            if (definition != null)
+            {
+                maxHealth = definition.MaxHealth;
+            }
+
             maxHealth = Mathf.Max(1f, maxHealth);
             Current = maxHealth;
+        }
+
+        private UnitDefinition ResolveDefinition()
+        {
+            return TryGetComponent(out UnitDefinitionProvider provider) ? provider.Definition : null;
         }
 
         private void OnValidate()

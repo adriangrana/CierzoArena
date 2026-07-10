@@ -21,6 +21,12 @@ namespace CierzoArena.Units
 
         private void Awake()
         {
+            UnitDefinition definition = ResolveDefinition();
+            if (definition != null)
+            {
+                moveSpeed = definition.MovementSpeed;
+            }
+
             RuntimeNavMesh.EnsureBuilt(navigationSourceMask, new Bounds(transform.position, runtimeNavMeshExtents));
 
             if (!TryGetComponent(out agent))
@@ -90,6 +96,11 @@ namespace CierzoArena.Units
             {
                 agent.Warp(hit.position);
             }
+        }
+
+        private UnitDefinition ResolveDefinition()
+        {
+            return TryGetComponent(out UnitDefinitionProvider provider) ? provider.Definition : null;
         }
     }
 }

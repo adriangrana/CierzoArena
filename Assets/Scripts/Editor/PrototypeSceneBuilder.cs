@@ -23,17 +23,17 @@ namespace CierzoArena.EditorTools
         }
 
         [InitializeOnLoadMethod]
-        private static void CreateInitialSceneIfMissing()
+        private static void EnsureSceneRegisteredOnLoad()
         {
+            // Only register an already-existing scene in build settings. Never create
+            // scenes, materials or UnitDefinition assets silently on editor load: asset
+            // creation is an explicit, conscious action via the menu command above.
             EditorApplication.delayCall += () =>
             {
-                if (AssetDatabase.LoadAssetAtPath<SceneAsset>(ScenePath) == null)
+                if (AssetDatabase.LoadAssetAtPath<SceneAsset>(ScenePath) != null)
                 {
-                    CreatePrototypeScene(showConfirmation: false);
-                    return;
+                    EnsureSceneInBuildSettings();
                 }
-
-                EnsureSceneInBuildSettings();
             };
         }
 
@@ -53,8 +53,14 @@ namespace CierzoArena.EditorTools
             Material healthFillMaterial = CreateMaterial("Assets/Materials/Prototype_HealthFill.mat", new Color(0.2f, 0.85f, 0.3f));
 
             CreateGround(groundMaterial);
-            GameObject player = CreateUnit("Azure Vanguard", new Vector3(-4f, 1f, -2f), TeamId.Azure, allyMaterial, ringMaterial, healthBackgroundMaterial, healthFillMaterial, true, 500f);
-            CreateUnit("Ember Target", new Vector3(4f, 1f, 1f), TeamId.Ember, enemyMaterial, ringMaterial, healthBackgroundMaterial, healthFillMaterial, false, 180f);
+
+            UnitDefinition azureDefinition = CreateOrLoadUnitDefinition(
+                "Assets/Data/AzureVanguard.asset", 520f, 5.5f, 48f, 2.2f, 0.8f);
+            UnitDefinition emberDefinition = CreateOrLoadUnitDefinition(
+                "Assets/Data/EmberTarget.asset", 180f, 4.2f, 30f, 1.8f, 0.5f);
+
+            GameObject player = CreateUnit("Azure Vanguard", new Vector3(-4f, 1f, -2f), TeamId.Azure, allyMaterial, ringMaterial, healthBackgroundMaterial, healthFillMaterial, true, azureDefinition);
+            CreateUnit("Ember Target", new Vector3(4f, 1f, 1f), TeamId.Ember, enemyMaterial, ringMaterial, healthBackgroundMaterial, healthFillMaterial, false, emberDefinition);
             CreateLighting();
             CreateCamera(player.transform);
             CreateCommandController();
@@ -77,13 +83,18 @@ namespace CierzoArena.EditorTools
             ground.GetComponent<Renderer>().sharedMaterial = material;
         }
 
-        private static GameObject CreateUnit(string name, Vector3 position, TeamId team, Material bodyMaterial, Material ringMaterial, Material healthBackgroundMaterial, Material healthFillMaterial, bool playerControlled, float maxHealth)
+        private static GameObject CreateUnit(string name, Vector3 position, TeamId team, Material bodyMaterial, Material ringMaterial, Material healthBackgroundMaterial, Material healthFillMaterial, bool playerControlled, UnitDefinition definition)
         {
             GameObject unit = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             unit.name = name;
             unit.layer = SelectableLayer;
             unit.transform.position = position;
             unit.GetComponent<Renderer>().sharedMaterial = bodyMaterial;
+
+            UnitDefinitionProvider definitionProvider = unit.AddComponent<UnitDefinitionProvider>();
+            SerializedObject providerObject = new SerializedObject(definitionProvider);
+            providerObject.FindProperty("definition").objectReferenceValue = definition;
+            providerObject.ApplyModifiedPropertiesWithoutUndo();
 
             TeamMember teamMember = unit.AddComponent<TeamMember>();
             SerializedObject teamObject = new SerializedObject(teamMember);
@@ -92,7 +103,7 @@ namespace CierzoArena.EditorTools
 
             Health health = unit.AddComponent<Health>();
             SerializedObject healthObject = new SerializedObject(health);
-            healthObject.FindProperty("maxHealth").floatValue = maxHealth;
+            healthObject.FindProperty("maxHealth").floatValue = definition.MaxHealth;
             healthObject.ApplyModifiedPropertiesWithoutUndo();
 
             DamageFlash damageFlash = unit.AddComponent<DamageFlash>();
@@ -208,6 +219,37 @@ namespace CierzoArena.EditorTools
             commandObject.FindProperty("groundMask").intValue = 1 << GroundLayer;
             commandObject.FindProperty("selectableMask").intValue = 1 << SelectableLayer;
             commandObject.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static UnitDefinition CreateOrLoadUnitDefinition(string path, float maxHealth, float movementSpeed, float attackDamage, float attackRange, float attacksPerSecond)
+        {
+            EnsureFolder("Assets", "Data");
+
+            UnitDefinition definition = AssetDatabase.LoadAssetAtPath<UnitDefinition>(path);
+            if (definition == null)
+            {
+                definition = ScriptableObject.CreateInstance<UnitDefinition>();
+                AssetDatabase.CreateAsset(definition, path);
+            }
+
+            SerializedObject definitionObject = new SerializedObject(definition);
+            definitionObject.FindProperty("maxHealth").floatValue = maxHealth;
+            definitionObject.FindProperty("movementSpeed").floatValue = movementSpeed;
+            definitionObject.FindProperty("attackDamage").floatValue = attackDamage;
+            definitionObject.FindProperty("attackRange").floatValue = attackRange;
+            definitionObject.FindProperty("attacksPerSecond").floatValue = attacksPerSecond;
+            definitionObject.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(definition);
+
+            return definition;
+        }
+
+        private static void EnsureFolder(string parent, string folder)
+        {
+            if (!AssetDatabase.IsValidFolder($"{parent}/{folder}"))
+            {
+                AssetDatabase.CreateFolder(parent, folder);
+            }
         }
 
         private static Material CreateMaterial(string path, Color color)

@@ -21,6 +21,19 @@ namespace CierzoArena.Combat
         {
             teamMember = GetComponent<TeamMember>();
             health = GetComponent<Health>();
+
+            UnitDefinition definition = ResolveDefinition();
+            if (definition != null)
+            {
+                damage = definition.AttackDamage;
+                range = definition.AttackRange;
+                attacksPerSecond = definition.AttacksPerSecond;
+            }
+        }
+
+        private UnitDefinition ResolveDefinition()
+        {
+            return TryGetComponent(out UnitDefinitionProvider provider) ? provider.Definition : null;
         }
 
         private void OnValidate()
