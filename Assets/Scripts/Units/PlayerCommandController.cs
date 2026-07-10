@@ -53,7 +53,7 @@ namespace CierzoArena.Units
             Ray ray = commandCamera.ScreenPointToRay(Input.mousePosition);
             ClickMover mover = selectedUnit.GetComponent<ClickMover>();
 
-            if (Physics.Raycast(ray, out RaycastHit groundHit, 500f, groundMask))
+            if (mover != null && Physics.Raycast(ray, out RaycastHit groundHit, 500f, groundMask))
             {
                 mover.MoveTo(groundHit.point);
             }

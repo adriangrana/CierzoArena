@@ -158,13 +158,20 @@ namespace CierzoArena.EditorTools
 
         private static Material CreateMaterial(string path, Color color)
         {
+            Shader shader = Shader.Find("Standard");
             Material existing = AssetDatabase.LoadAssetAtPath<Material>(path);
             if (existing != null)
             {
+                if (existing.shader != shader)
+                {
+                    existing.shader = shader;
+                    existing.color = color;
+                    EditorUtility.SetDirty(existing);
+                }
+
                 return existing;
             }
 
-            Shader shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
             Material material = new Material(shader);
             material.color = color;
             AssetDatabase.CreateAsset(material, path);
