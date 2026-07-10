@@ -15,7 +15,7 @@ Objetivo final asumido: MOBA 3D original, competitivo, eventualmente 5v5 online,
 | M2.5 — Spike multijugador autoritativo temprano | Completed | Manual (2 instancias) + tests |
 | M3A — Cámara técnica para mapa grande | Completed | Manual Play Mode + tests |
 | M3B — Navegación a gran escala | Completed | Manual Play Mode + tests |
-| M3C — Greybox completo del mapa MOBA | Planned | Planned |
+| M3C — Greybox completo del mapa MOBA | Implemented | Pending manual validation |
 
 ## Roadmap Principles
 
@@ -215,28 +215,30 @@ Resultado: escena técnica `NavigationScaleSpike` (builder por menú) con dos re
 
 ### Milestone 3C — Greybox completo del mapa MOBA
 
-Status: ⬜ Planeado
+Status: 🟡 Implementado / pendiente de validación manual
 
 Dependencia: requiere M3A (cámara técnica) y M3B (navegación a gran escala) resueltos y validados. No iniciar el greybox hasta que cámara y navegación funcionen sobre un mapa grande.
 
-- [ ] Nueva escena separada
-- [ ] Base Azure
-- [ ] Base Ember
-- [ ] Top
-- [ ] Mid
-- [ ] Bot
-- [ ] Jungla Azure
-- [ ] Jungla Ember
-- [ ] Corredor central / río / cauce
-- [ ] Rutas alternativas
-- [ ] Chokepoints
-- [ ] Obstáculos
-- [ ] Marcadores de torres
-- [ ] Marcadores de campamentos
-- [ ] Spawn points
-- [ ] Límites
-- [ ] NavMesh completo
-- [ ] Sin materiales magenta
+- [x] Nueva escena separada
+- [x] Base Azure
+- [x] Base Ember
+- [x] Top
+- [x] Mid
+- [x] Bot
+- [x] Jungla Azure
+- [x] Jungla Ember
+- [x] Corredor central / río / cauce
+- [x] Rutas alternativas
+- [x] Chokepoints
+- [x] Obstáculos
+- [x] Marcadores de torres
+- [x] Marcadores de campamentos
+- [x] Spawn points
+- [x] Límites
+- [x] NavMesh completo
+- [x] Sin materiales magenta
+
+Resultado: escena técnica `MobaGreyboxArena` (builder por menú `Cierzo Arena → Create MOBA Greybox Arena`) con topología MOBA clásica: bases Azure (esquina inferior-izquierda, SW) y Ember (superior-derecha, NE) en esquinas opuestas, mid diagonal directa entre bases, y líneas top/bot en "L" pegadas a los bordes (top por el borde oeste y luego el norte; bot por el sur y luego el este). El río técnico corre por la anti-diagonal partiendo el cuadrado en dos mitades, con un puente/chokepoint por línea (top en la esquina NW, mid al centro, bot en la esquina SE). Cada línea lleva tres marcadores de torre por equipo escalonados a lo largo de su recorrido (puerta, interior, exterior), y cada base define tres spawn points, uno por línea. Campamentos neutrales en las junglas laterales, obstáculos en los triángulos de jungla entre líneas, límites cuadrados. Cubierta por `LargeNavMeshBootstrap` y cámara M3A. Los marcadores son solo visuales (no bloquean navegación). Pendiente de validación manual del propietario.
 
 > 🚪 Gate: recorrer manualmente todo el mapa.
 

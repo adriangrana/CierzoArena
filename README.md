@@ -17,6 +17,7 @@ Prototipo en Unity 6 (`ProjectSettings/ProjectVersion.txt`: Unity 6000.5.3f1) co
 - **M2.5** — Spike multijugador autoritativo (Netcode for GameObjects + Unity Transport) en `Assets/Scenes/MultiplayerSpikeArena.unity`: servidor autoritativo, órdenes de red, vida/daño/muerte replicados, el cliente no decide el daño (validado con dos instancias).
 - **M3A** — Cámara técnica isométrica para mapa grande: follow/free, recentrado, zoom y límites.
 - **M3B** — Spike de navegación a gran escala en `Assets/Scenes/NavigationScaleSpike.unity`: mapa amplio con dos regiones separadas por un barranco y unidas por un puente estrecho, obstáculos grandes, zona bloqueada y persecución a distancia. Valida que el NavMesh runtime escala con `LargeNavMeshBootstrap` (bake único de cobertura completa) e instrumentación de path (`NavPathProbe`).
+- **M3C** — Primer greybox completo del mapa MOBA en `Assets/Scenes/MobaGreyboxArena.unity` (builder por menú `Cierzo Arena → Create MOBA Greybox Arena`): bases Azure/Ember enfrentadas, rutas central/norte/sur, río técnico diagonal, puentes/chokepoints, zonas neutrales, obstáculos y límites. Solo formas y materiales técnicos, sin arte final. Implementado, pendiente de validación manual.
 
 La version real del proyecto esta en `ProjectSettings/ProjectVersion.txt`: Unity 6000.5.3f1.
 
@@ -53,4 +54,4 @@ La version real del proyecto esta en `ProjectSettings/ProjectVersion.txt`: Unity
 
 ## Estado del milestone
 
-Los Milestones 1 a 2.5, M3A y M3B están completados y validados. No avanzar al siguiente milestone (M3C, greybox) hasta recibir una nueva indicación.
+Los Milestones 1 a 2.5, M3A y M3B están completados y validados. M3C (greybox del mapa MOBA) está implementado y pendiente de validación manual. No avanzar al siguiente milestone hasta recibir una nueva indicación.
