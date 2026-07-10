@@ -1,3 +1,4 @@
+using CierzoArena.Combat;
 using CierzoArena.Core;
 using UnityEngine;
 
@@ -8,6 +9,7 @@ namespace CierzoArena.Units
         [SerializeField] private Camera commandCamera;
         [SerializeField] private LayerMask groundMask;
         [SerializeField] private LayerMask selectableMask;
+        [SerializeField] private KeyCode stopKey = KeyCode.S;
 
         private SelectableUnit selectedUnit;
 
@@ -21,6 +23,20 @@ namespace CierzoArena.Units
 
         private void Update()
         {
+            if (selectedUnit != null && !IsPlayerControlled(selectedUnit))
+            {
+                Select(null);
+            }
+
+            if (selectedUnit != null && Input.GetKeyDown(stopKey))
+            {
+                UnitOrderController selectedOrders = selectedUnit.GetComponent<UnitOrderController>();
+                if (selectedOrders != null)
+                {
+                    selectedOrders.Stop();
+                }
+            }
+
             if (commandCamera == null)
             {
                 return;
@@ -51,11 +67,29 @@ namespace CierzoArena.Units
         private void IssueCommand()
         {
             Ray ray = commandCamera.ScreenPointToRay(Input.mousePosition);
-            ClickMover mover = selectedUnit.GetComponent<ClickMover>();
-
-            if (mover != null && Physics.Raycast(ray, out RaycastHit groundHit, 500f, groundMask))
+            UnitOrderController orders = selectedUnit.GetComponent<UnitOrderController>();
+            if (orders == null)
             {
-                mover.MoveTo(groundHit.point);
+                return;
+            }
+
+            if (Physics.Raycast(ray, out RaycastHit unitHit, 500f, selectableMask))
+            {
+                Health targetHealth = unitHit.collider.GetComponentInParent<Health>();
+                TeamMember selectedTeam = selectedUnit.GetComponent<TeamMember>();
+                TeamMember targetTeam = targetHealth != null ? targetHealth.GetComponent<TeamMember>() : null;
+
+                if (selectedTeam != null && selectedTeam.IsEnemy(targetTeam))
+                {
+                    orders.IssueAttack(targetHealth);
+                }
+
+                return;
+            }
+
+            if (Physics.Raycast(ray, out RaycastHit groundHit, 500f, groundMask))
+            {
+                orders.IssueMove(groundHit.point);
             }
         }
 
@@ -82,7 +116,8 @@ namespace CierzoArena.Units
             }
 
             TeamMember teamMember = unit.GetComponent<TeamMember>();
-            return teamMember != null && teamMember.Team == TeamId.Azure;
+            Health health = unit.GetComponent<Health>();
+            return teamMember != null && health != null && health.IsAlive && teamMember.Team == TeamId.Azure;
         }
     }
 }

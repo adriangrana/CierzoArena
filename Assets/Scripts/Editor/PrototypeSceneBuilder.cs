@@ -47,10 +47,12 @@ namespace CierzoArena.EditorTools
 
             Material groundMaterial = CreateMaterial("Assets/Materials/Prototype_Ground.mat", new Color(0.24f, 0.31f, 0.29f));
             Material allyMaterial = CreateMaterial("Assets/Materials/Prototype_Azure.mat", new Color(0.08f, 0.35f, 0.9f));
+            Material enemyMaterial = CreateMaterial("Assets/Materials/Prototype_Ember.mat", new Color(0.85f, 0.18f, 0.12f));
             Material ringMaterial = CreateMaterial("Assets/Materials/Prototype_Selection.mat", new Color(0.95f, 0.86f, 0.24f));
 
             CreateGround(groundMaterial);
-            GameObject player = CreateUnit("Azure Vanguard", new Vector3(-4f, 1f, -2f), TeamId.Azure, allyMaterial, ringMaterial, true);
+            GameObject player = CreateUnit("Azure Vanguard", new Vector3(-4f, 1f, -2f), TeamId.Azure, allyMaterial, ringMaterial, true, 500f);
+            CreateUnit("Ember Target", new Vector3(4f, 1f, 1f), TeamId.Ember, enemyMaterial, ringMaterial, false, 180f);
             CreateLighting();
             CreateCamera(player.transform);
             CreateCommandController();
@@ -73,7 +75,7 @@ namespace CierzoArena.EditorTools
             ground.GetComponent<Renderer>().sharedMaterial = material;
         }
 
-        private static GameObject CreateUnit(string name, Vector3 position, TeamId team, Material bodyMaterial, Material ringMaterial, bool selectable)
+        private static GameObject CreateUnit(string name, Vector3 position, TeamId team, Material bodyMaterial, Material ringMaterial, bool playerControlled, float maxHealth)
         {
             GameObject unit = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             unit.name = name;
@@ -86,8 +88,17 @@ namespace CierzoArena.EditorTools
             teamObject.FindProperty("team").enumValueIndex = (int)team;
             teamObject.ApplyModifiedPropertiesWithoutUndo();
 
-            unit.AddComponent<Health>();
-            unit.AddComponent<ClickMover>();
+            Health health = unit.AddComponent<Health>();
+            SerializedObject healthObject = new SerializedObject(health);
+            healthObject.FindProperty("maxHealth").floatValue = maxHealth;
+            healthObject.ApplyModifiedPropertiesWithoutUndo();
+
+            if (playerControlled)
+            {
+                unit.AddComponent<ClickMover>();
+                unit.AddComponent<BasicAttack>();
+                unit.AddComponent<UnitOrderController>();
+            }
 
             GameObject ring = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             ring.name = "Selection Ring";
@@ -102,7 +113,7 @@ namespace CierzoArena.EditorTools
             SerializedObject selectableObject = new SerializedObject(selectableUnit);
             selectableObject.FindProperty("selectionRing").objectReferenceValue = ring.GetComponent<Renderer>();
             selectableObject.ApplyModifiedPropertiesWithoutUndo();
-            selectableUnit.SetSelected(selectable);
+            selectableUnit.SetSelected(playerControlled);
 
             DeathVisibility deathVisibility = unit.AddComponent<DeathVisibility>();
             SerializedObject deathObject = new SerializedObject(deathVisibility);

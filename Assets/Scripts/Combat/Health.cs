@@ -16,7 +16,13 @@ namespace CierzoArena.Combat
 
         private void Awake()
         {
+            maxHealth = Mathf.Max(1f, maxHealth);
             Current = maxHealth;
+        }
+
+        private void OnValidate()
+        {
+            maxHealth = Mathf.Max(1f, maxHealth);
         }
 
         public void ApplyDamage(float amount)

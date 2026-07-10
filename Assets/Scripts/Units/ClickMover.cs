@@ -51,8 +51,20 @@ namespace CierzoArena.Units
 
             if (NavMesh.SamplePosition(worldPosition, out NavMeshHit hit, 1.5f, NavMesh.AllAreas))
             {
+                agent.isStopped = false;
                 agent.SetDestination(hit.position);
             }
+        }
+
+        public void Stop()
+        {
+            if (agent == null || !agent.isOnNavMesh)
+            {
+                return;
+            }
+
+            agent.isStopped = true;
+            agent.ResetPath();
         }
 
         private void ConfigureAgent()
