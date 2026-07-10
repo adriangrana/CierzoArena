@@ -27,10 +27,13 @@ namespace CierzoArena.EditorTools
     /// - Tower markers (three per lane and team) and three base spawn/access points
     ///   per team, one per lane, expressing that each base is reached by three routes.
     ///
-    /// It reuses the M3A camera (<see cref="IsometricCameraRig"/>), the M3B navigation
-    /// stack (<see cref="LargeNavMeshBootstrap"/> + <see cref="NavPathProbe"/>) and the
-    /// existing gameplay systems. It never touches PrototypeArena, MultiplayerSpikeArena
-    /// or NavigationScaleSpike, and never runs on editor load.
+    /// It reuses the M3B navigation stack (<see cref="LargeNavMeshBootstrap"/> +
+    /// <see cref="NavPathProbe"/>) and the existing gameplay systems. As of M4.4 the
+    /// scene uses the real MOBA camera (<see cref="MobaCameraController"/> +
+    /// <see cref="CameraWorldBounds"/> + <see cref="LocalHeroProvider"/>) instead of the
+    /// M3A <see cref="IsometricCameraRig"/>, starting framed on and following the local
+    /// Azure hero. It never touches PrototypeArena or NavigationScaleSpike, and never
+    /// runs on editor load.
     /// </summary>
     public static class MobaGreyboxArenaBuilder
     {
@@ -97,7 +100,7 @@ namespace CierzoArena.EditorTools
 
             CreateNavMeshBootstrap();
             CreateLighting();
-            CreateCamera(azure.transform);
+            CreateMobaCamera(azure.transform);
             CreateCommandController();
 
             EditorSceneManager.MarkSceneDirty(scene);
@@ -585,32 +588,82 @@ namespace CierzoArena.EditorTools
             RenderSettings.ambientLight = new Color(0.45f, 0.48f, 0.52f);
         }
 
-        private static void CreateCamera(Transform target)
+        // ----- MOBA camera (M4.4) --------------------------------------------
+
+        // Real camera bounds for the greybox. The boundary walls are centred at +/-84
+        // with thickness 4, so their outer face is at +/-86; using +/-86 lets the
+        // camera reach exactly the wall face without ever revealing empty exterior.
+        private const float CameraBound = 86f;
+
+        // Camera geometry. Height above the ground plane (y = 0) and the 55-degree
+        // pitch fix how far ahead (+Z) the view centre sits: centreZ = height * cot,
+        // with cot = forward.z / -forward.y for the pitch. Pulling the follow pivot
+        // back by that amount frames the hero centred instead of near the bottom edge,
+        // and it is independent of zoom, so it holds at every orthographic size.
+        private const float CameraHeight = 35f;
+        private const float CameraPitchDeg = 55f;
+
+        /// <summary>
+        /// Builds the M4.4 MOBA camera rig for the greybox: a tilted orthographic
+        /// <see cref="MobaCameraController"/> with real <see cref="CameraWorldBounds"/>,
+        /// a scene <see cref="LocalHeroProvider"/> and a
+        /// <see cref="SceneLocalHeroRegistrar"/> that registers Azure as the local hero
+        /// at runtime. This replaces the M3A <see cref="IsometricCameraRig"/> in this
+        /// scene only; the rig stays available for the spike scenes and its tests.
+        /// </summary>
+        private static void CreateMobaCamera(Transform azure)
         {
-            GameObject cameraObject = new GameObject("Isometric Camera");
+            // Framing offset that centres the hero for the fixed pitch/height (see the
+            // constants above). Negative Z pulls the pivot back along the view.
+            float pitchRad = CameraPitchDeg * Mathf.Deg2Rad;
+            float centreZ = CameraHeight * (Mathf.Cos(pitchRad) / Mathf.Sin(pitchRad));
+            Vector2 followOffset = new Vector2(0f, -centreZ);
+
+            // Decoupled local-hero source, plus explicit runtime registration of Azure
+            // through the provider's existing API (Ember is never registered).
+            GameObject providerObject = new GameObject("Local Hero Provider");
+            LocalHeroProvider provider = providerObject.AddComponent<LocalHeroProvider>();
+
+            SceneLocalHeroRegistrar registrar = providerObject.AddComponent<SceneLocalHeroRegistrar>();
+            SetObjectReference(registrar, "provider", provider);
+            SetObjectReference(registrar, "hero", azure);
+
+            GameObject cameraObject = new GameObject("MOBA Camera");
             Camera camera = cameraObject.AddComponent<Camera>();
             camera.tag = "MainCamera";
             camera.orthographic = true;
             camera.orthographicSize = 22f;
             camera.farClipPlane = 500f;
-            cameraObject.transform.position = target.position + new Vector3(0f, 34f, -30f);
-            cameraObject.transform.rotation = Quaternion.Euler(55f, 0f, 0f);
 
-            IsometricCameraRig rig = cameraObject.AddComponent<IsometricCameraRig>();
-            rig.SetTarget(target);
+            // Start already framed on Azure so there is no first-frame jump: pivot XZ =
+            // hero XZ + framing offset, at the configured height, with the iso pitch.
+            cameraObject.transform.position = new Vector3(
+                azure.position.x + followOffset.x,
+                CameraHeight,
+                azure.position.z + followOffset.y);
+            cameraObject.transform.rotation = Quaternion.Euler(CameraPitchDeg, 0f, 0f);
 
-            // Tune the M3A rig for the square greybox play area (roughly within +/-84).
-            SerializedObject rigObject = new SerializedObject(rig);
-            rigObject.FindProperty("offset").vector3Value = new Vector3(0f, 34f, -30f);
-            rigObject.FindProperty("panSpeed").floatValue = 50f;
-            rigObject.FindProperty("minZoom").floatValue = 10f;
-            rigObject.FindProperty("maxZoom").floatValue = 55f;
-            rigObject.FindProperty("zoomStep").floatValue = 3.5f;
-            rigObject.FindProperty("minX").floatValue = -90f;
-            rigObject.FindProperty("maxX").floatValue = 90f;
-            rigObject.FindProperty("minZ").floatValue = -90f;
-            rigObject.FindProperty("maxZ").floatValue = 90f;
-            rigObject.ApplyModifiedPropertiesWithoutUndo();
+            CameraWorldBounds bounds = cameraObject.AddComponent<CameraWorldBounds>();
+            SetFloat(bounds, "minX", -CameraBound);
+            SetFloat(bounds, "maxX", CameraBound);
+            SetFloat(bounds, "minZ", -CameraBound);
+            SetFloat(bounds, "maxZ", CameraBound);
+
+            MobaCameraController controller = cameraObject.AddComponent<MobaCameraController>();
+            SerializedObject controllerObject = new SerializedObject(controller);
+            controllerObject.FindProperty("keyboardPanSpeed").floatValue = 50f;
+            controllerObject.FindProperty("edgeScrollingEnabled").boolValue = true;
+            controllerObject.FindProperty("edgePanSpeed").floatValue = 50f;
+            controllerObject.FindProperty("edgeBorderPixels").intValue = 12;
+            controllerObject.FindProperty("zoomSpeed").floatValue = 3.5f;
+            controllerObject.FindProperty("minOrthographicSize").floatValue = 12f;
+            controllerObject.FindProperty("maxOrthographicSize").floatValue = 55f;
+            controllerObject.FindProperty("targetCamera").objectReferenceValue = camera;
+            controllerObject.FindProperty("worldBounds").objectReferenceValue = bounds;
+            controllerObject.FindProperty("groundPlaneY").floatValue = 0f;
+            controllerObject.FindProperty("heroProvider").objectReferenceValue = provider;
+            controllerObject.FindProperty("followPlaneOffset").vector2Value = followOffset;
+            controllerObject.ApplyModifiedPropertiesWithoutUndo();
         }
 
         private static void CreateCommandController()

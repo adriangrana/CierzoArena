@@ -73,7 +73,7 @@ namespace CierzoArena.Netcode.EditorTools
 
             CreateConnectionBootstrap(azurePrefab, emberPrefab);
             CreateLighting();
-            CreateCamera();
+            CreateMobaCamera();
             CreateCommandController();
 
             EditorSceneManager.MarkSceneDirty(scene);
@@ -270,19 +270,60 @@ namespace CierzoArena.Netcode.EditorTools
             RenderSettings.ambientLight = new Color(0.45f, 0.48f, 0.52f);
         }
 
-        private static void CreateCamera()
+        private static void CreateMobaCamera()
         {
-            GameObject cameraObject = new GameObject("Isometric Camera");
+            // Small spike ground: a 10-unit plane scaled 3.5 spans about +/-17.5, so
+            // bounds of +/-20 keep a light margin. Height/pitch fix the framing
+            // pull-back exactly as in the greybox (centreZ = height * cot(pitch),
+            // independent of zoom).
+            const float spikeCameraBound = 20f;
+            const float spikeCameraHeight = 14f;
+            const float spikeCameraPitchDeg = 55f;
+
+            float pitchRad = spikeCameraPitchDeg * Mathf.Deg2Rad;
+            float centreZ = spikeCameraHeight * (Mathf.Cos(pitchRad) / Mathf.Sin(pitchRad));
+            Vector2 followOffset = new Vector2(0f, -centreZ);
+
+            // In-scene provider so each instance resolves its own
+            // LocalHeroProvider.Active before units spawn. It is never networked; the
+            // owning NetworkUnitController registers its unit on spawn, so the host
+            // follows its unit and the client follows its own, never a remote one.
+            GameObject providerObject = new GameObject("Local Hero Provider");
+            LocalHeroProvider provider = providerObject.AddComponent<LocalHeroProvider>();
+
+            GameObject cameraObject = new GameObject("MOBA Camera");
             Camera camera = cameraObject.AddComponent<Camera>();
             camera.tag = "MainCamera";
             camera.orthographic = true;
             camera.orthographicSize = 9f;
-            cameraObject.transform.position = new Vector3(0f, 14f, -12f);
-            cameraObject.transform.rotation = Quaternion.Euler(55f, 0f, 0f);
+            camera.farClipPlane = 500f;
 
-            // Units are spawned at runtime, so there is no in-scene target to follow;
-            // the rig stays put until/unless a target is assigned at runtime.
-            cameraObject.AddComponent<IsometricCameraRig>();
+            // No in-scene hero yet: start framed on the spawn origin so following an
+            // owned unit that spawns near the centre does not jump.
+            cameraObject.transform.position = new Vector3(followOffset.x, spikeCameraHeight, followOffset.y);
+            cameraObject.transform.rotation = Quaternion.Euler(spikeCameraPitchDeg, 0f, 0f);
+
+            CameraWorldBounds bounds = cameraObject.AddComponent<CameraWorldBounds>();
+            SetFloat(bounds, "minX", -spikeCameraBound);
+            SetFloat(bounds, "maxX", spikeCameraBound);
+            SetFloat(bounds, "minZ", -spikeCameraBound);
+            SetFloat(bounds, "maxZ", spikeCameraBound);
+
+            MobaCameraController controller = cameraObject.AddComponent<MobaCameraController>();
+            SerializedObject controllerObject = new SerializedObject(controller);
+            controllerObject.FindProperty("keyboardPanSpeed").floatValue = 30f;
+            controllerObject.FindProperty("edgeScrollingEnabled").boolValue = true;
+            controllerObject.FindProperty("edgePanSpeed").floatValue = 30f;
+            controllerObject.FindProperty("edgeBorderPixels").intValue = 12;
+            controllerObject.FindProperty("zoomSpeed").floatValue = 2f;
+            controllerObject.FindProperty("minOrthographicSize").floatValue = 6f;
+            controllerObject.FindProperty("maxOrthographicSize").floatValue = 16f;
+            controllerObject.FindProperty("targetCamera").objectReferenceValue = camera;
+            controllerObject.FindProperty("worldBounds").objectReferenceValue = bounds;
+            controllerObject.FindProperty("groundPlaneY").floatValue = 0f;
+            controllerObject.FindProperty("heroProvider").objectReferenceValue = provider;
+            controllerObject.FindProperty("followPlaneOffset").vector2Value = followOffset;
+            controllerObject.ApplyModifiedPropertiesWithoutUndo();
         }
 
         private static void CreateCommandController()
