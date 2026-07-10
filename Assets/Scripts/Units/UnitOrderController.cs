@@ -56,31 +56,63 @@ namespace CierzoArena.Units
 
         public bool IssueMove(Vector3 destination)
         {
-            if (!CanReceiveOrders)
-            {
-                return false;
-            }
-
-            attackTarget = null;
-            mover.MoveTo(destination);
-            return true;
+            return Execute(UnitOrderCommand.Move(destination));
         }
 
         public bool IssueAttack(Health target)
         {
-            if (!CanReceiveOrders || !basicAttack.CanAttack(target))
-            {
-                return false;
-            }
-
-            attackTarget = target;
-            return true;
+            return Execute(UnitOrderCommand.Attack(target));
         }
 
         public void Stop()
         {
-            attackTarget = null;
-            mover.Stop();
+            Execute(UnitOrderCommand.Stop());
+        }
+
+        /// <summary>
+        /// Single reception boundary for gameplay orders. All order acceptance is
+        /// validated here (and only here); accepted orders are applied to the
+        /// runtime components. Continuous simulation of an accepted order (chasing,
+        /// range checks, firing) happens in <see cref="Update"/>, not per command.
+        /// </summary>
+        public bool Execute(in UnitOrderCommand command)
+        {
+            if (!CanAccept(command))
+            {
+                return false;
+            }
+
+            switch (command.Type)
+            {
+                case UnitOrderType.Move:
+                    attackTarget = null;
+                    mover.MoveTo(command.Destination);
+                    return true;
+                case UnitOrderType.Attack:
+                    attackTarget = command.Target;
+                    return true;
+                case UnitOrderType.Stop:
+                    attackTarget = null;
+                    mover.Stop();
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        private bool CanAccept(in UnitOrderCommand command)
+        {
+            switch (command.Type)
+            {
+                case UnitOrderType.Move:
+                    return CanReceiveOrders;
+                case UnitOrderType.Attack:
+                    return CanReceiveOrders && basicAttack.CanAttack(command.Target);
+                case UnitOrderType.Stop:
+                    return CanReceiveOrders;
+                default:
+                    return false;
+            }
         }
 
         private bool CanReceiveOrders => health != null && health.IsAlive;
@@ -91,9 +123,15 @@ namespace CierzoArena.Units
             mover.Stop();
         }
 
+        private void ClearActiveOrderAndStopMovement()
+        {
+            attackTarget = null;
+            mover.Stop();
+        }
+
         private void OnDied(Health _)
         {
-            Stop();
+            ClearActiveOrderAndStopMovement();
         }
     }
 }

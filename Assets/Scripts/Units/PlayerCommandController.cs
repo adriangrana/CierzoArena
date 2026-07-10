@@ -33,7 +33,7 @@ namespace CierzoArena.Units
                 UnitOrderController selectedOrders = selectedUnit.GetComponent<UnitOrderController>();
                 if (selectedOrders != null)
                 {
-                    selectedOrders.Stop();
+                    selectedOrders.Execute(UnitOrderCommand.Stop());
                 }
             }
 
@@ -73,15 +73,15 @@ namespace CierzoArena.Units
                 return;
             }
 
+            // Resolve player intent only: clicked unit -> Attack request, ground -> Move
+            // request. Whether the order is valid (enemy, alive, in team rules) is
+            // decided by the order boundary, not here, to avoid duplicated validation.
             if (Physics.Raycast(ray, out RaycastHit unitHit, 500f, selectableMask))
             {
                 Health targetHealth = unitHit.collider.GetComponentInParent<Health>();
-                TeamMember selectedTeam = selectedUnit.GetComponent<TeamMember>();
-                TeamMember targetTeam = targetHealth != null ? targetHealth.GetComponent<TeamMember>() : null;
-
-                if (selectedTeam != null && selectedTeam.IsEnemy(targetTeam))
+                if (targetHealth != null)
                 {
-                    orders.IssueAttack(targetHealth);
+                    orders.Execute(UnitOrderCommand.Attack(targetHealth));
                 }
 
                 return;
@@ -89,7 +89,7 @@ namespace CierzoArena.Units
 
             if (Physics.Raycast(ray, out RaycastHit groundHit, 500f, groundMask))
             {
-                orders.IssueMove(groundHit.point);
+                orders.Execute(UnitOrderCommand.Move(groundHit.point));
             }
         }
 
