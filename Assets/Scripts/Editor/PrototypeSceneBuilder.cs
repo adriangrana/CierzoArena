@@ -6,7 +6,6 @@ using CierzoArena.Units;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
-using UnityEngine.AI;
 using UnityEngine.SceneManagement;
 
 namespace CierzoArena.EditorTools
@@ -88,14 +87,6 @@ namespace CierzoArena.EditorTools
             teamObject.ApplyModifiedPropertiesWithoutUndo();
 
             unit.AddComponent<Health>();
-            NavMeshAgent agent = unit.AddComponent<NavMeshAgent>();
-            agent.speed = 5.5f;
-            agent.angularSpeed = 720f;
-            agent.acceleration = 24f;
-            agent.stoppingDistance = 0.15f;
-            agent.radius = 0.45f;
-            agent.height = 2f;
-            agent.baseOffset = 1f;
             unit.AddComponent<ClickMover>();
 
             GameObject ring = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
