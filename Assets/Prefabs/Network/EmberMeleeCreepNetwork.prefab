@@ -111,6 +111,7 @@ GameObject:
   - component: {fileID: 5208888937748468972}
   - component: {fileID: 4967655504794808189}
   - component: {fileID: 2631691185267345336}
+  - component: {fileID: 1321709712791377029}
   - component: {fileID: 5877460984325687272}
   m_Layer: 8
   m_Name: EmberMeleeCreepNetwork
@@ -414,6 +415,22 @@ MonoBehaviour:
   m_EditorClassIdentifier: CierzoArena.Runtime::CierzoArena.Units.DefensiveAggroResponder
   heroProtectionRange: 9
   defensiveAggroDuration: 4
+--- !u!114 &1321709712791377029
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1741252092411218118}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 734e2a901f2a4d85874d10f1c90b1002, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: CierzoArena.Runtime::CierzoArena.Units.ExperienceReward
+  experienceReward: 60
+  experienceRadius: 14
+  goldReward: 40
+  shareExperienceWithNearbyHeroes: 1
 --- !u!114 &5877460984325687272
 MonoBehaviour:
   m_ObjectHideFlags: 0

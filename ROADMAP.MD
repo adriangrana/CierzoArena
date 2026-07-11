@@ -21,6 +21,8 @@ Objetivo final asumido: MOBA 3D original, competitivo, eventualmente 5v5 online,
 | M6 — Modelo avanzado de ataque | Completed | Automated + manual validation |
 | M7 — Creeps, oleadas y aggro defensivo | Completed | Automated + manual validation |
 | M8 — Muerte y respawn de héroes | Implemented | Runtime, Netcode, selección persistente y cobertura determinista Edit Mode |
+| M9 — Experiencia y niveles | Implemented | Progresión autoritativa, replicación y pruebas Edit/Play Mode |
+| M10 — Oro y experiencia compartida | Implemented | Reparto por proximidad, oro autoritativo y pruebas Edit/Netcode |
 
 ## Roadmap Principles
 
@@ -362,82 +364,53 @@ Resultado: `Los héroes ya tienen un ciclo completo de muerte y reaparición.`
 
 > 🚪 Gate: validar localmente y con host/cliente que no haya órdenes válidas, doble respawn ni pérdida de ownership.
 
-### Milestone 9 — Primer héroe completo
+### Milestone 9 — Experiencia y niveles
 
-Status: ⬜ Futuro
+Status: 🔵 Implementado / pendiente de validación final en Unity
 
-Aquí aparece el primer héroe verdadero de CierzoArena.
+- [x] Experiencia por último golpe a creeps y héroes enemigos
+- [x] Curva determinista: 100 XP iniciales y multiplicador 1,25, con sobrante y varios niveles por recompensa grande
+- [x] Nivel máximo configurable; la XP posterior se descarta de forma explícita
+- [x] +80 vida máxima/actual, +8 daño y +0,2 velocidad por nivel
+- [x] Nivel y XP persisten tras muerte y respawn
+- [x] Recompensa única por entidad y bloqueo tras victoria, fuego amigo o atacante no héroe
+- [x] Servidor autoritativo y `NetworkVariable` para nivel, XP y XP acumulada
+- [x] Feedback provisional de nivel, XP y `LEVEL UP!`
 
-- [ ] Nombre original
-- [ ] Rol
-- [ ] Estadísticas
-- [ ] Q
-- [ ] W
-- [ ] E
-- [ ] R
-- [ ] Pasiva si corresponde
-- [ ] Iconos provisionales
-- [ ] Retrato provisional
-- [ ] Modelo placeholder
-- [ ] Feedback visual
-- [ ] Muerte
-- [ ] Respawn
-
-Resultado: primer personaje jugable completo.
+Resultado: `Los héroes ya progresan durante la partida mediante experiencia y niveles.`
 
 ---
 
 ## FASE VI — Primer MOBA real
 
-### Milestone 10 — Creeps
+### Milestone 10 — Oro y experiencia compartida
 
-Status: ⬜ Futuro
+Status: 🔵 Implementado / pendiente de validación final en Unity
 
-- [ ] Creeps Azure
-- [ ] Creeps Ember
-- [ ] Spawn por oleadas
-- [ ] Ruta de línea
-- [ ] Aggro
-- [ ] Selección de objetivos
-- [ ] Melee creeps
-- [ ] Ranged creeps
-- [ ] Muerte
-- [ ] Oro
-- [ ] Experiencia
+- [x] XP de creeps por proximidad, no por último golpe
+- [x] Reparto entero sin pérdida; el resto se asigna de forma determinista
+- [x] Sólo héroes enemigos vivos dentro de radio reciben XP
+- [x] Oro fijo de último golpe: 40 melee y 55 ranged
+- [x] Creep, torre, aliado o daño desconocido no reciben oro
+- [x] Oro persistente durante muerte/respawn, sin persistencia entre partidas
+- [x] Servidor autoritativo y `NetworkVariable` de oro, sin RPC de cliente
+- [x] Feedback provisional de oro y ganancia `+N`
 
-Primero una sola línea.
+Resultado: `La progresión distingue entre experiencia compartida y recompensa económica por último golpe.`
 
-### Milestone 11 — Una línea funcional completa
+### Milestone 11 — Tienda, inventario e ítems básicos
 
-Status: ⬜ Futuro
+Status: 🔵 Implementado / pendiente de validación final en Unity
 
-Este será otro gran momento del proyecto.
+- [x] Catálogo explícito de cinco objetos `ScriptableObject` con ID estable, precio de compra/venta y detección de IDs duplicados.
+- [x] Tienda Azure y Ember; cada compra/venta exige zona aliada, héroe vivo y partida en curso.
+- [x] Inventario autoritativo de seis huecos, con duplicados permitidos, venta por slot y persistencia durante muerte/respawn.
+- [x] Bonificaciones derivadas de vida máxima, daño, movimiento y cadencia; quitar un objeto recalcula desde el inventario completo, sin deriva.
+- [x] UI provisional de tienda, oro e inventario; sólo solicita la acción, nunca decide el resultado.
+- [x] En red el propietario solicita ID/slot y el servidor valida ownership, equipo, posición, oro, estado e inventario antes de modificarlo; se replican los IDs de los slots.
+- [x] Wiring en los builders de `MobaGreyboxArena` y `MultiplayerSpikeArena`.
 
-```text
-Base Azure
-↓
-Torre
-↓
-Creeps
-↓
-Combate
-↓
-Torre
-↓
-Base Ember
-```
-
-Checklist:
-
-- [ ] Una lane completa
-- [ ] Oleadas enfrentándose
-- [ ] Creeps atacándose
-- [ ] Héroe participando
-- [ ] Last hit
-- [ ] XP
-- [ ] Torres provisionales
-
-> 🚪 Gate: jugar varios minutos sin romper el flujo.
+Resultado: `Los héroes ya pueden convertir el oro de la partida en mejoras mediante objetos.`
 
 ### Milestone 12 — Torres
 

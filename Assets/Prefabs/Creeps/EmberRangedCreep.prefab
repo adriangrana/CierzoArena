@@ -109,6 +109,7 @@ GameObject:
   - component: {fileID: 5528653936750614420}
   - component: {fileID: 7348972693164612028}
   - component: {fileID: 6443571072910097422}
+  - component: {fileID: 5171366141922677792}
   m_Layer: 8
   m_Name: EmberRangedCreep
   m_TagString: Untagged
@@ -337,6 +338,22 @@ MonoBehaviour:
   m_EditorClassIdentifier: CierzoArena.Runtime::CierzoArena.Units.DefensiveAggroResponder
   heroProtectionRange: 9
   defensiveAggroDuration: 4
+--- !u!114 &5171366141922677792
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 937207644541880536}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 734e2a901f2a4d85874d10f1c90b1002, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: CierzoArena.Runtime::CierzoArena.Units.ExperienceReward
+  experienceReward: 75
+  experienceRadius: 14
+  goldReward: 55
+  shareExperienceWithNearbyHeroes: 1
 --- !u!1 &7999142678270111999
 GameObject:
   m_ObjectHideFlags: 0

@@ -19,6 +19,7 @@ GameObject:
   - component: {fileID: 1199899798155124090}
   - component: {fileID: 5476662648580394822}
   - component: {fileID: 3241952207680491571}
+  - component: {fileID: 705322555145592904}
   m_Layer: 8
   m_Name: AzureMeleeCreep
   m_TagString: Untagged
@@ -249,6 +250,22 @@ MonoBehaviour:
   m_EditorClassIdentifier: CierzoArena.Runtime::CierzoArena.Units.DefensiveAggroResponder
   heroProtectionRange: 9
   defensiveAggroDuration: 4
+--- !u!114 &705322555145592904
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2950453679329854256}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 734e2a901f2a4d85874d10f1c90b1002, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: CierzoArena.Runtime::CierzoArena.Units.ExperienceReward
+  experienceReward: 60
+  experienceRadius: 14
+  goldReward: 40
+  shareExperienceWithNearbyHeroes: 1
 --- !u!1 &3045769259052721723
 GameObject:
   m_ObjectHideFlags: 0

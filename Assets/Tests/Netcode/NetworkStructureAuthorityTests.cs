@@ -51,6 +51,18 @@ namespace CierzoArena.Netcode.Tests
             AssertHasNoRpc(typeof(NetworkCreepWaveSpawner));
         }
 
+        [Test]
+        public void NetworkHeroProgressionExposesNoClientExperienceEntryPoint()
+        {
+            AssertHasNoRpc(typeof(NetworkHeroProgression));
+        }
+
+        [Test]
+        public void NetworkHeroEconomyExposesNoClientGoldEntryPoint()
+        {
+            AssertHasNoRpc(typeof(NetworkHeroEconomy));
+        }
+
         private static void AssertHasNoRpc(System.Type type)
         {
             MethodInfo[] methods = type.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly);

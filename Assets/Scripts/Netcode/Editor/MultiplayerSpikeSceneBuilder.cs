@@ -53,6 +53,9 @@ namespace CierzoArena.Netcode.EditorTools
                 "Assets/Data/AzureVanguard.asset", 520f, 5.5f, 48f, 2.2f, 0.8f);
             UnitDefinition emberDefinition = CreateOrLoadUnitDefinition(
                 "Assets/Data/EmberTarget.asset", 180f, 4.2f, 30f, 1.8f, 0.5f);
+            ItemCatalog itemCatalog = CreateShopCatalog();
+            CreateShopZone("Azure Shop", new Vector3(-10f, 0.05f, -6f), TeamId.Azure, itemCatalog, azureMaterial);
+            CreateShopZone("Ember Shop", new Vector3(10f, 0.05f, 6f), TeamId.Ember, itemCatalog, emberMaterial);
 
             // Units are authored as network prefabs (not in-scene NetworkObjects), so
             // they get valid, non-zero GlobalObjectIdHash values from the asset GUID
@@ -230,10 +233,22 @@ namespace CierzoArena.Netcode.EditorTools
             AttackVisual attackVisual = unit.AddComponent<AttackVisual>();
             SetObjectReference(attackVisual, "targetRenderer", unit.GetComponent<Renderer>());
             unit.AddComponent<UnitOrderController>();
+            HeroProgression progression = unit.AddComponent<HeroProgression>();
+            ConfigureHeroProgression(progression);
+            ExperienceReward heroReward = unit.AddComponent<ExperienceReward>();
+            SetInt(heroReward, "experienceReward", 300);
+            SetInt(heroReward, "goldReward", 0);
+            unit.AddComponent<HeroEconomy>();
+            unit.AddComponent<HeroInventory>();
+            unit.AddComponent<HeroProgressionFeedback>();
+            unit.AddComponent<HeroShopFeedback>();
             unit.AddComponent<HeroLifeCycle>();
             unit.AddComponent<HeroRespawnFeedback>();
             unit.AddComponent<NetworkUnitController>();
             unit.AddComponent<NetworkHeroLifeCycle>();
+            unit.AddComponent<NetworkHeroProgression>();
+            unit.AddComponent<NetworkHeroEconomy>();
+            unit.AddComponent<NetworkHeroInventory>();
 
             GameObject ring = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             ring.name = "Selection Ring";
@@ -302,10 +317,26 @@ namespace CierzoArena.Netcode.EditorTools
             SetFloat(controller, "detectionRange", archetype == CreepArchetype.Melee ? 6.5f : 8f);
             SetFloat(controller, "leashRange", 14f);
             creep.AddComponent<DefensiveAggroResponder>();
+            ExperienceReward reward = creep.AddComponent<ExperienceReward>();
+            SetInt(reward, "experienceReward", archetype == CreepArchetype.Melee ? 60 : 75);
+            SetFloat(reward, "experienceRadius", 14f);
+            SetInt(reward, "goldReward", archetype == CreepArchetype.Melee ? 40 : 55);
+            SetBool(reward, "shareExperienceWithNearbyHeroes", true);
             creep.AddComponent<NetworkCreepController>();
             PrefabUtility.SaveAsPrefabAsset(creep, path);
             Object.DestroyImmediate(creep);
             return path;
+        }
+
+        private static void ConfigureHeroProgression(HeroProgression progression)
+        {
+            SetInt(progression, "startingLevel", 1);
+            SetInt(progression, "maximumLevel", 10);
+            SetInt(progression, "baseExperienceForNextLevel", 100);
+            SetFloat(progression, "experienceGrowth", 1.25f);
+            SetFloat(progression, "maximumHealthPerLevel", 80f);
+            SetFloat(progression, "damagePerLevel", 8f);
+            SetFloat(progression, "movementSpeedPerLevel", 0.2f);
         }
 
         private static string CreateNetworkStructurePrefab(string assetName, string displayName, TeamId team, StructureKind kind, StructureLane lane, StructureTier tier, Material material, Material healthBackgroundMaterial, Material healthFillMaterial)
@@ -588,6 +619,62 @@ namespace CierzoArena.Netcode.EditorTools
             return definition;
         }
 
+        private static ItemCatalog CreateShopCatalog()
+        {
+            EnsureFolder("Assets", "Data");
+            EnsureFolder("Assets/Data", "Items");
+            ItemDefinition[] items =
+            {
+                CreateOrLoadItemDefinition("Assets/Data/Items/BastionPlating.asset", "bastion.plating", "Bastion Plating", "A sturdy plate that reinforces a hero's vital reserve.", 40, 20, 120f, 0f, 0f, 0f),
+                CreateOrLoadItemDefinition("Assets/Data/Items/GaleEdge.asset", "gale.edge", "Gale Edge", "A honed edge that adds direct striking force.", 45, 22, 0f, 15f, 0f, 0f),
+                CreateOrLoadItemDefinition("Assets/Data/Items/WindstepBoots.asset", "windstep.boots", "Windstep Boots", "Light boots for faster movement between lanes.", 35, 17, 0f, 0f, 0.8f, 0f),
+                CreateOrLoadItemDefinition("Assets/Data/Items/TempestCog.asset", "tempest.cog", "Tempest Cog", "A simple mechanism that improves attack cadence.", 50, 25, 0f, 0f, 0f, 0.25f),
+                CreateOrLoadItemDefinition("Assets/Data/Items/CierzoAlloy.asset", "cierzo.alloy", "Cierzo Alloy", "A balanced alloy providing both endurance and force.", 55, 27, 60f, 8f, 0f, 0f)
+            };
+            GameObject catalogObject = new GameObject("Item Catalog");
+            ItemCatalog catalog = catalogObject.AddComponent<ItemCatalog>();
+            SetObjectArray(catalog, "items", items);
+            catalog.Rebuild();
+            return catalog;
+        }
+
+        private static ItemDefinition CreateOrLoadItemDefinition(string path, string id, string displayName, string description, int purchasePrice, int salePrice, float health, float damage, float movement, float attackSpeed)
+        {
+            ItemDefinition item = AssetDatabase.LoadAssetAtPath<ItemDefinition>(path);
+            if (item == null)
+            {
+                item = ScriptableObject.CreateInstance<ItemDefinition>();
+                AssetDatabase.CreateAsset(item, path);
+            }
+
+            SerializedObject serialized = new SerializedObject(item);
+            serialized.FindProperty("itemId").stringValue = id;
+            serialized.FindProperty("displayName").stringValue = displayName;
+            serialized.FindProperty("description").stringValue = description;
+            serialized.FindProperty("purchasePrice").intValue = purchasePrice;
+            serialized.FindProperty("salePrice").intValue = salePrice;
+            serialized.FindProperty("maximumHealthBonus").floatValue = health;
+            serialized.FindProperty("attackDamageBonus").floatValue = damage;
+            serialized.FindProperty("movementSpeedBonus").floatValue = movement;
+            serialized.FindProperty("attackSpeedBonus").floatValue = attackSpeed;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(item);
+            return item;
+        }
+
+        private static void CreateShopZone(string name, Vector3 position, TeamId team, ItemCatalog catalog, Material material)
+        {
+            GameObject zoneObject = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            zoneObject.name = name;
+            zoneObject.transform.position = position;
+            zoneObject.transform.localScale = new Vector3(8f, 0.08f, 8f);
+            zoneObject.GetComponent<Renderer>().sharedMaterial = material;
+            zoneObject.GetComponent<Collider>().isTrigger = true;
+            ShopZone zone = zoneObject.AddComponent<ShopZone>();
+            SetEnum(zone, "team", (int)team);
+            SetObjectReference(zone, "catalog", catalog);
+        }
+
         private static void EnsureFolder(string parent, string folder)
         {
             if (!AssetDatabase.IsValidFolder($"{parent}/{folder}"))
@@ -716,6 +803,13 @@ namespace CierzoArena.Netcode.EditorTools
         {
             SerializedObject serialized = new SerializedObject(target);
             serialized.FindProperty(propertyName).intValue = value;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static void SetBool(Object target, string propertyName, bool value)
+        {
+            SerializedObject serialized = new SerializedObject(target);
+            serialized.FindProperty(propertyName).boolValue = value;
             serialized.ApplyModifiedPropertiesWithoutUndo();
         }
 

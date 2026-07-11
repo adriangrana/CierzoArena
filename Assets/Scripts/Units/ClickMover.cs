@@ -18,6 +18,10 @@ namespace CierzoArena.Units
         [SerializeField] private float navMeshSearchRadius = 3f;
 
         private NavMeshAgent agent;
+        private float levelMoveSpeedBonus;
+        private float itemMoveSpeedBonus;
+
+        public float EffectiveMoveSpeed => Mathf.Max(0f, moveSpeed + levelMoveSpeedBonus + itemMoveSpeedBonus);
 
         private void Awake()
         {
@@ -97,9 +101,25 @@ namespace CierzoArena.Units
             Stop();
         }
 
+        /// <summary>Sets the additive per-match movement speed earned from hero levels.</summary>
+        public void SetLevelMoveSpeedBonus(float bonus)
+        {
+            levelMoveSpeedBonus = Mathf.Max(0f, bonus);
+            if (agent != null)
+            {
+                ConfigureAgent();
+            }
+        }
+
+        public void SetItemMoveSpeedBonus(float bonus)
+        {
+            itemMoveSpeedBonus = Mathf.Max(0f, bonus);
+            if (agent != null) ConfigureAgent();
+        }
+
         private void ConfigureAgent()
         {
-            agent.speed = moveSpeed;
+            agent.speed = EffectiveMoveSpeed;
             agent.stoppingDistance = stoppingDistance;
             agent.angularSpeed = turnSpeed * 60f;
             agent.acceleration = acceleration;

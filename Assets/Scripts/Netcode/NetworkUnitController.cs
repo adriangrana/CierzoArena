@@ -34,6 +34,7 @@ namespace CierzoArena.Netcode
         private BasicAttack attack;
         private AuthoritativeOrderProcessor processor;
         private LocalHeroProvider localHeroProvider;
+        private float lastReplicatedHealth;
 
         private void Awake()
         {
@@ -66,7 +67,8 @@ namespace CierzoArena.Netcode
 
                 // Apply the initial authoritative health exactly (explicit initial
                 // path, independent of any later OnValueChanged).
-                health.ApplyAuthoritativeState(replicatedHealth.Value);
+                lastReplicatedHealth = replicatedHealth.Value;
+                ReapplyReplicatedHealth();
                 replicatedHealth.OnValueChanged += OnReplicatedHealthChanged;
             }
 
@@ -259,7 +261,22 @@ namespace CierzoArena.Netcode
             // Mirror the authoritative value as exact state (not as a damage event) so
             // the client's Health, world health bar and death visibility stay in sync
             // without ever interpreting a state sync as a hit.
-            health.ApplyAuthoritativeState(current);
+            lastReplicatedHealth = current;
+            ReapplyReplicatedHealth();
+        }
+
+        /// <summary>
+        /// Applies the most recent server current-health value after another
+        /// replicated system (level or inventory) has changed the local maximum.
+        /// This keeps ordering between independent NetworkVariables from turning a
+        /// damaged hero's purchase into an accidental heal on a client.
+        /// </summary>
+        public void ReapplyReplicatedHealth()
+        {
+            if (IsSpawned && !IsServer)
+            {
+                health.ApplyAuthoritativeState(lastReplicatedHealth);
+            }
         }
     }
 }

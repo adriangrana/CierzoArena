@@ -10,6 +10,7 @@ namespace CierzoArena.Combat
 
         private float current;
         private bool initialized;
+        private float itemMaximumHealthBonus;
 
         public float Current
         {
@@ -32,6 +33,7 @@ namespace CierzoArena.Combat
         public bool IsAlive => Current > 0f;
 
         public event Action<Health> Died;
+        public event Action<Health, DamageContext> DiedWithContext;
         public event Action<Health, float, float> Changed;
 
         private void Awake()
@@ -102,6 +104,7 @@ namespace CierzoArena.Combat
             if (Current <= 0f)
             {
                 Died?.Invoke(this);
+                DiedWithContext?.Invoke(this, context);
             }
 
             return true;
@@ -134,6 +137,30 @@ namespace CierzoArena.Combat
             EnsureInitialized();
             Current = maxHealth;
             Changed?.Invoke(this, Current, maxHealth);
+        }
+
+        /// <summary>Raises maximum health and preserves the gained amount as current health.</summary>
+        public void AddMaximumHealth(float amount)
+        {
+            EnsureInitialized();
+            if (Mathf.Approximately(amount, 0f))
+            {
+                return;
+            }
+
+            maxHealth = Mathf.Max(1f, maxHealth + amount);
+            Current = amount > 0f
+                ? Mathf.Min(maxHealth, Current + amount)
+                : Mathf.Clamp(Current, IsAlive ? 1f : 0f, maxHealth);
+            Changed?.Invoke(this, Current, maxHealth);
+        }
+
+        public void SetItemMaximumHealthBonus(float bonus)
+        {
+            EnsureInitialized();
+            float next = Mathf.Max(0f, bonus);
+            AddMaximumHealth(next - itemMaximumHealthBonus);
+            itemMaximumHealthBonus = next;
         }
     }
 }

@@ -38,12 +38,15 @@ namespace CierzoArena.Combat
         private float cooldownRemaining;
         private bool releasedThisCycle;
         private bool projectilePresentationEnabled = true;
+        private float levelDamageBonus;
+        private float itemDamageBonus;
+        private float itemAttackSpeedBonus;
 
         public AttackState State => state;
         public Health Target => target;
         public float Range => Mathf.Max(0f, range);
-        public float Damage => Mathf.Max(0f, damage);
-        public float AttackInterval => Mathf.Max(0.01f, attackInterval);
+        public float Damage => Mathf.Max(0f, damage + levelDamageBonus + itemDamageBonus);
+        public float AttackInterval => Mathf.Max(0.01f, attackInterval / (1f + itemAttackSpeedBonus));
         public AttackDelivery Delivery => delivery;
         public bool NeedsApproach => state == AttackState.Approaching;
         public float ProjectileSpeed => Mathf.Max(0.01f, projectileSpeed);
@@ -110,6 +113,18 @@ namespace CierzoArena.Combat
         public void SetProjectilePresentationEnabled(bool enabled)
         {
             projectilePresentationEnabled = enabled;
+        }
+
+        /// <summary>Sets the additive per-match damage earned from hero levels.</summary>
+        public void SetLevelDamageBonus(float bonus)
+        {
+            levelDamageBonus = Mathf.Max(0f, bonus);
+        }
+
+        public void SetItemBonuses(float damageBonus, float attackSpeedBonus)
+        {
+            itemDamageBonus = Mathf.Max(0f, damageBonus);
+            itemAttackSpeedBonus = Mathf.Max(0f, attackSpeedBonus);
         }
 
         /// <summary>Compatibility intent entry point. Damage still waits for Simulate to reach attackPoint.</summary>

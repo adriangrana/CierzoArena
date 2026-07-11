@@ -26,6 +26,9 @@ Prototipo en Unity 6 (`ProjectSettings/ProjectVersion.txt`: Unity 6000.5.3f1) co
 - **M6** — Modelo avanzado de ataque: `BasicAttack` usa la secuencia Idle → Approaching → Windup → Backswing. Azure prueba melee (daño en el attack point); Ember y torres usan ranged (proyectil visible al attack point y daño únicamente al impacto). Una orden de mover o de atacar a otro objetivo cancela el windup, mientras que el backswing se puede cancelar sin alterar la cadencia. El servidor simula ataques e impactos; Netcode replica solo la visual del proyectil.
 - **M7** — Creeps, oleadas y aggro defensivo: seis spawners generan oleadas Azure/Ember en top, mid y bottom. Los creeps melee/ranged siguen rutas, buscan el enemigo válido más cercano, mantienen foco, respetan leash y usan `BasicAttack`. Si un héroe daña a un héroe aliado cercano, creeps y torres cambian temporalmente al agresor. En red, solo el servidor genera y simula creeps.
 - **M8** — Muerte y respawn de héroes: los héroes pasan por `Alive`, `Dead` y `Respawning`; al morir se limpian órdenes y objetivos, se oculta su presentación y reaparecen con vida máxima en el `HeroSpawnPoint` de su equipo. Azure queda seleccionado al iniciar y al reaparecer, por lo que el clic derecho sobre creeps enemigos ordena perseguir y atacar de inmediato. El servidor controla y replica el ciclo en la escena multijugador.
+- **M9** — Experiencia y niveles: el héroe que logra el último golpe a un creep o héroe enemigo recibe experiencia autoritativa. La curva usa 100 XP al nivel 1 y un crecimiento de 1,25; cada nivel añade 80 de vida máxima (y vida actual), 8 de daño y 0,2 de velocidad. El nivel se conserva tras morir y se replica en red.
+- **M10** — Oro y experiencia compartida: los creeps reparten su XP total entre héroes enemigos vivos dentro de 14 unidades, preservando el resto de forma determinista. Sólo el último golpe de un héroe concede oro (40 melee, 55 ranged); oro y XP se mantienen tras respawn y se replican desde el servidor.
+- **M11** — Tienda, inventario e ítems básicos: cada base tiene una tienda aliada y un catálogo de cinco objetos. El inventario tiene seis huecos, conserva objetos tras muerte/respawn y recalcula vida máxima, daño, movimiento y cadencia desde sus slots. En red, el cliente propietario sólo solicita compra/venta; el servidor valida zona, equipo, oro, vida y estado de partida, y replica los IDs del inventario.
 
 La version real del proyecto esta en `ProjectSettings/ProjectVersion.txt`: Unity 6000.5.3f1.
 
@@ -50,6 +53,9 @@ La version real del proyecto esta en `ProjectSettings/ProjectVersion.txt`: Unity
 8. En `MobaGreyboxArena`, entra en el rango de una torre enemiga: debe hacer windup, lanzar un proyectil y mantenerse inmóvil. Destruir un núcleo muestra el ganador y bloquea el gameplay restante, incluidos ataques y proyectiles pendientes.
 9. Espera las oleadas: los creeps Azure y Ember avanzan por las tres líneas, se enfrentan al encontrarse y retoman su ruta al perder el objetivo.
 10. Para probar M8, deja que una torre, creep o héroe enemigo mate a Azure: debe desaparecer, mostrar `Respawning in X`, rechazar órdenes y reaparecer seleccionado en su base con la barra llena. Space vuelve a centrar la cámara tras reaparecer. En `MultiplayerSpikeArena`, repite la prueba con host y cliente; cada uno conserva ownership y vuelve a su propio spawn.
+11. Para probar M9, da el último golpe a dos creeps enemigos: el panel provisional muestra el nivel y XP; con 120 XP Azure llega a nivel 2 y aumenta vida, daño y velocidad. Matarlo y esperar su respawn no reinicia el nivel.
+12. Para probar M10, sitúa dos héroes enemigos cerca de un creep que muere: ambos comparten la XP y sólo quien da el último golpe recibe el oro mostrado como `+40`/`+55`.
+13. Para probar M11, consigue oro con últimos golpes y vuelve al círculo luminoso de tu base. Aparece `TEAM SHOP`: compra objetos, comprueba el panel de seis slots y sus estadísticas; vende uno. Fuera de la zona, muerto o tras la victoria no se permite comprar ni vender. Tras reaparecer, los slots y las bonificaciones deben mantenerse.
 
 ## Controles
 
@@ -66,4 +72,4 @@ La version real del proyecto esta en `ProjectSettings/ProjectVersion.txt`: Unity
 
 ## Estado del milestone
 
-Los Milestones 1 a 8 están implementados. M8 añade el ciclo autoritativo de muerte y respawn de héroes. Para regenerar las escenas tras cambios de builders, usa los menús `Cierzo Arena > Create MOBA Greybox Arena` y `Cierzo Arena > Create Multiplayer Spike Scene`.
+Los Milestones 1 a 11 están implementados. M10 separa experiencia por proximidad y oro por último golpe; M11 permite gastarlo en objetos. Para regenerar las escenas tras cambios de builders, usa los menús `Cierzo Arena > Create MOBA Greybox Arena` y `Cierzo Arena > Create Multiplayer Spike Scene`.

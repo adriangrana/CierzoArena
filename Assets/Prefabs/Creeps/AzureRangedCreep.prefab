@@ -250,6 +250,7 @@ GameObject:
   - component: {fileID: 632555324040071900}
   - component: {fileID: 3048151806088642093}
   - component: {fileID: 4996914794943930330}
+  - component: {fileID: 1385000968640557120}
   m_Layer: 8
   m_Name: AzureRangedCreep
   m_TagString: Untagged
@@ -478,3 +479,19 @@ MonoBehaviour:
   m_EditorClassIdentifier: CierzoArena.Runtime::CierzoArena.Units.DefensiveAggroResponder
   heroProtectionRange: 9
   defensiveAggroDuration: 4
+--- !u!114 &1385000968640557120
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8164605437689287411}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 734e2a901f2a4d85874d10f1c90b1002, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: CierzoArena.Runtime::CierzoArena.Units.ExperienceReward
+  experienceReward: 75
+  experienceRadius: 14
+  goldReward: 55
+  shareExperienceWithNearbyHeroes: 1
