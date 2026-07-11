@@ -457,17 +457,19 @@ Status: ✅ Implementado
 
 Resultado: `La información del mapa ya depende de la visión de cada equipo.`
 
-### Milestone 15 — Oro y last hit
+### Milestone 15 — Jungla y campamentos neutrales
 
-Status: ⬜ Futuro
+Status: 🔵 Implementado / pendiente de validación final en Unity
 
-- [ ] Recompensa por unidad
-- [ ] Last hit
-- [ ] Kill de héroe
-- [ ] Assist
-- [ ] Oro pasivo si decidimos usarlo
-- [ ] Feedback
-- [ ] Contabilidad robusta
+- [x] Facción neutral hostil a Azure y Ember, sin combate entre neutrales aliados.
+- [x] Campamentos configurables pequeño, mediano y grande con composición y posiciones fijas.
+- [x] Aggro por daño o proximidad, asistencia local de campamento, leash, retorno y curación completa al reset.
+- [x] XP compartida por proximidad y oro sólo por último golpe mediante las recompensas existentes.
+- [x] Respawn íntegro por campamento, bloqueado después de la victoria.
+- [x] Ocultación por niebla y ausencia de neutrales no vistos en minimapa.
+- [x] Spawn, IA, recompensas y respawn exclusivos de servidor con prefabs NGO registrados.
+
+Resultado: `La jungla ya contiene campamentos neutrales con combate, recompensas y respawn.`
 
 ### Milestone 16 — Inventario
 

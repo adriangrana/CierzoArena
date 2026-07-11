@@ -10,7 +10,14 @@ namespace CierzoArena.Core
 
         public bool IsEnemy(TeamMember other)
         {
-            return other != null && team != TeamId.Neutral && other.team != TeamId.Neutral && other.team != team;
+            if (other == null || team == other.team)
+            {
+                return false;
+            }
+
+            // Neutral is a real hostile faction: it fights Azure and Ember, but
+            // members of the same neutral camp never fight each other.
+            return true;
         }
     }
 }

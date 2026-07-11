@@ -41,6 +41,7 @@ namespace CierzoArena.Netcode.EditorTools
             Material groundMaterial = CreateMaterial("Assets/Materials/Prototype_Ground.mat", new Color(0.24f, 0.31f, 0.29f));
             Material azureMaterial = CreateMaterial("Assets/Materials/Prototype_Azure.mat", new Color(0.08f, 0.35f, 0.9f));
             Material emberMaterial = CreateMaterial("Assets/Materials/Prototype_Ember.mat", new Color(0.85f, 0.18f, 0.12f));
+            Material neutralMaterial = CreateMaterial("Assets/Materials/Prototype_Neutral.mat", new Color(0.46f, 0.33f, 0.56f));
             Material ringMaterial = CreateMaterial("Assets/Materials/Prototype_Selection.mat", new Color(0.95f, 0.86f, 0.24f));
             Material healthBackgroundMaterial = CreateMaterial("Assets/Materials/Prototype_HealthBackground.mat", new Color(0.08f, 0.08f, 0.08f));
             Material healthFillMaterial = CreateMaterial("Assets/Materials/Prototype_HealthFill.mat", new Color(0.2f, 0.85f, 0.3f));
@@ -82,6 +83,9 @@ namespace CierzoArena.Netcode.EditorTools
             string azureRangedCreepPath = CreateNetworkCreepPrefab("AzureRangedCreepNetwork", TeamId.Azure, CreepArchetype.Ranged, azureMaterial, healthBackgroundMaterial, healthFillMaterial);
             string emberMeleeCreepPath = CreateNetworkCreepPrefab("EmberMeleeCreepNetwork", TeamId.Ember, CreepArchetype.Melee, emberMaterial, healthBackgroundMaterial, healthFillMaterial);
             string emberRangedCreepPath = CreateNetworkCreepPrefab("EmberRangedCreepNetwork", TeamId.Ember, CreepArchetype.Ranged, emberMaterial, healthBackgroundMaterial, healthFillMaterial);
+            string neutralSmallPath = CreateNetworkNeutralPrefab("NeutralSmallNetwork", NeutralCampCategory.Small, PrimitiveType.Capsule, neutralMaterial, healthBackgroundMaterial, healthFillMaterial, 260f, 22f, 1.9f, 1.15f, 70, 45);
+            string neutralMediumPath = CreateNetworkNeutralPrefab("NeutralMediumNetwork", NeutralCampCategory.Medium, PrimitiveType.Sphere, neutralMaterial, healthBackgroundMaterial, healthFillMaterial, 330f, 28f, 5.8f, 1.35f, 90, 60);
+            string neutralLargePath = CreateNetworkNeutralPrefab("NeutralLargeNetwork", NeutralCampCategory.Large, PrimitiveType.Cube, neutralMaterial, healthBackgroundMaterial, healthFillMaterial, 620f, 42f, 2.1f, 1.5f, 150, 95);
 
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
@@ -98,14 +102,18 @@ namespace CierzoArena.Netcode.EditorTools
             NetworkObject azureRangedCreep = AssetDatabase.LoadAssetAtPath<GameObject>(azureRangedCreepPath).GetComponent<NetworkObject>();
             NetworkObject emberMeleeCreep = AssetDatabase.LoadAssetAtPath<GameObject>(emberMeleeCreepPath).GetComponent<NetworkObject>();
             NetworkObject emberRangedCreep = AssetDatabase.LoadAssetAtPath<GameObject>(emberRangedCreepPath).GetComponent<NetworkObject>();
+            NetworkObject neutralSmall = AssetDatabase.LoadAssetAtPath<GameObject>(neutralSmallPath).GetComponent<NetworkObject>();
+            NetworkObject neutralMedium = AssetDatabase.LoadAssetAtPath<GameObject>(neutralMediumPath).GetComponent<NetworkObject>();
+            NetworkObject neutralLarge = AssetDatabase.LoadAssetAtPath<GameObject>(neutralLargePath).GetComponent<NetworkObject>();
 
-            NetworkPrefabsList spikePrefabs = CreateNetworkPrefabsList(azurePrefab.gameObject, emberPrefab.gameObject, azureTowerPrefab.gameObject, emberTowerPrefab.gameObject, azureCorePrefab.gameObject, emberCorePrefab.gameObject, matchPrefab.gameObject, projectilePrefab.gameObject, azureMeleeCreep.gameObject, azureRangedCreep.gameObject, emberMeleeCreep.gameObject, emberRangedCreep.gameObject);
+            NetworkPrefabsList spikePrefabs = CreateNetworkPrefabsList(azurePrefab.gameObject, emberPrefab.gameObject, azureTowerPrefab.gameObject, emberTowerPrefab.gameObject, azureCorePrefab.gameObject, emberCorePrefab.gameObject, matchPrefab.gameObject, projectilePrefab.gameObject, azureMeleeCreep.gameObject, azureRangedCreep.gameObject, emberMeleeCreep.gameObject, emberRangedCreep.gameObject, neutralSmall.gameObject, neutralMedium.gameObject, neutralLarge.gameObject);
 
             CreateNetworkManager(spikePrefabs);
 
             CreateConnectionBootstrap(azurePrefab, emberPrefab, matchPrefab, azureTowerPrefab, emberTowerPrefab, azureCorePrefab, emberCorePrefab);
             CreateProjectileSpawner(projectilePrefab);
             CreateNetworkWaveSpawners(azureMeleeCreep, azureRangedCreep, emberMeleeCreep, emberRangedCreep);
+            CreateNetworkNeutralCamp(neutralSmall, neutralMedium, neutralLarge);
             CreateLighting();
             CreateMobaCamera();
             CreateCommandController();
@@ -340,6 +348,12 @@ namespace CierzoArena.Netcode.EditorTools
             PrefabUtility.SaveAsPrefabAsset(creep, path);
             Object.DestroyImmediate(creep);
             return path;
+        }
+
+        private static string CreateNetworkNeutralPrefab(string assetName, NeutralCampCategory category, PrimitiveType primitive, Material material, Material healthBackgroundMaterial, Material healthFillMaterial, float maxHealth, float damage, float range, float interval, int experience, int gold)
+        {
+            EnsureFolder("Assets", "Prefabs"); EnsureFolder("Assets/Prefabs", "Network"); string path=$"Assets/Prefabs/Network/{assetName}.prefab";
+            GameObject neutral=GameObject.CreatePrimitive(primitive);neutral.name=assetName;neutral.layer=AttackableLayer;neutral.transform.localScale=category==NeutralCampCategory.Large?Vector3.one*1.15f:Vector3.one*.72f;neutral.GetComponent<Renderer>().sharedMaterial=material;neutral.AddComponent<NetworkObject>();neutral.AddComponent<NetworkTransform>();TeamMember member=neutral.AddComponent<TeamMember>();SetEnum(member,"team",(int)TeamId.Neutral);Health health=neutral.AddComponent<Health>();SetFloat(health,"maxHealth",maxHealth);neutral.AddComponent<StatusEffectController>();neutral.AddComponent<VisionVisibility>();CreateHealthBar(neutral.transform,health,healthBackgroundMaterial,healthFillMaterial,category==NeutralCampCategory.Large?2.3f:1.65f,1.1f);neutral.AddComponent<ClickMover>();BasicAttack attack=neutral.AddComponent<BasicAttack>();ConfigureAttack(attack,range>3f?AttackDelivery.Ranged:AttackDelivery.Melee,range,damage,interval,.25f,.3f);AttackVisual visual=neutral.AddComponent<AttackVisual>();SetObjectReference(visual,"targetRenderer",neutral.GetComponent<Renderer>());neutral.AddComponent<NeutralUnitController>();ExperienceReward reward=neutral.AddComponent<ExperienceReward>();SetInt(reward,"experienceReward",experience);SetFloat(reward,"experienceRadius",14f);SetInt(reward,"goldReward",gold);SetBool(reward,"shareExperienceWithNearbyHeroes",true);neutral.AddComponent<NetworkNeutralController>();PrefabUtility.SaveAsPrefabAsset(neutral,path);Object.DestroyImmediate(neutral);return path;
         }
 
         private static void ConfigureHeroProgression(HeroProgression progression)
@@ -815,6 +829,11 @@ namespace CierzoArena.Netcode.EditorTools
             LaneRoute emberRoute = CreateSpikeRoute(root.transform, "Ember Route", new[] { new Vector3(12f, 1f, 0f), Vector3.up, new Vector3(-12f, 1f, 0f) }, Color.red);
             CreateNetworkWaveSpawner(root.transform, "Azure Waves", azureRoute, azureMelee, azureRanged);
             CreateNetworkWaveSpawner(root.transform, "Ember Waves", emberRoute, emberMelee, emberRanged);
+        }
+
+        private static void CreateNetworkNeutralCamp(NetworkObject small, NetworkObject medium, NetworkObject large)
+        {
+            GameObject root=new GameObject("Neutral Camp Spike");root.transform.position=new Vector3(0f,0f,9f);NeutralCamp camp=root.AddComponent<NeutralCamp>();camp.Configure("spike.neutral",new[]{new NeutralSpawnEntry(NeutralCampCategory.Small,small.gameObject,new Vector3(-1.4f,0f,0f)),new NeutralSpawnEntry(NeutralCampCategory.Medium,medium.gameObject,new Vector3(1.4f,0f,0f)),new NeutralSpawnEntry(NeutralCampCategory.Large,large.gameObject,new Vector3(0f,0f,2f))},8f,14f,1.5f,20f);NetworkNeutralCampSpawner bridge=root.AddComponent<NetworkNeutralCampSpawner>();SetObjectReference(bridge,"smallPrefab",small);SetObjectReference(bridge,"mediumPrefab",medium);SetObjectReference(bridge,"largePrefab",large);
         }
 
         private static LaneRoute CreateSpikeRoute(Transform parent, string name, Vector3[] points, Color color)

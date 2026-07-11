@@ -110,6 +110,7 @@ namespace CierzoArena.EditorTools
                 emberMaterial, ringMaterial, healthBackgroundMaterial, healthFillMaterial, emberDefinition, abilityKit, startSelected: false);
 
             BuildLaneCreeps(azureMaterial, emberMaterial, healthBackgroundMaterial, healthFillMaterial);
+            BuildNeutralCamps(neutralMaterial, healthBackgroundMaterial, healthFillMaterial);
 
             CreateNavMeshBootstrap();
             CreateLighting();
@@ -620,6 +621,36 @@ namespace CierzoArena.EditorTools
         }
 
         // ----- M7 lane creeps ------------------------------------------------
+
+        private static void BuildNeutralCamps(Material neutralMaterial, Material healthBackgroundMaterial, Material healthFillMaterial)
+        {
+            EnsureFolder("Assets", "Prefabs"); EnsureFolder("Assets/Prefabs", "Neutrals");
+            GameObject small=CreateNeutralPrefab("NeutralSmallMelee",NeutralCampCategory.Small,PrimitiveType.Capsule,neutralMaterial,healthBackgroundMaterial,healthFillMaterial,260f,22f,1.9f,1.15f,70,45);
+            GameObject medium=CreateNeutralPrefab("NeutralMediumRanged",NeutralCampCategory.Medium,PrimitiveType.Sphere,neutralMaterial,healthBackgroundMaterial,healthFillMaterial,330f,28f,5.8f,1.35f,90,60);
+            GameObject large=CreateNeutralPrefab("NeutralLargeBrute",NeutralCampCategory.Large,PrimitiveType.Cube,neutralMaterial,healthBackgroundMaterial,healthFillMaterial,620f,42f,2.1f,1.5f,150,95);
+            GameObject root=new GameObject("Neutral Jungle Camps");
+            CreateNeutralCamp(root.transform,"azure.small.north",new Vector3(-38f,0f,26f),new[]{new NeutralSpawnEntry(NeutralCampCategory.Small,small,Vector3.zero,2)});
+            CreateNeutralCamp(root.transform,"azure.small.south",new Vector3(4f,0f,-38f),new[]{new NeutralSpawnEntry(NeutralCampCategory.Small,small,Vector3.zero,2)});
+            CreateNeutralCamp(root.transform,"azure.medium.north",new Vector3(-48f,0f,12f),new[]{new NeutralSpawnEntry(NeutralCampCategory.Medium,medium,Vector3.zero,1),new NeutralSpawnEntry(NeutralCampCategory.Small,small,new Vector3(2f,0f,1f),1)});
+            CreateNeutralCamp(root.transform,"azure.medium.south",new Vector3(16f,0f,-48f),new[]{new NeutralSpawnEntry(NeutralCampCategory.Medium,medium,Vector3.zero,1),new NeutralSpawnEntry(NeutralCampCategory.Small,small,new Vector3(-2f,0f,1f),1)});
+            CreateNeutralCamp(root.transform,"azure.large",new Vector3(-26f,0f,38f),new[]{new NeutralSpawnEntry(NeutralCampCategory.Large,large,Vector3.zero,1)});
+            CreateNeutralCamp(root.transform,"ember.small.north",new Vector3(-4f,0f,38f),new[]{new NeutralSpawnEntry(NeutralCampCategory.Small,small,Vector3.zero,2)});
+            CreateNeutralCamp(root.transform,"ember.small.south",new Vector3(38f,0f,-26f),new[]{new NeutralSpawnEntry(NeutralCampCategory.Small,small,Vector3.zero,2)});
+            CreateNeutralCamp(root.transform,"ember.medium.north",new Vector3(-16f,0f,48f),new[]{new NeutralSpawnEntry(NeutralCampCategory.Medium,medium,Vector3.zero,1),new NeutralSpawnEntry(NeutralCampCategory.Small,small,new Vector3(2f,0f,-1f),1)});
+            CreateNeutralCamp(root.transform,"ember.medium.south",new Vector3(48f,0f,-12f),new[]{new NeutralSpawnEntry(NeutralCampCategory.Medium,medium,Vector3.zero,1),new NeutralSpawnEntry(NeutralCampCategory.Small,small,new Vector3(-2f,0f,-1f),1)});
+            CreateNeutralCamp(root.transform,"ember.large",new Vector3(26f,0f,-38f),new[]{new NeutralSpawnEntry(NeutralCampCategory.Large,large,Vector3.zero,1)});
+        }
+
+        private static void CreateNeutralCamp(Transform parent,string id,Vector3 position,NeutralSpawnEntry[] composition)
+        {
+            GameObject item=new GameObject($"Camp {id}");item.transform.SetParent(parent);item.transform.position=position;NeutralCamp camp=item.AddComponent<NeutralCamp>();camp.Configure(id,composition,8f,15f,1.5f,35f);
+        }
+
+        private static GameObject CreateNeutralPrefab(string assetName,NeutralCampCategory category,PrimitiveType primitive,Material material,Material healthBackgroundMaterial,Material healthFillMaterial,float maxHealth,float damage,float range,float interval,int experience,int gold)
+        {
+            string path=$"Assets/Prefabs/Neutrals/{assetName}.prefab";GameObject neutral=GameObject.CreatePrimitive(primitive);neutral.name=assetName;neutral.layer=AttackableLayer;neutral.transform.localScale=category==NeutralCampCategory.Large?Vector3.one*1.15f:Vector3.one*.72f;neutral.GetComponent<Renderer>().sharedMaterial=material;
+            TeamMember member=neutral.AddComponent<TeamMember>();SetEnum(member,"team",(int)TeamId.Neutral);Health health=neutral.AddComponent<Health>();SetFloat(health,"maxHealth",maxHealth);neutral.AddComponent<StatusEffectController>();neutral.AddComponent<VisionVisibility>();CreateHealthBar(neutral.transform,health,healthBackgroundMaterial,healthFillMaterial,category==NeutralCampCategory.Large?2.3f:1.65f,1.1f);neutral.AddComponent<ClickMover>();BasicAttack attack=neutral.AddComponent<BasicAttack>();ConfigureAttack(attack,range>3f?AttackDelivery.Ranged:AttackDelivery.Melee,range,damage,interval,.25f,.3f);AttackVisual visual=neutral.AddComponent<AttackVisual>();SetObjectReference(visual,"targetRenderer",neutral.GetComponent<Renderer>());neutral.AddComponent<NeutralUnitController>();ExperienceReward reward=neutral.AddComponent<ExperienceReward>();SetInt(reward,"experienceReward",experience);SetFloat(reward,"experienceRadius",14f);SetInt(reward,"goldReward",gold);SetBool(reward,"shareExperienceWithNearbyHeroes",true);PrefabUtility.SaveAsPrefabAsset(neutral,path);Object.DestroyImmediate(neutral);return AssetDatabase.LoadAssetAtPath<GameObject>(path);
+        }
 
         private static void BuildLaneCreeps(Material azureMaterial, Material emberMaterial, Material healthBackgroundMaterial, Material healthFillMaterial)
         {
