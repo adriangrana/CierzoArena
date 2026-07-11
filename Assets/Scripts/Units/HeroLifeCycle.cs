@@ -143,6 +143,14 @@ namespace CierzoArena.Units
             attack.ClearTarget();
             mover.Stop();
             health.RestoreFull();
+            if (TryGetComponent(out StatusEffectController effects))
+            {
+                effects.ClearAll();
+            }
+            if (TryGetComponent(out HeroMana mana))
+            {
+                mana.RestoreFull();
+            }
             remaining = 0f;
             ApplyPresentation(true);
             SetState(HeroLifeState.Alive);

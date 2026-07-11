@@ -280,7 +280,7 @@ M4.1 introduce `MobaCameraController` (nuevo, independiente de `IsometricCameraR
 
 M4.2 añade zoom ortográfico limitado (rueda arriba = zoom in, reduciendo `orthographicSize`) y límites reales del mapa mediante `CameraWorldBounds` (nuevo componente de área de juego con gizmos). El clamp mantiene toda la región visible dentro de los bounds calculando la proyección del viewport sobre un plano horizontal a partir de la orientación real de la cámara (intersección de las cuatro esquinas, sin `55` codificado), por lo que respeta zoom, aspect ratio e inclinación. Los offsets visibles son asimétricos (la cámara inclinada ve más hacia delante que hacia atrás) y, cuando el viewport supera el mapa en un eje, ese eje se centra de forma determinista.
 
-M4.3 añade seguimiento del héroe local mediante un `LocalHeroProvider` desacoplado (en Runtime, sin conocer Netcode): el controlador empieza en `FollowHero`, sigue al héroe en `LateUpdate`, pasa a `Free` con input manual real, y Space recentra. `NetworkUnitController` registra su unidad como héroe local solo cuando es owner (nunca una unidad remota), tolerando spawn tardío y despawn sin búsquedas globales por frame ni tráfico de red de cámara.
+M4.3 añade seguimiento del héroe local mediante un `LocalHeroProvider` desacoplado (en Runtime, sin conocer Netcode): el controlador empieza en `FollowHero`, sigue al héroe en `LateUpdate`, pasa a `Free` con input manual real, y Space recentra. El paneo usa flechas para reservar Q/W/E/R a las habilidades. `NetworkUnitController` registra su unidad como héroe local solo cuando es owner (nunca una unidad remota), tolerando spawn tardío y despawn sin búsquedas globales por frame ni tráfico de red de cámara.
 
 M4.4 integra la cámara MOBA en la greybox principal (`MobaGreyboxArena`) sustituyendo a la cámara técnica M3A: la cámara empieza encuadrada y siguiendo a Azure (registrado como héroe local vía `SceneLocalHeroRegistrar`), con bounds reales a ±86 (cara exterior de los muros de navegación, centro ±84 + grosor 4), zoom 12–55, y un offset de encuadre `followPlaneOffset` que centra al héroe compensando la inclinación (independiente del zoom). La escena de red (`MultiplayerSpikeArena`) también pasa a la cámara MOBA con su propio `LocalHeroProvider`, de modo que host y cliente siguen cada uno su unidad owner. `IsometricCameraRig` permanece en el proyecto para las escenas spike y sus tests. Pendiente de validación manual (local + host/cliente) y de comprobación en varias resoluciones.
 
@@ -412,52 +412,50 @@ Status: 🔵 Implementado / pendiente de validación final en Unity
 
 Resultado: `Los héroes ya pueden convertir el oro de la partida en mejoras mediante objetos.`
 
-### Milestone 12 — Torres
+### Milestone 12 — Maná y habilidades básicas
 
-Status: ⬜ Futuro
+Status: 🔵 Implementado / pendiente de validación final en Unity
 
-- [ ] Selección de objetivo
-- [ ] Rango
-- [ ] Ataque
-- [ ] Proyectiles
-- [ ] Daño
-- [ ] Cambio de aggro
-- [ ] Prioridades
-- [ ] Vida
-- [ ] Destrucción
-- [ ] Equipo
-- [ ] Feedback
+- [x] Maná máximo, actual y regeneración autoritativa; reaparece lleno.
+- [x] Cuatro slots con Q/W/E/R, puntos de habilidad, niveles, restricciones de definitiva y cooldowns.
+- [x] Q proyectil dirigido, W área, E aumento temporal de movimiento y R área fuerte.
+- [x] Cast point, cancelación previa por órdenes/muerte/victoria, validación de equipo, objetivo, rango y coste.
+- [x] UI provisional de maná, niveles, cooldowns y mejora de habilidad.
+- [x] El cliente sólo solicita upgrade/cast; servidor valida y replica maná, puntos, niveles y cooldowns.
 
-### Milestone 13 — Bases y condición de victoria
+Resultado: `Los héroes ya pueden aprender y lanzar habilidades autoritativas durante la partida.`
 
-Status: ⬜ Futuro
+### Milestone 13 — Estados de combate y efectos temporales
 
-- [ ] Estructura principal Azure
-- [ ] Estructura principal Ember
-- [ ] Invulnerabilidad si aplica
-- [ ] Destrucción
-- [ ] Victoria
-- [ ] Derrota
-- [ ] Pantalla final
-- [ ] Reinicio de partida
+Status: 🔵 Implementado / pendiente de validación final en Unity
 
-Resultado: por primera vez CierzoArena tiene una partida que puede terminar.
+- [x] Controlador reutilizable con duración, refresco y reemplazo por magnitud.
+- [x] Stun, root, silence, slow, escudo y buffs de daño/movimiento.
+- [x] Escudo integrado antes de la vida en la única ruta de daño.
+- [x] Órdenes, ataques y habilidades respetan los estados bloqueantes.
+- [x] W aplica slow y R aplica stun de área; UI textual de estados y escudo.
+- [x] Limpieza en muerte/respawn y snapshots replicados por servidor para héroes en Netcode.
+
+Resultado: `Las habilidades ya pueden aplicar control, protección y modificaciones temporales de estadísticas.`
 
 ---
 
 ## FASE VII — Progresión dentro de la partida
 
-### Milestone 14 — Experiencia y niveles
+### Milestone 14 — Visión, niebla de guerra y minimapa
 
-Status: ⬜ Futuro
+Status: ✅ Implementado
 
-- [ ] XP
-- [ ] Radio de experiencia
-- [ ] Subida de nivel
-- [ ] Estadísticas por nivel
-- [ ] Puntos de habilidad
-- [ ] Nivel máximo
-- [ ] Feedback visual
+- [x] Fuentes registradas de visión por equipo para héroes, creeps, torres y núcleos.
+- [x] Visión circular simple en XZ, sin compartir visión entre Azure y Ember.
+- [x] Niebla de malla reutilizable que oscurece el terreno fuera de visión.
+- [x] Unidades móviles enemigas, sus barras, selección y efectos se ocultan fuera de visión.
+- [x] Las estructuras enemigas se conservan como estado conocido oscurecido; vida y cambios no vistos se revelan al recuperar visión.
+- [x] Targeting local y validación autoritativa de ataques/objetivos dirigidos según visión.
+- [x] Minimapa con terreno, estructuras conocidas, enemigos visibles y clic para mover sólo la cámara.
+- [x] Integración local y host/cliente en ambas escenas.
+
+Resultado: `La información del mapa ya depende de la visión de cada equipo.`
 
 ### Milestone 15 — Oro y last hit
 

@@ -54,6 +54,7 @@ namespace CierzoArena.Netcode.EditorTools
             UnitDefinition emberDefinition = CreateOrLoadUnitDefinition(
                 "Assets/Data/EmberTarget.asset", 180f, 4.2f, 30f, 1.8f, 0.5f);
             ItemCatalog itemCatalog = CreateShopCatalog();
+            AbilityDefinition[] abilityKit = CreateHeroAbilityKit();
             CreateShopZone("Azure Shop", new Vector3(-10f, 0.05f, -6f), TeamId.Azure, itemCatalog, azureMaterial);
             CreateShopZone("Ember Shop", new Vector3(10f, 0.05f, 6f), TeamId.Ember, itemCatalog, emberMaterial);
 
@@ -63,11 +64,11 @@ namespace CierzoArena.Netcode.EditorTools
             // in-scene GlobalObjectIdHash / ScenePlacedObjects registration failure.
             string azurePrefabPath = CreateNetworkUnitPrefab(
                 "AzureVanguardNetwork", "Azure Vanguard", TeamId.Azure,
-                azureMaterial, ringMaterial, healthBackgroundMaterial, healthFillMaterial, azureDefinition);
+                azureMaterial, ringMaterial, healthBackgroundMaterial, healthFillMaterial, azureDefinition, abilityKit);
 
             string emberPrefabPath = CreateNetworkUnitPrefab(
                 "EmberSkirmisherNetwork", "Ember Skirmisher", TeamId.Ember,
-                emberMaterial, ringMaterial, healthBackgroundMaterial, healthFillMaterial, emberDefinition);
+                emberMaterial, ringMaterial, healthBackgroundMaterial, healthFillMaterial, emberDefinition, abilityKit);
 
             string azureTowerPrefabPath = CreateNetworkStructurePrefab("AzureTowerNetwork", "Azure Tower", TeamId.Azure, StructureKind.Tower, StructureLane.Mid, StructureTier.Outer, azureMaterial, healthBackgroundMaterial, healthFillMaterial);
             string emberTowerPrefabPath = CreateNetworkStructurePrefab("EmberTowerNetwork", "Ember Tower", TeamId.Ember, StructureKind.Tower, StructureLane.Mid, StructureTier.Outer, emberMaterial, healthBackgroundMaterial, healthFillMaterial);
@@ -178,13 +179,13 @@ namespace CierzoArena.Netcode.EditorTools
             return list;
         }
 
-        private static string CreateNetworkUnitPrefab(string assetName, string displayName, TeamId team, Material bodyMaterial, Material ringMaterial, Material healthBackgroundMaterial, Material healthFillMaterial, UnitDefinition definition)
+        private static string CreateNetworkUnitPrefab(string assetName, string displayName, TeamId team, Material bodyMaterial, Material ringMaterial, Material healthBackgroundMaterial, Material healthFillMaterial, UnitDefinition definition, AbilityDefinition[] abilityKit)
         {
             EnsureFolder("Assets", "Prefabs");
             EnsureFolder("Assets/Prefabs", "Network");
             string path = $"Assets/Prefabs/Network/{assetName}.prefab";
 
-            GameObject root = BuildNetworkUnit(displayName, team, bodyMaterial, ringMaterial, healthBackgroundMaterial, healthFillMaterial, definition);
+            GameObject root = BuildNetworkUnit(displayName, team, bodyMaterial, ringMaterial, healthBackgroundMaterial, healthFillMaterial, definition, abilityKit);
 
             // Persisting as a prefab asset triggers NetworkObject.OnValidate, which
             // assigns a deterministic non-zero GlobalObjectIdHash from the asset GUID.
@@ -194,7 +195,7 @@ namespace CierzoArena.Netcode.EditorTools
             return path;
         }
 
-        private static GameObject BuildNetworkUnit(string name, TeamId team, Material bodyMaterial, Material ringMaterial, Material healthBackgroundMaterial, Material healthFillMaterial, UnitDefinition definition)
+        private static GameObject BuildNetworkUnit(string name, TeamId team, Material bodyMaterial, Material ringMaterial, Material healthBackgroundMaterial, Material healthFillMaterial, UnitDefinition definition, AbilityDefinition[] abilityKit)
         {
             GameObject unit = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             unit.name = name;
@@ -212,6 +213,8 @@ namespace CierzoArena.Netcode.EditorTools
             TeamMember teamMember = unit.AddComponent<TeamMember>();
             SetEnum(teamMember, "team", (int)team);
             unit.AddComponent<HeroUnit>();
+            unit.AddComponent<VisionSource>();
+            unit.AddComponent<VisionVisibility>();
 
             Health health = unit.AddComponent<Health>();
             SetFloat(health, "maxHealth", definition.MaxHealth);
@@ -240,8 +243,14 @@ namespace CierzoArena.Netcode.EditorTools
             SetInt(heroReward, "goldReward", 0);
             unit.AddComponent<HeroEconomy>();
             unit.AddComponent<HeroInventory>();
+            unit.AddComponent<HeroMana>();
+            unit.AddComponent<StatusEffectController>();
+            unit.AddComponent<StatusEffectFeedback>();
+            HeroAbilities heroAbilities = unit.AddComponent<HeroAbilities>();
+            SetObjectArray(heroAbilities, "abilities", abilityKit);
             unit.AddComponent<HeroProgressionFeedback>();
             unit.AddComponent<HeroShopFeedback>();
+            unit.AddComponent<HeroAbilitiesFeedback>();
             unit.AddComponent<HeroLifeCycle>();
             unit.AddComponent<HeroRespawnFeedback>();
             unit.AddComponent<NetworkUnitController>();
@@ -249,6 +258,8 @@ namespace CierzoArena.Netcode.EditorTools
             unit.AddComponent<NetworkHeroProgression>();
             unit.AddComponent<NetworkHeroEconomy>();
             unit.AddComponent<NetworkHeroInventory>();
+            unit.AddComponent<NetworkHeroAbilities>();
+            unit.AddComponent<NetworkStatusEffects>();
 
             GameObject ring = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             ring.name = "Selection Ring";
@@ -300,6 +311,9 @@ namespace CierzoArena.Netcode.EditorTools
             SetEnum(member, "team", (int)team);
             Health health = creep.AddComponent<Health>();
             SetFloat(health, "maxHealth", archetype == CreepArchetype.Melee ? 220f : 150f);
+            creep.AddComponent<StatusEffectController>();
+            creep.AddComponent<VisionSource>();
+            creep.AddComponent<VisionVisibility>();
             CreateHealthBar(creep.transform, health, healthBackgroundMaterial, healthFillMaterial, 1.65f, 1.05f);
             creep.AddComponent<ClickMover>();
             BasicAttack attack = creep.AddComponent<BasicAttack>();
@@ -368,6 +382,8 @@ namespace CierzoArena.Netcode.EditorTools
             SetFloat(health, "maxHealth", kind == StructureKind.Core ? 1000f : 400f);
             health.RestoreFull();
             StructureEntity entity = structureObject.AddComponent<StructureEntity>();
+            structureObject.AddComponent<VisionSource>();
+            structureObject.AddComponent<VisionVisibility>();
             SetEnum(entity, "kind", (int)kind);
             SetEnum(entity, "lane", (int)lane);
             SetEnum(entity, "tier", (int)tier);
@@ -567,6 +583,8 @@ namespace CierzoArena.Netcode.EditorTools
             SetFloat(bounds, "maxZ", spikeCameraBound);
 
             MobaCameraController controller = cameraObject.AddComponent<MobaCameraController>();
+            cameraObject.AddComponent<MinimapFeedback>();
+            cameraObject.AddComponent<FogOfWarOverlay>();
             SerializedObject controllerObject = new SerializedObject(controller);
             controllerObject.FindProperty("keyboardPanSpeed").floatValue = 30f;
             controllerObject.FindProperty("edgeScrollingEnabled").boolValue = true;
@@ -636,6 +654,29 @@ namespace CierzoArena.Netcode.EditorTools
             SetObjectArray(catalog, "items", items);
             catalog.Rebuild();
             return catalog;
+        }
+
+        private static AbilityDefinition[] CreateHeroAbilityKit()
+        {
+            EnsureFolder("Assets", "Data"); EnsureFolder("Assets/Data", "Abilities");
+            return new[]
+            {
+                CreateOrLoadAbility("Assets/Data/Abilities/ArcBolt.asset", "arc.bolt", "Arc Bolt", "Q: targeted projectile damage.", AbilityTargeting.UnitTarget, AbilityEffect.ProjectileDamage, 8f, .25f, 2.5f, 0f, 14f, new[] { 35f, 45f, 55f, 65f }, new[] { 45f, 70f, 95f, 120f }, new[] { 1, 1, 1, 1 }),
+                CreateOrLoadAbility("Assets/Data/Abilities/StormMark.asset", "storm.mark", "Storm Mark", "W: slows enemies in a chosen area.", AbilityTargeting.PointTarget, AbilityEffect.AreaSlow, 7f, .3f, 2.5f, 2.5f, 14f, new[] { 45f, 55f, 65f, 75f }, new[] { .25f, .35f, .45f, .55f }, new[] { 1, 1, 1, 1 }),
+                CreateOrLoadAbility("Assets/Data/Abilities/GaleStep.asset", "gale.step", "Gale Step", "E: temporary self movement boost.", AbilityTargeting.NoTarget, AbilityEffect.SelfMoveSpeed, 0f, .1f, 0f, 3f, 14f, new[] { 30f, 35f, 40f, 45f }, new[] { 1f, 1.4f, 1.8f, 2.2f }, new[] { 1, 1, 1, 1 }),
+                CreateOrLoadAbility("Assets/Data/Abilities/TempestFall.asset", "tempest.fall", "Tempest Fall", "R: powerful area stun.", AbilityTargeting.PointTarget, AbilityEffect.StrongAreaStun, 9f, .45f, 4f, 1.25f, 14f, new[] { 90f, 120f, 150f, 180f }, new[] { 150f, 240f, 330f, 420f }, new[] { 6, 12, 18, 18 })
+            };
+        }
+
+        private static AbilityDefinition CreateOrLoadAbility(string path, string id, string displayName, string description, AbilityTargeting targeting, AbilityEffect effect, float range, float castPoint, float radius, float duration, float projectileSpeed, float[] costs, float[] values, int[] requiredLevels)
+        {
+            AbilityDefinition ability = AssetDatabase.LoadAssetAtPath<AbilityDefinition>(path);
+            if (ability == null) { ability = ScriptableObject.CreateInstance<AbilityDefinition>(); AssetDatabase.CreateAsset(ability, path); }
+            SerializedObject serialized = new SerializedObject(ability);
+            serialized.FindProperty("abilityId").stringValue = id; serialized.FindProperty("displayName").stringValue = displayName; serialized.FindProperty("description").stringValue = description;
+            serialized.FindProperty("targeting").enumValueIndex = (int)targeting; serialized.FindProperty("effect").enumValueIndex = (int)effect; serialized.FindProperty("range").floatValue = range; serialized.FindProperty("castPoint").floatValue = castPoint; serialized.FindProperty("areaRadius").floatValue = radius; serialized.FindProperty("duration").floatValue = duration; serialized.FindProperty("projectileSpeed").floatValue = projectileSpeed;
+            SetFloatArray(serialized.FindProperty("manaCosts"), costs); SetFloatArray(serialized.FindProperty("effectValues"), values); SetIntArray(serialized.FindProperty("requiredHeroLevels"), requiredLevels);
+            serialized.ApplyModifiedPropertiesWithoutUndo(); EditorUtility.SetDirty(ability); return ability;
         }
 
         private static ItemDefinition CreateOrLoadItemDefinition(string path, string id, string displayName, string description, int purchasePrice, int salePrice, float health, float damage, float movement, float attackSpeed)
@@ -746,6 +787,18 @@ namespace CierzoArena.Netcode.EditorTools
                 property.GetArrayElementAtIndex(i).objectReferenceValue = values[i];
             }
             serialized.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static void SetFloatArray(SerializedProperty property, float[] values)
+        {
+            property.arraySize = values.Length;
+            for (int i = 0; i < values.Length; i++) property.GetArrayElementAtIndex(i).floatValue = values[i];
+        }
+
+        private static void SetIntArray(SerializedProperty property, int[] values)
+        {
+            property.arraySize = values.Length;
+            for (int i = 0; i < values.Length; i++) property.GetArrayElementAtIndex(i).intValue = values[i];
         }
 
         private static void CreateProjectileSpawner(NetworkProjectileVisual projectilePrefab)

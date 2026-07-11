@@ -1,4 +1,5 @@
 using CierzoArena.Combat;
+using CierzoArena.Units;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -12,6 +13,11 @@ namespace CierzoArena.Netcode
         private readonly NetworkVariable<float> speed = new(14f);
         private readonly NetworkVariable<float> lifetime = new(4f);
         private float elapsed;
+
+        private void Awake()
+        {
+            if (!TryGetComponent(out VisionEffectVisibility _)) gameObject.AddComponent<VisionEffectVisibility>();
+        }
 
         public void Configure(NetworkObject target, float visualSpeed, float visualLifetime)
         {

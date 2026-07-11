@@ -245,6 +245,9 @@ GameObject:
   - component: {fileID: 5465401950085519313}
   - component: {fileID: 712619973640473077}
   - component: {fileID: 2844707698217506869}
+  - component: {fileID: 8516379911800600692}
+  - component: {fileID: 521411361409752264}
+  - component: {fileID: 7585291151767197015}
   - component: {fileID: 8540464696184853408}
   - component: {fileID: 2604797889981034016}
   - component: {fileID: 632555324040071900}
@@ -378,6 +381,43 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: CierzoArena.Runtime::CierzoArena.Combat.Health
   maxHealth: 150
+--- !u!114 &8516379911800600692
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8164605437689287411}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b7ac6f67c2f949c6afd8c17e15a3f201, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: CierzoArena.Runtime::CierzoArena.Units.StatusEffectController
+--- !u!114 &521411361409752264
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8164605437689287411}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b7ac6f67c2f949c6afd8c17e15a3f301, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: CierzoArena.Runtime::CierzoArena.Units.VisionSource
+  radius: 12
+--- !u!114 &7585291151767197015
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8164605437689287411}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b7ac6f67c2f949c6afd8c17e15a3f302, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: CierzoArena.Runtime::CierzoArena.Units.VisionVisibility
 --- !u!114 &8540464696184853408
 MonoBehaviour:
   m_ObjectHideFlags: 0

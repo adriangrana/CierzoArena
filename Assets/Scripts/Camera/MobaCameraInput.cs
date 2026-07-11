@@ -9,9 +9,9 @@ namespace CierzoArena.CameraSystem
     /// methods; the direction math is exposed as pure static functions that can be
     /// unit-tested without a running player.
     ///
-    /// Keyboard uses the project's existing "Horizontal"/"Vertical" axes, which are
-    /// already bound to both WASD (alt buttons a/d, s/w) and the arrow keys. GetAxisRaw
-    /// returns a clean -1/0/1 with no smoothing, which is what a camera pan wants.
+    /// Keyboard pan uses only arrow keys. Q/W/E/R are reserved by the hero ability
+    /// kit, so relying on the legacy Horizontal/Vertical axes (which include WASD)
+    /// would also switch the camera to free mode while casting.
     /// </summary>
     public sealed class MobaCameraInput
     {
@@ -21,7 +21,9 @@ namespace CierzoArena.CameraSystem
         /// </summary>
         public Vector2 ReadKeyboardDirection()
         {
-            Vector2 raw = new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical"));
+            float x = (Input.GetKey(KeyCode.RightArrow) ? 1f : 0f) - (Input.GetKey(KeyCode.LeftArrow) ? 1f : 0f);
+            float y = (Input.GetKey(KeyCode.UpArrow) ? 1f : 0f) - (Input.GetKey(KeyCode.DownArrow) ? 1f : 0f);
+            Vector2 raw = new Vector2(x, y);
             return LimitMagnitude(raw, 1f);
         }
 

@@ -68,6 +68,8 @@ GameObject:
   - component: {fileID: 5250525631110706754}
   - component: {fileID: 1891759444802609601}
   - component: {fileID: 1108868389167126436}
+  - component: {fileID: 145011952376085780}
+  - component: {fileID: 7110625913049857064}
   - component: {fileID: 6567214877372100782}
   m_Layer: 0
   m_Name: AzureCoreNetwork
@@ -289,6 +291,31 @@ MonoBehaviour:
   collidersToDisable:
   - {fileID: 2548700826233982151}
   - {fileID: 1785573935653269089}
+--- !u!114 &145011952376085780
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1401529001611232202}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b7ac6f67c2f949c6afd8c17e15a3f301, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: CierzoArena.Runtime::CierzoArena.Units.VisionSource
+  radius: 12
+--- !u!114 &7110625913049857064
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1401529001611232202}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b7ac6f67c2f949c6afd8c17e15a3f302, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: CierzoArena.Runtime::CierzoArena.Units.VisionVisibility
 --- !u!114 &6567214877372100782
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -338,6 +338,8 @@ GameObject:
   - component: {fileID: 4865374277487425726}
   - component: {fileID: 3109310316574340005}
   - component: {fileID: 8920872948964082688}
+  - component: {fileID: 3054619374269123755}
+  - component: {fileID: 9073846366637029855}
   - component: {fileID: 4247868301067704926}
   - component: {fileID: 2998532347789012997}
   - component: {fileID: 3171935849099911085}
@@ -349,8 +351,13 @@ GameObject:
   - component: {fileID: 4404991198174352373}
   - component: {fileID: 7936450002617782695}
   - component: {fileID: 7164035397985483793}
+  - component: {fileID: 7412333801418492465}
+  - component: {fileID: 5545680065727833754}
+  - component: {fileID: 4236376314490834618}
+  - component: {fileID: 7900616894236775148}
   - component: {fileID: 2722150763699248660}
   - component: {fileID: 3320493177217654271}
+  - component: {fileID: 5784065514123582300}
   - component: {fileID: 8768412026401482626}
   - component: {fileID: 281907993321800783}
   - component: {fileID: 308542167135044382}
@@ -358,6 +365,8 @@ GameObject:
   - component: {fileID: 6857512514383220583}
   - component: {fileID: 1035235838769766252}
   - component: {fileID: 2642297214873495390}
+  - component: {fileID: 6812228475176985915}
+  - component: {fileID: 7963021220088169899}
   - component: {fileID: 3848645385178074447}
   - component: {fileID: 8987734147815320748}
   m_Layer: 7
@@ -574,6 +583,31 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: aa8140753d6c4dd6a347fb7f3ed2b167, type: 3}
   m_Name: 
   m_EditorClassIdentifier: CierzoArena.Runtime::CierzoArena.Units.HeroUnit
+--- !u!114 &3054619374269123755
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7012766082569407939}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b7ac6f67c2f949c6afd8c17e15a3f301, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: CierzoArena.Runtime::CierzoArena.Units.VisionSource
+  radius: 12
+--- !u!114 &9073846366637029855
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7012766082569407939}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b7ac6f67c2f949c6afd8c17e15a3f302, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: CierzoArena.Runtime::CierzoArena.Units.VisionVisibility
 --- !u!114 &4247868301067704926
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -757,6 +791,65 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: CierzoArena.Runtime::CierzoArena.Units.HeroInventory
   capacity: 6
+--- !u!114 &7412333801418492465
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7012766082569407939}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b7ac6f67c2f949c6afd8c17e15a3f101, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: CierzoArena.Runtime::CierzoArena.Units.HeroMana
+  maximumMana: 250
+  regenerationPerSecond: 6
+  authorityEnabled: 1
+--- !u!114 &5545680065727833754
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7012766082569407939}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b7ac6f67c2f949c6afd8c17e15a3f201, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: CierzoArena.Runtime::CierzoArena.Units.StatusEffectController
+--- !u!114 &4236376314490834618
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7012766082569407939}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b7ac6f67c2f949c6afd8c17e15a3f202, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: CierzoArena.Runtime::CierzoArena.Units.StatusEffectFeedback
+--- !u!114 &7900616894236775148
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7012766082569407939}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b7ac6f67c2f949c6afd8c17e15a3f104, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: CierzoArena.Runtime::CierzoArena.Units.HeroAbilities
+  abilities:
+  - {fileID: 11400000, guid: b1f700394c516ca449b5fa9c2a9f1985, type: 2}
+  - {fileID: 11400000, guid: fca80775c95cf0f4fab371369c0b962c, type: 2}
+  - {fileID: 11400000, guid: 7465dfa017f55624184d6389d37d5956, type: 2}
+  - {fileID: 11400000, guid: f16e7e0b090a8fd4aa1fb480b7177aa0, type: 2}
+  startingSkillPoints: 1
+  recoveryDuration: 0.1
+  authorityEnabled: 1
 --- !u!114 &2722150763699248660
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -781,6 +874,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b7ac6f67c2f949c6afd8c17e15a3f005, type: 3}
   m_Name: 
   m_EditorClassIdentifier: CierzoArena.Runtime::CierzoArena.Units.HeroShopFeedback
+--- !u!114 &5784065514123582300
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7012766082569407939}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b7ac6f67c2f949c6afd8c17e15a3f105, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: CierzoArena.Runtime::CierzoArena.Units.HeroAbilitiesFeedback
 --- !u!114 &8768412026401482626
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -873,6 +978,32 @@ MonoBehaviour:
   m_EditorClassIdentifier: CierzoArena.Netcode::CierzoArena.Netcode.NetworkHeroInventory
   ShowTopMostFoldoutHeaderGroup: 1
   catalog: {fileID: 0}
+--- !u!114 &6812228475176985915
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7012766082569407939}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b7ac6f67c2f949c6afd8c17e15a3f106, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: CierzoArena.Netcode::CierzoArena.Netcode.NetworkHeroAbilities
+  ShowTopMostFoldoutHeaderGroup: 1
+--- !u!114 &7963021220088169899
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7012766082569407939}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b7ac6f67c2f949c6afd8c17e15a3f203, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: CierzoArena.Netcode::CierzoArena.Netcode.NetworkStatusEffects
+  ShowTopMostFoldoutHeaderGroup: 1
 --- !u!114 &3848645385178074447
 MonoBehaviour:
   m_ObjectHideFlags: 0

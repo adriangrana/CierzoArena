@@ -29,6 +29,9 @@ Prototipo en Unity 6 (`ProjectSettings/ProjectVersion.txt`: Unity 6000.5.3f1) co
 - **M9** — Experiencia y niveles: el héroe que logra el último golpe a un creep o héroe enemigo recibe experiencia autoritativa. La curva usa 100 XP al nivel 1 y un crecimiento de 1,25; cada nivel añade 80 de vida máxima (y vida actual), 8 de daño y 0,2 de velocidad. El nivel se conserva tras morir y se replica en red.
 - **M10** — Oro y experiencia compartida: los creeps reparten su XP total entre héroes enemigos vivos dentro de 14 unidades, preservando el resto de forma determinista. Sólo el último golpe de un héroe concede oro (40 melee, 55 ranged); oro y XP se mantienen tras respawn y se replican desde el servidor.
 - **M11** — Tienda, inventario e ítems básicos: cada base tiene una tienda aliada y un catálogo de cinco objetos. El inventario tiene seis huecos, conserva objetos tras muerte/respawn y recalcula vida máxima, daño, movimiento y cadencia desde sus slots. En red, el cliente propietario sólo solicita compra/venta; el servidor valida zona, equipo, oro, vida y estado de partida, y replica los IDs del inventario.
+- **M12** — Maná y habilidades básicas: los héroes tienen maná regenerable, puntos de habilidad y cuatro slots. Q lanza un proyectil dirigido, W y R dañan áreas y E concede velocidad temporal. Coste, cast point, cancelación y cooldown se validan en servidor; host/cliente reciben el mismo estado.
+- **M13** — Estados de combate: efectos temporales autoritativos (stun, root, silence, slow, escudo y buffs) con duración, refresco, limpieza al morir y snapshots de red. W ralentiza y R aturde en área.
+- **M14** — Visión y niebla de guerra: héroes, creeps y estructuras aportan visión circular por equipo. Los enemigos móviles desaparecen fuera de visión; el terreno permanece como contexto del mapa y las estructuras enemigas conservan una representación oscurecida de su último estado conocido. Sus barras, ataques y cambios (incluida una destrucción no vista) sólo se actualizan al recuperar visión. El minimapa aplica la misma regla.
 
 La version real del proyecto esta en `ProjectSettings/ProjectVersion.txt`: Unity 6000.5.3f1.
 
@@ -56,6 +59,8 @@ La version real del proyecto esta en `ProjectSettings/ProjectVersion.txt`: Unity
 11. Para probar M9, da el último golpe a dos creeps enemigos: el panel provisional muestra el nivel y XP; con 120 XP Azure llega a nivel 2 y aumenta vida, daño y velocidad. Matarlo y esperar su respawn no reinicia el nivel.
 12. Para probar M10, sitúa dos héroes enemigos cerca de un creep que muere: ambos comparten la XP y sólo quien da el último golpe recibe el oro mostrado como `+40`/`+55`.
 13. Para probar M11, consigue oro con últimos golpes y vuelve al círculo luminoso de tu base. Aparece `TEAM SHOP`: compra objetos, comprueba el panel de seis slots y sus estadísticas; vende uno. Fuera de la zona, muerto o tras la victoria no se permite comprar ni vender. Tras reaparecer, los slots y las bonificaciones deben mantenerse.
+14. Para probar M12, usa los botones `+ Level` para aprender una habilidad. Q y luego clic izquierdo en enemigo lanza Arc Bolt; W/R y clic en suelo lanzan áreas; E se lanza sobre el héroe. Clic derecho o Escape cancela un cast antes de su punto de lanzamiento. El HUD muestra maná, puntos y cooldowns.
+15. Para probar M14, aleja Azure de enemigos: héroes y creeps Ember deben desaparecer, mientras torres y núcleo Ember permanecen como siluetas oscuras sin barra de vida. Destruye una torre cuando Azure no pueda verla y vuelve a acercarte: conserva su último estado hasta que recuperes visión, momento en que se actualiza. El minimapa debe ocultar unidades móviles no vistas y atenuar las estructuras conocidas.
 
 ## Controles
 
@@ -66,10 +71,10 @@ La version real del proyecto esta en `ProjectSettings/ProjectVersion.txt`: Unity
 
 ### Cámara técnica (M3A)
 
-- WASD / flechas: mover la cámara libremente (pasa a modo libre).
+- Flechas: mover la cámara libremente (pasa a modo libre). Q/W/E/R están reservadas para habilidades.
 - Rueda del ratón: zoom con límites.
 - F: recentrar en la unidad y volver al seguimiento.
 
 ## Estado del milestone
 
-Los Milestones 1 a 11 están implementados. M10 separa experiencia por proximidad y oro por último golpe; M11 permite gastarlo en objetos. Para regenerar las escenas tras cambios de builders, usa los menús `Cierzo Arena > Create MOBA Greybox Arena` y `Cierzo Arena > Create Multiplayer Spike Scene`.
+Los Milestones 1 a 14 están implementados. M10 separa experiencia por proximidad y oro por último golpe; M11 permite gastarlo en objetos; M12–M13 añaden habilidades y estados; M14 añade visión por equipo y niebla. Para regenerar las escenas tras cambios de builders, usa los menús `Cierzo Arena > Create MOBA Greybox Arena` y `Cierzo Arena > Create Multiplayer Spike Scene`.

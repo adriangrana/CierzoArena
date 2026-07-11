@@ -41,11 +41,12 @@ namespace CierzoArena.Combat
         private float levelDamageBonus;
         private float itemDamageBonus;
         private float itemAttackSpeedBonus;
+        private float statusDamageBonus;
 
         public AttackState State => state;
         public Health Target => target;
         public float Range => Mathf.Max(0f, range);
-        public float Damage => Mathf.Max(0f, damage + levelDamageBonus + itemDamageBonus);
+        public float Damage => Mathf.Max(0f, damage + levelDamageBonus + itemDamageBonus + statusDamageBonus);
         public float AttackInterval => Mathf.Max(0.01f, attackInterval / (1f + itemAttackSpeedBonus));
         public AttackDelivery Delivery => delivery;
         public bool NeedsApproach => state == AttackState.Approaching;
@@ -126,6 +127,7 @@ namespace CierzoArena.Combat
             itemDamageBonus = Mathf.Max(0f, damageBonus);
             itemAttackSpeedBonus = Mathf.Max(0f, attackSpeedBonus);
         }
+        public void SetStatusDamageBonus(float bonus) => statusDamageBonus = Mathf.Max(0f, bonus);
 
         /// <summary>Compatibility intent entry point. Damage still waits for Simulate to reach attackPoint.</summary>
         public bool TryAttack(Health newTarget)
@@ -233,7 +235,15 @@ namespace CierzoArena.Combat
             {
                 return false;
             }
-
+            if (TryGetComponent(out CierzoArena.Units.StatusEffectController effects) && !effects.CanAttack)
+            {
+                return false;
+            }
+            if (TryGetComponent(out CierzoArena.Units.VisionSource _) &&
+                !CierzoArena.Units.VisionSource.IsVisible(teamMember.Team, candidate.transform.position))
+            {
+                return false;
+            }
             if ((TryGetComponent(out HeroLifeCycle attackerLife) && !attackerLife.IsAliveForGameplay) ||
                 (candidate.TryGetComponent(out HeroLifeCycle targetLife) && !targetLife.IsAliveForGameplay))
             {
@@ -346,6 +356,7 @@ namespace CierzoArena.Combat
             }
 
             AttackProjectile projectile = projectileObject.AddComponent<AttackProjectile>();
+            projectileObject.AddComponent<CierzoArena.Units.VisionEffectVisibility>();
             projectile.Launch(victim, teamMember, Damage, projectileSpeed, projectileLifetime, projectileImpactRadius);
         }
 

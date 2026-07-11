@@ -1,4 +1,5 @@
 using CierzoArena.Combat;
+using CierzoArena.Units;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -17,8 +18,13 @@ namespace CierzoArena.Netcode
         [SerializeField] private LayerMask selectableMask;
         [SerializeField] private LayerMask attackableMask;
         [SerializeField] private KeyCode stopKey = KeyCode.S;
+        [SerializeField] private KeyCode abilityOneKey = KeyCode.Q;
+        [SerializeField] private KeyCode abilityTwoKey = KeyCode.W;
+        [SerializeField] private KeyCode abilityThreeKey = KeyCode.E;
+        [SerializeField] private KeyCode ultimateKey = KeyCode.R;
 
         private NetworkUnitController ownedUnit;
+        private int pendingAbilitySlot = -1;
 
         private void Awake()
         {
@@ -50,11 +56,46 @@ namespace CierzoArena.Netcode
             {
                 unit.RequestStopRpc();
             }
+            if (Input.GetKeyDown(abilityOneKey)) BeginAbility(unit, 0);
+            if (Input.GetKeyDown(abilityTwoKey)) BeginAbility(unit, 1);
+            if (Input.GetKeyDown(abilityThreeKey)) BeginAbility(unit, 2);
+            if (Input.GetKeyDown(ultimateKey)) BeginAbility(unit, 3);
+            if (Input.GetKeyDown(KeyCode.Escape)) pendingAbilitySlot = -1;
+
+            if (Input.GetMouseButtonDown(0) && ConfirmAbility(unit)) return;
 
             if (Input.GetMouseButtonDown(1))
             {
+                if (pendingAbilitySlot >= 0) { pendingAbilitySlot = -1; return; }
                 IssueCommand(unit);
             }
+        }
+
+        private void BeginAbility(NetworkUnitController unit, int slot)
+        {
+            HeroAbilities abilities = unit.GetComponent<HeroAbilities>(); NetworkHeroAbilities networkAbilities = unit.GetComponent<NetworkHeroAbilities>();
+            AbilityDefinition definition = abilities != null ? abilities.GetDefinition(slot) : null;
+            if (definition == null || networkAbilities == null) return;
+            if (definition.Targeting == AbilityTargeting.NoTarget) networkAbilities.RequestCast(slot, null, unit.transform.position);
+            else pendingAbilitySlot = slot;
+        }
+
+        private bool ConfirmAbility(NetworkUnitController unit)
+        {
+            if (pendingAbilitySlot < 0) return false;
+            HeroAbilities abilities = unit.GetComponent<HeroAbilities>(); NetworkHeroAbilities networkAbilities = unit.GetComponent<NetworkHeroAbilities>();
+            AbilityDefinition definition = abilities != null ? abilities.GetDefinition(pendingAbilitySlot) : null;
+            if (definition == null || networkAbilities == null) { pendingAbilitySlot = -1; return true; }
+            Ray ray = commandCamera.ScreenPointToRay(Input.mousePosition);
+            if (definition.Targeting == AbilityTargeting.UnitTarget && Physics.Raycast(ray, out RaycastHit unitHit, 500f, attackableMask))
+            {
+                Health target = unitHit.collider.GetComponentInParent<Health>(); networkAbilities.RequestCast(pendingAbilitySlot, target, target != null ? target.transform.position : Vector3.zero); pendingAbilitySlot = -1; return true;
+            }
+            if (definition.Targeting == AbilityTargeting.PointTarget && Physics.Raycast(ray, out RaycastHit groundHit, 500f, groundMask))
+            {
+                networkAbilities.RequestCast(pendingAbilitySlot, null, groundHit.point); pendingAbilitySlot = -1; return true;
+            }
+            return true;
         }
 
         private void IssueCommand(NetworkUnitController unit)

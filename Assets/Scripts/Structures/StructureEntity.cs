@@ -1,6 +1,7 @@
 using System;
 using CierzoArena.Combat;
 using CierzoArena.Core;
+using CierzoArena.Units;
 using UnityEngine;
 
 namespace CierzoArena.Structures
@@ -156,9 +157,25 @@ namespace CierzoArena.Structures
             }
         }
 
-        private void DisablePresentationAndCollision()
+        /// <summary>
+        /// Called when an enemy regains vision after a structure was destroyed in
+        /// fog. Until then, the local client deliberately keeps its last-known model.
+        /// </summary>
+        public void ApplyDestroyedPresentationAfterVision()
         {
-            if (renderersToDisable != null)
+            if (destroyed)
+            {
+                DisablePresentationAndCollision(true);
+            }
+        }
+
+        private void DisablePresentationAndCollision(bool force = false)
+        {
+            // Fog may defer only the renderer. Collision is authoritative gameplay
+            // state and must disappear immediately on every peer/server.
+            bool preserveKnownRenderer = !force && TryGetComponent(out VisionVisibility visibility) && visibility.PreserveKnownStructurePresentation;
+
+            if (!preserveKnownRenderer && renderersToDisable != null)
             {
                 foreach (Renderer target in renderersToDisable)
                 {

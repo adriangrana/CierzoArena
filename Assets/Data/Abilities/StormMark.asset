@@ -1,0 +1,41 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b7ac6f67c2f949c6afd8c17e15a3f102, type: 3}
+  m_Name: StormMark
+  m_EditorClassIdentifier: CierzoArena.Runtime::CierzoArena.Units.AbilityDefinition
+  abilityId: storm.mark
+  displayName: Storm Mark
+  description: 'W: slows enemies in a chosen area.'
+  maximumLevel: 4
+  requiredHeroLevels: 01000000010000000100000001000000
+  manaCosts:
+  - 45
+  - 55
+  - 65
+  - 75
+  cooldowns:
+  - 6
+  - 5.5
+  - 5
+  - 4.5
+  castPoint: 0.3
+  range: 7
+  targeting: 2
+  effect: 4
+  effectValues:
+  - 0.25
+  - 0.35
+  - 0.45
+  - 0.55
+  areaRadius: 2.5
+  duration: 2.5
+  projectileSpeed: 14

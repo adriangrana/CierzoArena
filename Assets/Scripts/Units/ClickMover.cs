@@ -20,8 +20,11 @@ namespace CierzoArena.Units
         private NavMeshAgent agent;
         private float levelMoveSpeedBonus;
         private float itemMoveSpeedBonus;
+        private float abilityMoveSpeedBonus;
+        private float statusMoveSpeedBonus;
+        private float statusMoveSpeedMultiplier = 1f;
 
-        public float EffectiveMoveSpeed => Mathf.Max(0f, moveSpeed + levelMoveSpeedBonus + itemMoveSpeedBonus);
+        public float EffectiveMoveSpeed => Mathf.Max(0f, (moveSpeed + levelMoveSpeedBonus + itemMoveSpeedBonus + abilityMoveSpeedBonus + statusMoveSpeedBonus) * statusMoveSpeedMultiplier);
 
         private void Awake()
         {
@@ -54,6 +57,7 @@ namespace CierzoArena.Units
 
         public void MoveTo(Vector3 worldPosition)
         {
+            if (TryGetComponent(out StatusEffectController effects) && !effects.CanMove) return;
             if (agent == null || !agent.isOnNavMesh)
             {
                 return;
@@ -116,6 +120,14 @@ namespace CierzoArena.Units
             itemMoveSpeedBonus = Mathf.Max(0f, bonus);
             if (agent != null) ConfigureAgent();
         }
+
+        public void SetAbilityMoveSpeedBonus(float bonus)
+        {
+            abilityMoveSpeedBonus = Mathf.Max(0f, bonus);
+            if (agent != null) ConfigureAgent();
+        }
+        public void SetStatusMoveSpeedBonus(float bonus) { statusMoveSpeedBonus = Mathf.Max(0f, bonus); if (agent != null) ConfigureAgent(); }
+        public void SetStatusMoveSpeedMultiplier(float multiplier) { statusMoveSpeedMultiplier = Mathf.Clamp(multiplier, .2f, 1f); if (agent != null) ConfigureAgent(); }
 
         private void ConfigureAgent()
         {

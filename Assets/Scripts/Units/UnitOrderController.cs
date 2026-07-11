@@ -87,15 +87,21 @@ namespace CierzoArena.Units
             switch (command.Type)
             {
                 case UnitOrderType.Move:
+                    TryGetComponent(out HeroAbilities abilities);
+                    abilities?.CancelBeforeRelease();
                     attackTarget = null;
                     basicAttack.ClearTarget();
                     mover.MoveTo(command.Destination);
                     return true;
                 case UnitOrderType.Attack:
+                    TryGetComponent(out HeroAbilities attackAbilities);
+                    attackAbilities?.CancelBeforeRelease();
                     basicAttack.SetTarget(command.Target);
                     attackTarget = command.Target;
                     return true;
                 case UnitOrderType.Stop:
+                    TryGetComponent(out HeroAbilities stopAbilities);
+                    stopAbilities?.CancelBeforeRelease();
                     attackTarget = null;
                     basicAttack.ClearTarget();
                     mover.Stop();
@@ -110,9 +116,9 @@ namespace CierzoArena.Units
             switch (command.Type)
             {
                 case UnitOrderType.Move:
-                    return CanReceiveOrders;
+                    return CanReceiveOrders && (!TryGetComponent(out StatusEffectController moveEffects) || moveEffects.CanMove);
                 case UnitOrderType.Attack:
-                    return CanReceiveOrders && basicAttack.CanAttack(command.Target);
+                    return CanReceiveOrders && (!TryGetComponent(out StatusEffectController attackEffects) || attackEffects.CanAttack) && basicAttack.CanAttack(command.Target);
                 case UnitOrderType.Stop:
                     return CanReceiveOrders;
                 default:

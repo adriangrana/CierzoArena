@@ -1,0 +1,41 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b7ac6f67c2f949c6afd8c17e15a3f102, type: 3}
+  m_Name: ArcBolt
+  m_EditorClassIdentifier: CierzoArena.Runtime::CierzoArena.Units.AbilityDefinition
+  abilityId: arc.bolt
+  displayName: Arc Bolt
+  description: 'Q: targeted projectile damage.'
+  maximumLevel: 4
+  requiredHeroLevels: 01000000010000000100000001000000
+  manaCosts:
+  - 35
+  - 45
+  - 55
+  - 65
+  cooldowns:
+  - 6
+  - 5.5
+  - 5
+  - 4.5
+  castPoint: 0.25
+  range: 8
+  targeting: 1
+  effect: 0
+  effectValues:
+  - 45
+  - 70
+  - 95
+  - 120
+  areaRadius: 2.5
+  duration: 0
+  projectileSpeed: 14

@@ -90,6 +90,11 @@ namespace CierzoArena.Combat
             {
                 return false;
             }
+            if (TryGetComponent(out CierzoArena.Units.StatusEffectController effects))
+            {
+                context = new DamageContext(context.Attacker, effects.AbsorbDamage(context.Amount), context.Delivery);
+                if (context.Amount <= 0f) return false;
+            }
 
             float before = Current;
             Current = Mathf.Max(0f, Current - context.Amount);

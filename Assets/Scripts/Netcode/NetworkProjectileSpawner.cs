@@ -37,5 +37,13 @@ namespace CierzoArena.Netcode
             visual.NetworkObject.Spawn();
             visual.Configure(targetObject, attacker.ProjectileSpeed, attacker.ProjectileLifetime);
         }
+
+        public void SpawnVisual(Vector3 origin, Health target, float visualSpeed, float visualLifetime)
+        {
+            if (projectilePrefab == null || target == null || !target.TryGetComponent(out NetworkObject targetObject)) return;
+            NetworkProjectileVisual visual = Instantiate(projectilePrefab, origin, Quaternion.identity);
+            visual.NetworkObject.Spawn();
+            visual.Configure(targetObject, visualSpeed, visualLifetime);
+        }
     }
 }

@@ -11,8 +11,13 @@ namespace CierzoArena.Units
         [SerializeField] private LayerMask selectableMask;
         [SerializeField] private LayerMask attackableMask;
         [SerializeField] private KeyCode stopKey = KeyCode.S;
+        [SerializeField] private KeyCode abilityOneKey = KeyCode.Q;
+        [SerializeField] private KeyCode abilityTwoKey = KeyCode.W;
+        [SerializeField] private KeyCode abilityThreeKey = KeyCode.E;
+        [SerializeField] private KeyCode ultimateKey = KeyCode.R;
 
         private SelectableUnit selectedUnit;
+        private int pendingAbilitySlot = -1;
 
         private void Awake()
         {
@@ -54,15 +59,60 @@ namespace CierzoArena.Units
                 return;
             }
 
+            if (Input.GetKeyDown(abilityOneKey)) BeginAbility(0);
+            if (Input.GetKeyDown(abilityTwoKey)) BeginAbility(1);
+            if (Input.GetKeyDown(abilityThreeKey)) BeginAbility(2);
+            if (Input.GetKeyDown(ultimateKey)) BeginAbility(3);
+            if (Input.GetKeyDown(KeyCode.Escape)) CancelAbility();
+
             if (Input.GetMouseButtonDown(0))
             {
-                TrySelect();
+                if (!ConfirmAbility()) TrySelect();
             }
 
             if (Input.GetMouseButtonDown(1) && selectedUnit != null)
             {
+                if (pendingAbilitySlot >= 0) { CancelAbility(); return; }
                 IssueCommand();
             }
+        }
+
+        private void BeginAbility(int slot)
+        {
+            HeroAbilities abilities = selectedUnit != null ? selectedUnit.GetComponent<HeroAbilities>() : null;
+            AbilityDefinition definition = abilities != null ? abilities.GetDefinition(slot) : null;
+            if (definition == null) return;
+            if (definition.Targeting == AbilityTargeting.NoTarget)
+            {
+                abilities.TryStartCast(slot, null, selectedUnit.transform.position);
+                return;
+            }
+            pendingAbilitySlot = slot;
+        }
+
+        private bool ConfirmAbility()
+        {
+            if (pendingAbilitySlot < 0 || selectedUnit == null) return false;
+            HeroAbilities abilities = selectedUnit.GetComponent<HeroAbilities>(); AbilityDefinition definition = abilities != null ? abilities.GetDefinition(pendingAbilitySlot) : null;
+            if (definition == null) { pendingAbilitySlot = -1; return true; }
+            Ray ray = commandCamera.ScreenPointToRay(Input.mousePosition);
+            if (definition.Targeting == AbilityTargeting.UnitTarget && Physics.Raycast(ray, out RaycastHit hit, 500f, attackableMask))
+            {
+                Health target = hit.collider.GetComponentInParent<Health>();
+                abilities.TryStartCast(pendingAbilitySlot, target, target != null ? target.transform.position : Vector3.zero);
+                pendingAbilitySlot = -1; return true;
+            }
+            if (definition.Targeting == AbilityTargeting.PointTarget && Physics.Raycast(ray, out RaycastHit ground, 500f, groundMask))
+            {
+                abilities.TryStartCast(pendingAbilitySlot, null, ground.point); pendingAbilitySlot = -1; return true;
+            }
+            return true;
+        }
+
+        private void CancelAbility()
+        {
+            pendingAbilitySlot = -1;
+            if (selectedUnit != null) selectedUnit.GetComponent<HeroAbilities>()?.CancelBeforeRelease();
         }
 
         private void TrySelect()

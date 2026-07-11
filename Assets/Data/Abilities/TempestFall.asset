@@ -1,0 +1,41 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b7ac6f67c2f949c6afd8c17e15a3f102, type: 3}
+  m_Name: TempestFall
+  m_EditorClassIdentifier: CierzoArena.Runtime::CierzoArena.Units.AbilityDefinition
+  abilityId: tempest.fall
+  displayName: Tempest Fall
+  description: 'R: powerful area stun.'
+  maximumLevel: 4
+  requiredHeroLevels: 060000000c0000001200000012000000
+  manaCosts:
+  - 90
+  - 120
+  - 150
+  - 180
+  cooldowns:
+  - 6
+  - 5.5
+  - 5
+  - 4.5
+  castPoint: 0.45
+  range: 9
+  targeting: 2
+  effect: 5
+  effectValues:
+  - 150
+  - 240
+  - 330
+  - 420
+  areaRadius: 4
+  duration: 1.25
+  projectileSpeed: 14

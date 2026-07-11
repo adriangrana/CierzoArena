@@ -197,6 +197,8 @@ GameObject:
   - component: {fileID: 2807730405123660855}
   - component: {fileID: 2029083694589430193}
   - component: {fileID: 4439619367869220330}
+  - component: {fileID: 2254421831374210015}
+  - component: {fileID: 8261719599357107338}
   - component: {fileID: 1955836224006375395}
   - component: {fileID: 2683587916189926954}
   - component: {fileID: 523166186664327449}
@@ -424,6 +426,31 @@ MonoBehaviour:
   collidersToDisable:
   - {fileID: 6159465641787955788}
   - {fileID: 3108985606639969057}
+--- !u!114 &2254421831374210015
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5724091805756932616}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b7ac6f67c2f949c6afd8c17e15a3f301, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: CierzoArena.Runtime::CierzoArena.Units.VisionSource
+  radius: 12
+--- !u!114 &8261719599357107338
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5724091805756932616}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b7ac6f67c2f949c6afd8c17e15a3f302, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: CierzoArena.Runtime::CierzoArena.Units.VisionVisibility
 --- !u!114 &1955836224006375395
 MonoBehaviour:
   m_ObjectHideFlags: 0
