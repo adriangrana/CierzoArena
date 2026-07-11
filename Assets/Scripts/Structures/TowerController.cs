@@ -22,6 +22,7 @@ namespace CierzoArena.Structures
         private BasicAttack attack;
         private Health currentTarget;
         private float searchElapsed;
+        private float defensiveAggroRemaining;
 
         public float Range => attack != null ? attack.Range : 0f;
         public Health CurrentTarget => currentTarget;
@@ -54,6 +55,19 @@ namespace CierzoArena.Structures
             }
         }
 
+        /// <summary>Prioritises a valid hero aggressor without changing tower movement.</summary>
+        public bool SetDefensiveAggro(Health aggressor, float duration)
+        {
+            if (!IsValidTarget(aggressor))
+            {
+                return false;
+            }
+
+            currentTarget = aggressor;
+            defensiveAggroRemaining = Mathf.Max(defensiveAggroRemaining, Mathf.Max(0f, duration));
+            return true;
+        }
+
         /// <summary>Explicit tick entry used by tests and by the normal Update loop.</summary>
         public bool Simulate(float deltaTime)
         {
@@ -66,8 +80,15 @@ namespace CierzoArena.Structures
             }
 
             deltaTime = Mathf.Max(0f, deltaTime);
+            bool defensiveWasActive = defensiveAggroRemaining > 0f;
+            defensiveAggroRemaining = Mathf.Max(0f, defensiveAggroRemaining - deltaTime);
             searchElapsed += deltaTime;
-            if (!IsValidTarget(currentTarget) || searchElapsed >= searchInterval)
+            bool defensiveTargetActive = defensiveAggroRemaining > 0f && IsValidTarget(currentTarget);
+            if (defensiveWasActive && !defensiveTargetActive)
+            {
+                currentTarget = null;
+            }
+            if (!defensiveTargetActive && (!IsValidTarget(currentTarget) || searchElapsed >= searchInterval))
             {
                 currentTarget = FindBestTarget();
                 searchElapsed = 0f;

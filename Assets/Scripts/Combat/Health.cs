@@ -74,19 +74,37 @@ namespace CierzoArena.Combat
 
         public void ApplyDamage(float amount)
         {
+            ApplyDamage(new DamageContext(null, amount, AttackDelivery.Melee));
+        }
+
+        /// <summary>
+        /// Applies confirmed gameplay damage and emits its source only after a real
+        /// health reduction. Health remains unaware of targeting/aggro decisions.
+        /// </summary>
+        public bool ApplyDamage(DamageContext context)
+        {
             EnsureInitialized();
-            if (!IsAlive || amount <= 0f)
+            if (!IsAlive || context.Amount <= 0f)
             {
-                return;
+                return false;
             }
 
-            Current = Mathf.Max(0f, Current - amount);
+            float before = Current;
+            Current = Mathf.Max(0f, Current - context.Amount);
+            if (Mathf.Approximately(before, Current))
+            {
+                return false;
+            }
+
             Changed?.Invoke(this, Current, maxHealth);
+            CombatEvents.RaiseDamageApplied(this, new DamageContext(context.Attacker, before - Current, context.Delivery));
 
             if (Current <= 0f)
             {
                 Died?.Invoke(this);
             }
+
+            return true;
         }
 
         /// <summary>

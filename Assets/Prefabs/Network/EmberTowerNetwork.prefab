@@ -199,6 +199,7 @@ GameObject:
   - component: {fileID: 4439619367869220330}
   - component: {fileID: 1955836224006375395}
   - component: {fileID: 2683587916189926954}
+  - component: {fileID: 523166186664327449}
   - component: {fileID: 8410742579835175018}
   - component: {fileID: 927442471704871207}
   m_Layer: 0
@@ -465,6 +466,20 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 128
   simulationEnabled: 1
+--- !u!114 &523166186664327449
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5724091805756932616}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6f09a06fdc874529be0d1aaf2dfe9476, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: CierzoArena.Runtime::CierzoArena.Units.DefensiveAggroResponder
+  heroProtectionRange: 9
+  defensiveAggroDuration: 4
 --- !u!114 &8410742579835175018
 MonoBehaviour:
   m_ObjectHideFlags: 0

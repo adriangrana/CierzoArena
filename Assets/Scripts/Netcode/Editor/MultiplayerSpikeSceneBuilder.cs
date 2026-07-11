@@ -26,6 +26,7 @@ namespace CierzoArena.Netcode.EditorTools
         private const string ScenePath = "Assets/Scenes/MultiplayerSpikeArena.unity";
         private const int GroundLayer = 6;
         private const int SelectableLayer = 7;
+        private const int AttackableLayer = 8;
 
         [MenuItem("Cierzo Arena/Create Multiplayer Spike Scene")]
         public static void CreateMultiplayerSpikeScene()
@@ -35,6 +36,7 @@ namespace CierzoArena.Netcode.EditorTools
 
             EnsureLayerName(GroundLayer, "Ground");
             EnsureLayerName(SelectableLayer, "Selectable");
+            EnsureLayerName(AttackableLayer, "Attackable");
 
             Material groundMaterial = CreateMaterial("Assets/Materials/Prototype_Ground.mat", new Color(0.24f, 0.31f, 0.29f));
             Material azureMaterial = CreateMaterial("Assets/Materials/Prototype_Azure.mat", new Color(0.08f, 0.35f, 0.9f));
@@ -70,6 +72,10 @@ namespace CierzoArena.Netcode.EditorTools
             string emberCorePrefabPath = CreateNetworkStructurePrefab("EmberCoreNetwork", "Ember Core", TeamId.Ember, StructureKind.Core, StructureLane.None, StructureTier.Core, emberMaterial, healthBackgroundMaterial, healthFillMaterial);
             string matchPrefabPath = CreateNetworkMatchPrefab();
             string projectilePrefabPath = CreateNetworkProjectilePrefab(emberMaterial);
+            string azureMeleeCreepPath = CreateNetworkCreepPrefab("AzureMeleeCreepNetwork", TeamId.Azure, CreepArchetype.Melee, azureMaterial, healthBackgroundMaterial, healthFillMaterial);
+            string azureRangedCreepPath = CreateNetworkCreepPrefab("AzureRangedCreepNetwork", TeamId.Azure, CreepArchetype.Ranged, azureMaterial, healthBackgroundMaterial, healthFillMaterial);
+            string emberMeleeCreepPath = CreateNetworkCreepPrefab("EmberMeleeCreepNetwork", TeamId.Ember, CreepArchetype.Melee, emberMaterial, healthBackgroundMaterial, healthFillMaterial);
+            string emberRangedCreepPath = CreateNetworkCreepPrefab("EmberRangedCreepNetwork", TeamId.Ember, CreepArchetype.Ranged, emberMaterial, healthBackgroundMaterial, healthFillMaterial);
 
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
@@ -82,13 +88,18 @@ namespace CierzoArena.Netcode.EditorTools
             NetworkObject emberCorePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(emberCorePrefabPath).GetComponent<NetworkObject>();
             NetworkObject matchPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(matchPrefabPath).GetComponent<NetworkObject>();
             NetworkProjectileVisual projectilePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(projectilePrefabPath).GetComponent<NetworkProjectileVisual>();
+            NetworkObject azureMeleeCreep = AssetDatabase.LoadAssetAtPath<GameObject>(azureMeleeCreepPath).GetComponent<NetworkObject>();
+            NetworkObject azureRangedCreep = AssetDatabase.LoadAssetAtPath<GameObject>(azureRangedCreepPath).GetComponent<NetworkObject>();
+            NetworkObject emberMeleeCreep = AssetDatabase.LoadAssetAtPath<GameObject>(emberMeleeCreepPath).GetComponent<NetworkObject>();
+            NetworkObject emberRangedCreep = AssetDatabase.LoadAssetAtPath<GameObject>(emberRangedCreepPath).GetComponent<NetworkObject>();
 
-            NetworkPrefabsList spikePrefabs = CreateNetworkPrefabsList(azurePrefab.gameObject, emberPrefab.gameObject, azureTowerPrefab.gameObject, emberTowerPrefab.gameObject, azureCorePrefab.gameObject, emberCorePrefab.gameObject, matchPrefab.gameObject, projectilePrefab.gameObject);
+            NetworkPrefabsList spikePrefabs = CreateNetworkPrefabsList(azurePrefab.gameObject, emberPrefab.gameObject, azureTowerPrefab.gameObject, emberTowerPrefab.gameObject, azureCorePrefab.gameObject, emberCorePrefab.gameObject, matchPrefab.gameObject, projectilePrefab.gameObject, azureMeleeCreep.gameObject, azureRangedCreep.gameObject, emberMeleeCreep.gameObject, emberRangedCreep.gameObject);
 
             CreateNetworkManager(spikePrefabs);
 
             CreateConnectionBootstrap(azurePrefab, emberPrefab, matchPrefab, azureTowerPrefab, emberTowerPrefab, azureCorePrefab, emberCorePrefab);
             CreateProjectileSpawner(projectilePrefab);
+            CreateNetworkWaveSpawners(azureMeleeCreep, azureRangedCreep, emberMeleeCreep, emberRangedCreep);
             CreateLighting();
             CreateMobaCamera();
             CreateCommandController();
@@ -195,6 +206,7 @@ namespace CierzoArena.Netcode.EditorTools
 
             TeamMember teamMember = unit.AddComponent<TeamMember>();
             SetEnum(teamMember, "team", (int)team);
+            unit.AddComponent<HeroUnit>();
 
             Health health = unit.AddComponent<Health>();
             SetFloat(health, "maxHealth", definition.MaxHealth);
@@ -208,7 +220,7 @@ namespace CierzoArena.Netcode.EditorTools
             unit.AddComponent<ClickMover>();
             BasicAttack attack = unit.AddComponent<BasicAttack>();
             ConfigureAttack(attack, team == TeamId.Azure ? AttackDelivery.Melee : AttackDelivery.Ranged,
-                team == TeamId.Azure ? 2.2f : 7f,
+                team == TeamId.Azure ? 3.25f : 7f,
                 definition.AttackDamage,
                 team == TeamId.Azure ? 1.25f : 1.4f,
                 0.3f,
@@ -242,6 +254,45 @@ namespace CierzoArena.Netcode.EditorTools
             deathObject.ApplyModifiedPropertiesWithoutUndo();
 
             return unit;
+        }
+
+        private static string CreateNetworkCreepPrefab(string assetName, TeamId team, CreepArchetype archetype, Material material, Material healthBackgroundMaterial, Material healthFillMaterial)
+        {
+            EnsureFolder("Assets", "Prefabs");
+            EnsureFolder("Assets/Prefabs", "Network");
+            string path = $"Assets/Prefabs/Network/{assetName}.prefab";
+            GameObject creep = GameObject.CreatePrimitive(archetype == CreepArchetype.Melee ? PrimitiveType.Capsule : PrimitiveType.Sphere);
+            creep.name = assetName;
+            creep.layer = AttackableLayer;
+            creep.transform.localScale = archetype == CreepArchetype.Melee ? Vector3.one * 0.75f : Vector3.one * 0.65f;
+            creep.GetComponent<Renderer>().sharedMaterial = material;
+            creep.AddComponent<NetworkObject>();
+            creep.AddComponent<NetworkTransform>();
+            TeamMember member = creep.AddComponent<TeamMember>();
+            SetEnum(member, "team", (int)team);
+            Health health = creep.AddComponent<Health>();
+            SetFloat(health, "maxHealth", archetype == CreepArchetype.Melee ? 220f : 150f);
+            CreateHealthBar(creep.transform, health, healthBackgroundMaterial, healthFillMaterial, 1.65f, 1.05f);
+            creep.AddComponent<ClickMover>();
+            BasicAttack attack = creep.AddComponent<BasicAttack>();
+            ConfigureAttack(attack,
+                archetype == CreepArchetype.Melee ? AttackDelivery.Melee : AttackDelivery.Ranged,
+                archetype == CreepArchetype.Melee ? 1.8f : 6f,
+                archetype == CreepArchetype.Melee ? 16f : 13f,
+                archetype == CreepArchetype.Melee ? 1.1f : 1.35f,
+                0.25f,
+                0.3f);
+            AttackVisual visual = creep.AddComponent<AttackVisual>();
+            SetObjectReference(visual, "targetRenderer", creep.GetComponent<Renderer>());
+            CreepController controller = creep.AddComponent<CreepController>();
+            SetEnum(controller, "archetype", (int)archetype);
+            SetFloat(controller, "detectionRange", archetype == CreepArchetype.Melee ? 6.5f : 8f);
+            SetFloat(controller, "leashRange", 14f);
+            creep.AddComponent<DefensiveAggroResponder>();
+            creep.AddComponent<NetworkCreepController>();
+            PrefabUtility.SaveAsPrefabAsset(creep, path);
+            Object.DestroyImmediate(creep);
+            return path;
         }
 
         private static string CreateNetworkStructurePrefab(string assetName, string displayName, TeamId team, StructureKind kind, StructureLane lane, StructureTier tier, Material material, Material healthBackgroundMaterial, Material healthFillMaterial)
@@ -319,8 +370,9 @@ namespace CierzoArena.Netcode.EditorTools
             if (kind == StructureKind.Tower)
             {
                 TowerController tower = structureObject.AddComponent<TowerController>();
+                structureObject.AddComponent<DefensiveAggroResponder>();
                 SetFloat(tower, "searchInterval", 0.2f);
-                SetInt(tower, "targetMask", 1 << SelectableLayer);
+                SetInt(tower, "targetMask", ~0);
                 ConfigureAttack(structureObject.GetComponent<BasicAttack>(), AttackDelivery.Ranged, 9f, 28f, 1f, 0.35f, 0.35f);
                 structureObject.AddComponent<AttackVisual>();
             }
@@ -496,6 +548,7 @@ namespace CierzoArena.Netcode.EditorTools
             commandObject.FindProperty("commandCamera").objectReferenceValue = Camera.main;
             commandObject.FindProperty("groundMask").intValue = 1 << GroundLayer;
             commandObject.FindProperty("selectableMask").intValue = 1 << SelectableLayer;
+            commandObject.FindProperty("attackableMask").intValue = (1 << SelectableLayer) | (1 << AttackableLayer);
             commandObject.ApplyModifiedPropertiesWithoutUndo();
         }
 
@@ -583,11 +636,67 @@ namespace CierzoArena.Netcode.EditorTools
             serialized.ApplyModifiedPropertiesWithoutUndo();
         }
 
+        private static void SetObjectArray(Object target, string propertyName, Object[] values)
+        {
+            SerializedObject serialized = new SerializedObject(target);
+            SerializedProperty property = serialized.FindProperty(propertyName);
+            property.arraySize = values.Length;
+            for (int i = 0; i < values.Length; i++)
+            {
+                property.GetArrayElementAtIndex(i).objectReferenceValue = values[i];
+            }
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+        }
+
         private static void CreateProjectileSpawner(NetworkProjectileVisual projectilePrefab)
         {
             GameObject spawnerObject = new GameObject("Network Projectile Spawner");
             NetworkProjectileSpawner spawner = spawnerObject.AddComponent<NetworkProjectileSpawner>();
             SetObjectReference(spawner, "projectilePrefab", projectilePrefab);
+        }
+
+        private static void CreateNetworkWaveSpawners(NetworkObject azureMelee, NetworkObject azureRanged, NetworkObject emberMelee, NetworkObject emberRanged)
+        {
+            GameObject root = new GameObject("Creep Wave Spike");
+            LaneRoute azureRoute = CreateSpikeRoute(root.transform, "Azure Route", new[] { new Vector3(-12f, 1f, 0f), Vector3.up, new Vector3(12f, 1f, 0f) }, Color.cyan);
+            LaneRoute emberRoute = CreateSpikeRoute(root.transform, "Ember Route", new[] { new Vector3(12f, 1f, 0f), Vector3.up, new Vector3(-12f, 1f, 0f) }, Color.red);
+            CreateNetworkWaveSpawner(root.transform, "Azure Waves", azureRoute, azureMelee, azureRanged);
+            CreateNetworkWaveSpawner(root.transform, "Ember Waves", emberRoute, emberMelee, emberRanged);
+        }
+
+        private static LaneRoute CreateSpikeRoute(Transform parent, string name, Vector3[] points, Color color)
+        {
+            GameObject routeObject = new GameObject(name);
+            routeObject.transform.SetParent(parent);
+            LaneRoute route = routeObject.AddComponent<LaneRoute>();
+            Transform[] waypoints = new Transform[points.Length];
+            for (int i = 0; i < points.Length; i++)
+            {
+                GameObject waypoint = new GameObject($"Waypoint {i + 1}");
+                waypoint.transform.SetParent(routeObject.transform);
+                waypoint.transform.position = points[i];
+                waypoints[i] = waypoint.transform;
+            }
+            SetObjectArray(route, "waypoints", waypoints);
+            SerializedObject serialized = new SerializedObject(route);
+            serialized.FindProperty("gizmoColor").colorValue = color;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+            return route;
+        }
+
+        private static void CreateNetworkWaveSpawner(Transform parent, string name, LaneRoute route, NetworkObject melee, NetworkObject ranged)
+        {
+            GameObject source = new GameObject(name);
+            source.transform.SetParent(parent);
+            CreepWaveSpawner spawner = source.AddComponent<CreepWaveSpawner>();
+            SetObjectReference(spawner, "route", route);
+            SetFloat(spawner, "initialDelay", 3f);
+            SetFloat(spawner, "waveInterval", 18f);
+            SetInt(spawner, "meleeCount", 1);
+            SetInt(spawner, "rangedCount", 1);
+            NetworkCreepWaveSpawner bridge = source.AddComponent<NetworkCreepWaveSpawner>();
+            SetObjectReference(bridge, "meleePrefab", melee);
+            SetObjectReference(bridge, "rangedPrefab", ranged);
         }
 
         private static void SetInt(Object target, string propertyName, int value)

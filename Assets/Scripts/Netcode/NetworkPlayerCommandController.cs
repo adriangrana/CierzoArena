@@ -15,6 +15,7 @@ namespace CierzoArena.Netcode
         [SerializeField] private Camera commandCamera;
         [SerializeField] private LayerMask groundMask;
         [SerializeField] private LayerMask selectableMask;
+        [SerializeField] private LayerMask attackableMask;
         [SerializeField] private KeyCode stopKey = KeyCode.S;
 
         private NetworkUnitController ownedUnit;
@@ -62,7 +63,8 @@ namespace CierzoArena.Netcode
 
             // Intent resolution only. Whether the target is a valid enemy, alive and
             // in range is decided by the server's domain boundary, not here.
-            if (Physics.Raycast(ray, out RaycastHit unitHit, 500f, selectableMask))
+            LayerMask targetMask = attackableMask.value != 0 ? attackableMask : selectableMask;
+            if (Physics.Raycast(ray, out RaycastHit unitHit, 500f, targetMask))
             {
                 NetworkObject targetObject = unitHit.collider.GetComponentInParent<NetworkObject>();
                 if (targetObject != null && targetObject.TryGetComponent(out Health _))

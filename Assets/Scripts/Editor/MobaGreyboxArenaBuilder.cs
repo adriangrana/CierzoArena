@@ -42,6 +42,7 @@ namespace CierzoArena.EditorTools
         private const string ScenePath = "Assets/Scenes/MobaGreyboxArena.unity";
         private const int GroundLayer = 6;
         private const int SelectableLayer = 7;
+        private const int AttackableLayer = 8;
 
         // Corners of the square arena. Azure at SW, Ember at NE (bottom-left /
         // top-right, like the classic MOBA layout). NW and SE are the outer lane
@@ -59,6 +60,7 @@ namespace CierzoArena.EditorTools
 
             EnsureLayerName(GroundLayer, "Ground");
             EnsureLayerName(SelectableLayer, "Selectable");
+            EnsureLayerName(AttackableLayer, "Attackable");
 
             Material groundMaterial = CreateMaterial("Assets/Materials/Prototype_Ground.mat", new Color(0.30f, 0.37f, 0.33f));
             Material routeMaterial = CreateMaterial("Assets/Materials/Prototype_Route.mat", new Color(0.68f, 0.58f, 0.34f));
@@ -100,6 +102,8 @@ namespace CierzoArena.EditorTools
             CreateUnit(
                 "Ember Skirmisher", EmberBaseCenter + new Vector3(-9f, 1f, -9f), TeamId.Ember,
                 emberMaterial, ringMaterial, healthBackgroundMaterial, healthFillMaterial, emberDefinition, startSelected: false);
+
+            BuildLaneCreeps(azureMaterial, emberMaterial, healthBackgroundMaterial, healthFillMaterial);
 
             CreateNavMeshBootstrap();
             CreateLighting();
@@ -403,11 +407,13 @@ namespace CierzoArena.EditorTools
             CreateTowerNavigationBlocker(root.transform);
             ConfigureStructure(root, team, StructureKind.Tower, lane, tier, 650f, healthBackgroundMaterial, healthFillMaterial, 9.2f);
             TowerController tower = root.AddComponent<TowerController>();
+            root.AddComponent<DefensiveAggroResponder>();
             // Tuned for the one-hero local validation scene: Azure can destroy a
             // tower while it is firing, making the destruction/victory path testable
             // without a second local player or temporary cheats.
             SetFloat(tower, "searchInterval", 0.2f);
-            SetInt(tower, "targetMask", 1 << SelectableLayer);
+            // Towers defend against heroes (Selectable) and lane creeps (Default).
+            SetInt(tower, "targetMask", ~0);
             ConfigureAttack(root.GetComponent<BasicAttack>(), AttackDelivery.Ranged, 9f, 20f, 1f, 0.35f, 0.35f);
             AttackVisual towerVisual = root.AddComponent<AttackVisual>();
             SetObjectReference(towerVisual, "targetRenderer", shaft.GetComponent<Renderer>());
@@ -528,6 +534,7 @@ namespace CierzoArena.EditorTools
 
             TeamMember teamMember = unit.AddComponent<TeamMember>();
             SetEnum(teamMember, "team", (int)team);
+            unit.AddComponent<HeroUnit>();
 
             Health health = unit.AddComponent<Health>();
             SetFloat(health, "maxHealth", definition.MaxHealth);
@@ -543,7 +550,7 @@ namespace CierzoArena.EditorTools
             unit.AddComponent<ClickMover>();
             BasicAttack attack = unit.AddComponent<BasicAttack>();
             ConfigureAttack(attack, team == TeamId.Azure ? AttackDelivery.Melee : AttackDelivery.Ranged,
-                team == TeamId.Azure ? 2.2f : 7f,
+                team == TeamId.Azure ? 3.25f : 7f,
                 definition.AttackDamage,
                 team == TeamId.Azure ? 1.25f : 1.4f,
                 0.3f,
@@ -577,6 +584,111 @@ namespace CierzoArena.EditorTools
             deathObject.ApplyModifiedPropertiesWithoutUndo();
 
             return unit;
+        }
+
+        // ----- M7 lane creeps ------------------------------------------------
+
+        private static void BuildLaneCreeps(Material azureMaterial, Material emberMaterial, Material healthBackgroundMaterial, Material healthFillMaterial)
+        {
+            EnsureFolder("Assets", "Prefabs");
+            EnsureFolder("Assets/Prefabs", "Creeps");
+            GameObject azureMelee = CreateCreepPrefab("AzureMeleeCreep", TeamId.Azure, CreepArchetype.Melee, azureMaterial, healthBackgroundMaterial, healthFillMaterial);
+            GameObject azureRanged = CreateCreepPrefab("AzureRangedCreep", TeamId.Azure, CreepArchetype.Ranged, azureMaterial, healthBackgroundMaterial, healthFillMaterial);
+            GameObject emberMelee = CreateCreepPrefab("EmberMeleeCreep", TeamId.Ember, CreepArchetype.Melee, emberMaterial, healthBackgroundMaterial, healthFillMaterial);
+            GameObject emberRanged = CreateCreepPrefab("EmberRangedCreep", TeamId.Ember, CreepArchetype.Ranged, emberMaterial, healthBackgroundMaterial, healthFillMaterial);
+
+            GameObject root = new GameObject("Lane Creeps");
+            GameObject routes = new GameObject("Lane Routes");
+            routes.transform.SetParent(root.transform);
+            Vector3[] top = { AzureBaseCenter, NorthWestCorner, EmberBaseCenter };
+            Vector3[] mid = { AzureBaseCenter, EmberBaseCenter };
+            Vector3[] bottom = { AzureBaseCenter, SouthEastCorner, EmberBaseCenter };
+            const float spawnFraction = 0.09f;
+            LaneRoute topAzure = CreateRoute(routes.transform, "Top Azure to Ember", new[] { PointAlong(top, spawnFraction), NorthWestCorner, PointAlong(top, 1f - spawnFraction) }, Color.cyan);
+            LaneRoute midAzure = CreateRoute(routes.transform, "Mid Azure to Ember", new[] { PointAlong(mid, spawnFraction), Vector3.zero, PointAlong(mid, 1f - spawnFraction) }, Color.cyan);
+            LaneRoute bottomAzure = CreateRoute(routes.transform, "Bottom Azure to Ember", new[] { PointAlong(bottom, spawnFraction), SouthEastCorner, PointAlong(bottom, 1f - spawnFraction) }, Color.cyan);
+            LaneRoute topEmber = CreateRoute(routes.transform, "Top Ember to Azure", new[] { PointAlong(top, 1f - spawnFraction), NorthWestCorner, PointAlong(top, spawnFraction) }, Color.red);
+            LaneRoute midEmber = CreateRoute(routes.transform, "Mid Ember to Azure", new[] { PointAlong(mid, 1f - spawnFraction), Vector3.zero, PointAlong(mid, spawnFraction) }, Color.red);
+            LaneRoute bottomEmber = CreateRoute(routes.transform, "Bottom Ember to Azure", new[] { PointAlong(bottom, 1f - spawnFraction), SouthEastCorner, PointAlong(bottom, spawnFraction) }, Color.red);
+
+            GameObject spawners = new GameObject("Wave Spawners");
+            spawners.transform.SetParent(root.transform);
+            CreateWaveSpawner(spawners.transform, "Azure Top Waves", topAzure, azureMelee, azureRanged);
+            CreateWaveSpawner(spawners.transform, "Azure Mid Waves", midAzure, azureMelee, azureRanged);
+            CreateWaveSpawner(spawners.transform, "Azure Bottom Waves", bottomAzure, azureMelee, azureRanged);
+            CreateWaveSpawner(spawners.transform, "Ember Top Waves", topEmber, emberMelee, emberRanged);
+            CreateWaveSpawner(spawners.transform, "Ember Mid Waves", midEmber, emberMelee, emberRanged);
+            CreateWaveSpawner(spawners.transform, "Ember Bottom Waves", bottomEmber, emberMelee, emberRanged);
+        }
+
+        private static LaneRoute CreateRoute(Transform parent, string name, Vector3[] points, Color color)
+        {
+            GameObject routeObject = new GameObject(name);
+            routeObject.transform.SetParent(parent);
+            LaneRoute route = routeObject.AddComponent<LaneRoute>();
+            Transform[] waypoints = new Transform[points.Length];
+            for (int i = 0; i < points.Length; i++)
+            {
+                GameObject point = new GameObject($"Waypoint {i + 1}");
+                point.transform.SetParent(routeObject.transform);
+                point.transform.position = points[i] + Vector3.up;
+                waypoints[i] = point.transform;
+            }
+
+            SetObjectArray(route, "waypoints", waypoints);
+            SerializedObject serialized = new SerializedObject(route);
+            serialized.FindProperty("gizmoColor").colorValue = color;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+            return route;
+        }
+
+        private static void CreateWaveSpawner(Transform parent, string name, LaneRoute route, GameObject melee, GameObject ranged)
+        {
+            GameObject source = new GameObject(name);
+            source.transform.SetParent(parent);
+            CreepWaveSpawner spawner = source.AddComponent<CreepWaveSpawner>();
+            SetObjectReference(spawner, "route", route);
+            SetObjectReference(spawner, "meleePrefab", melee);
+            SetObjectReference(spawner, "rangedPrefab", ranged);
+            SetFloat(spawner, "initialDelay", 4f);
+            SetFloat(spawner, "waveInterval", 25f);
+            SetInt(spawner, "meleeCount", 2);
+            SetInt(spawner, "rangedCount", 1);
+            SetFloat(spawner, "spawnSpacing", 1.3f);
+        }
+
+        private static GameObject CreateCreepPrefab(string assetName, TeamId team, CreepArchetype archetype, Material material, Material healthBackgroundMaterial, Material healthFillMaterial)
+        {
+            string path = $"Assets/Prefabs/Creeps/{assetName}.prefab";
+            GameObject creep = GameObject.CreatePrimitive(archetype == CreepArchetype.Melee ? PrimitiveType.Capsule : PrimitiveType.Sphere);
+            creep.name = assetName;
+            creep.layer = AttackableLayer;
+            creep.transform.localScale = archetype == CreepArchetype.Melee ? Vector3.one * 0.75f : Vector3.one * 0.65f;
+            creep.GetComponent<Renderer>().sharedMaterial = material;
+            TeamMember member = creep.AddComponent<TeamMember>();
+            SetEnum(member, "team", (int)team);
+            Health health = creep.AddComponent<Health>();
+            SetFloat(health, "maxHealth", archetype == CreepArchetype.Melee ? 220f : 150f);
+            CreateHealthBar(creep.transform, health, healthBackgroundMaterial, healthFillMaterial, 1.65f, 1.05f);
+            creep.AddComponent<ClickMover>();
+            BasicAttack attack = creep.AddComponent<BasicAttack>();
+            ConfigureAttack(attack,
+                archetype == CreepArchetype.Melee ? AttackDelivery.Melee : AttackDelivery.Ranged,
+                archetype == CreepArchetype.Melee ? 1.8f : 6f,
+                archetype == CreepArchetype.Melee ? 16f : 13f,
+                archetype == CreepArchetype.Melee ? 1.1f : 1.35f,
+                0.25f,
+                0.3f);
+            AttackVisual visual = creep.AddComponent<AttackVisual>();
+            SetObjectReference(visual, "targetRenderer", creep.GetComponent<Renderer>());
+            CreepController controller = creep.AddComponent<CreepController>();
+            SetEnum(controller, "archetype", (int)archetype);
+            SetFloat(controller, "detectionRange", archetype == CreepArchetype.Melee ? 6.5f : 8f);
+            SetFloat(controller, "leashRange", 15f);
+            creep.AddComponent<DefensiveAggroResponder>();
+            PrefabUtility.SaveAsPrefabAsset(creep, path);
+            Object.DestroyImmediate(creep);
+            return AssetDatabase.LoadAssetAtPath<GameObject>(path);
         }
 
         private static void CreateHealthBar(Transform unit, Health health, Material backgroundMaterial, Material fillMaterial, float localHeight = 2.35f, float width = 1.5f, bool worldSpaceAnchor = false)
@@ -817,6 +929,7 @@ namespace CierzoArena.EditorTools
             commandObject.FindProperty("commandCamera").objectReferenceValue = Camera.main;
             commandObject.FindProperty("groundMask").intValue = 1 << GroundLayer;
             commandObject.FindProperty("selectableMask").intValue = 1 << SelectableLayer;
+            commandObject.FindProperty("attackableMask").intValue = (1 << SelectableLayer) | (1 << AttackableLayer);
             commandObject.ApplyModifiedPropertiesWithoutUndo();
         }
 
@@ -903,6 +1016,18 @@ namespace CierzoArena.EditorTools
         {
             SerializedObject serialized = new SerializedObject(target);
             serialized.FindProperty(propertyName).floatValue = value;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static void SetObjectArray(Object target, string propertyName, Object[] values)
+        {
+            SerializedObject serialized = new SerializedObject(target);
+            SerializedProperty property = serialized.FindProperty(propertyName);
+            property.arraySize = values.Length;
+            for (int i = 0; i < values.Length; i++)
+            {
+                property.GetArrayElementAtIndex(i).objectReferenceValue = values[i];
+            }
             serialized.ApplyModifiedPropertiesWithoutUndo();
         }
 

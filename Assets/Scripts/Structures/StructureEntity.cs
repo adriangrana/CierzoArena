@@ -100,7 +100,7 @@ namespace CierzoArena.Structures
         }
 
         /// <summary>Damage entry for systems that know the attacking team.</summary>
-        public bool TryApplyDamage(TeamMember attacker, float amount)
+        public bool TryApplyDamage(TeamMember attacker, float amount, AttackDelivery delivery = AttackDelivery.Melee)
         {
             EnsureInitialized();
             if (!CanReceiveDamageFrom(attacker) || amount <= 0f)
@@ -108,8 +108,7 @@ namespace CierzoArena.Structures
                 return false;
             }
 
-            health.ApplyDamage(amount);
-            return true;
+            return health.ApplyDamage(new DamageContext(attacker, amount, delivery));
         }
 
         public bool CanReceiveDamageFrom(TeamMember attacker)

@@ -89,11 +89,11 @@ namespace CierzoArena.Combat
 
             if (target.TryGetComponent(out StructureEntity structure))
             {
-                structure.TryApplyDamage(attackerTeam, damage);
+                structure.TryApplyDamage(attackerTeam, damage, AttackDelivery.Ranged);
             }
             else
             {
-                target.ApplyDamage(damage);
+                target.ApplyDamage(new DamageContext(attackerTeam, damage, AttackDelivery.Ranged));
             }
         }
 

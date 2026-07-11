@@ -2,6 +2,7 @@ using System.Reflection;
 using CierzoArena.Combat;
 using CierzoArena.Core;
 using CierzoArena.Structures;
+using CierzoArena.Netcode;
 using NUnit.Framework;
 using Unity.Netcode;
 using UnityEngine;
@@ -40,6 +41,23 @@ namespace CierzoArena.Netcode.Tests
             {
                 Assert.That(method.Name.EndsWith("Rpc"), Is.False,
                     $"Unexpected victory RPC: {method.Name}");
+            }
+        }
+
+        [Test]
+        public void NetworkCreepBridgesExposeNoClientAuthoritativeEntryPoint()
+        {
+            AssertHasNoRpc(typeof(NetworkCreepController));
+            AssertHasNoRpc(typeof(NetworkCreepWaveSpawner));
+        }
+
+        private static void AssertHasNoRpc(System.Type type)
+        {
+            MethodInfo[] methods = type.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly);
+            foreach (MethodInfo method in methods)
+            {
+                Assert.That(method.Name.EndsWith("Rpc"), Is.False,
+                    $"{type.Name} unexpectedly exposes a client authority RPC: {method.Name}");
             }
         }
     }

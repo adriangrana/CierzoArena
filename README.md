@@ -24,6 +24,7 @@ Prototipo en Unity 6 (`ProjectSettings/ProjectVersion.txt`: Unity 6000.5.3f1) co
 - **M4.4** — Cámara MOBA real, integración y cierre: la cámara MOBA sustituye a la cámara técnica M3A en la greybox principal (`MobaGreyboxArena`), arrancando encuadrada y siguiendo a Azure (registrado vía `SceneLocalHeroRegistrar`), con bounds reales a ±86, zoom 12–55 y un `followPlaneOffset` que centra al héroe compensando la inclinación. La escena de red (`MultiplayerSpikeArena`) también usa la cámara MOBA con su propio `LocalHeroProvider`, de modo que host y cliente siguen cada uno su unidad owner. `IsometricCameraRig` permanece disponible para las escenas spike y sus tests. Implementado, pendiente de validación manual (local + host/cliente) y multi-resolución.
 - **M5** — Estructuras, torres y victoria: las torres detectan y atacan unidades enemigas con cadencia configurable. Por cada línea, solo la torre exterior puede dañarse al principio; desbloquea interior y luego puerta. El núcleo se vuelve vulnerable al caer las tres puertas. En red, el servidor decide objetivos, daño y ganador; los clientes solo reciben el estado replicado.
 - **M6** — Modelo avanzado de ataque: `BasicAttack` usa la secuencia Idle → Approaching → Windup → Backswing. Azure prueba melee (daño en el attack point); Ember y torres usan ranged (proyectil visible al attack point y daño únicamente al impacto). Una orden de mover o de atacar a otro objetivo cancela el windup, mientras que el backswing se puede cancelar sin alterar la cadencia. El servidor simula ataques e impactos; Netcode replica solo la visual del proyectil.
+- **M7** — Creeps, oleadas y aggro defensivo: seis spawners generan oleadas Azure/Ember en top, mid y bottom. Los creeps melee/ranged siguen rutas, buscan el enemigo válido más cercano, mantienen foco, respetan leash y usan `BasicAttack`. Si un héroe daña a un héroe aliado cercano, creeps y torres cambian temporalmente al agresor. En red, solo el servidor genera y simula creeps.
 
 La version real del proyecto esta en `ProjectSettings/ProjectVersion.txt`: Unity 6000.5.3f1.
 
@@ -46,6 +47,7 @@ La version real del proyecto esta en `ProjectSettings/ProjectVersion.txt`: Unity
 6. Durante el windup, da una orden de movimiento: no debe haber impacto ni proyectil. Tras liberar un proyectil, cambiar de orden no debe detenerlo ni cambiar su objetivo.
 7. Pulsa `S` para detener la orden actual.
 8. En `MobaGreyboxArena`, entra en el rango de una torre enemiga: debe hacer windup, lanzar un proyectil y mantenerse inmóvil. Destruir un núcleo muestra el ganador y bloquea el gameplay restante, incluidos ataques y proyectiles pendientes.
+9. Espera las oleadas: los creeps Azure y Ember avanzan por las tres líneas, se enfrentan al encontrarse y retoman su ruta al perder el objetivo.
 
 ## Controles
 

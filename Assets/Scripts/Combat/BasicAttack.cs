@@ -288,11 +288,11 @@ namespace CierzoArena.Combat
 
             if (victim.TryGetComponent(out StructureEntity structure))
             {
-                structure.TryApplyDamage(teamMember, Damage);
+                structure.TryApplyDamage(teamMember, Damage, AttackDelivery.Melee);
             }
             else
             {
-                victim.ApplyDamage(Damage);
+                victim.ApplyDamage(new DamageContext(teamMember, Damage, AttackDelivery.Melee));
             }
         }
 

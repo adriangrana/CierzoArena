@@ -324,22 +324,22 @@ Resultado: `Los ataques ya tienen una secuencia temporal coherente, impactos rea
 
 > 🚪 Gate: el combate debe sentirse responsivo antes de añadir héroes.
 
-### Milestone 7 — Sistema de órdenes completo
+### Milestone 7 — Creeps, oleadas y aggro defensivo
 
-Status: ⬜ Futuro
+Status: 🔵 Implementado / pendiente de validación final en Unity
 
-Amplía la frontera de órdenes del Milestone 2.4 hacia el conjunto completo.
+- [x] Oleadas Azure y Ember
+- [x] Tres líneas
+- [x] Creeps melee y ranged
+- [x] Rutas explícitas con waypoints
+- [x] Targeting por enemigo más cercano y mantenimiento de foco
+- [x] Aggro por ataque a héroe aliado
+- [x] Torres inmóviles
+- [x] Leash y regreso a ruta
+- [x] Autoridad de servidor y réplica NGO
+- [x] Detención tras victoria
 
-- [ ] Move
-- [ ] Attack
-- [ ] Attack-Move
-- [ ] Stop
-- [ ] Hold Position
-- [ ] Cast
-- [ ] Follow
-- [ ] Cancel
-
-No necesariamente todas de golpe, pero este sería el milestone donde formalizamos el sistema.
+Resultado: `La arena ya se juega de forma autónoma con oleadas, combate por líneas y aggro defensivo.`
 
 ### Milestone 8 — Framework de habilidades
 

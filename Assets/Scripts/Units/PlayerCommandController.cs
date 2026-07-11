@@ -9,6 +9,7 @@ namespace CierzoArena.Units
         [SerializeField] private Camera commandCamera;
         [SerializeField] private LayerMask groundMask;
         [SerializeField] private LayerMask selectableMask;
+        [SerializeField] private LayerMask attackableMask;
         [SerializeField] private KeyCode stopKey = KeyCode.S;
 
         private SelectableUnit selectedUnit;
@@ -76,7 +77,8 @@ namespace CierzoArena.Units
             // Resolve player intent only: clicked unit -> Attack request, ground -> Move
             // request. Whether the order is valid (enemy, alive, in team rules) is
             // decided by the order boundary, not here, to avoid duplicated validation.
-            if (Physics.Raycast(ray, out RaycastHit unitHit, 500f, selectableMask))
+            LayerMask targetMask = attackableMask.value != 0 ? attackableMask : selectableMask;
+            if (Physics.Raycast(ray, out RaycastHit unitHit, 500f, targetMask))
             {
                 Health targetHealth = unitHit.collider.GetComponentInParent<Health>();
                 if (targetHealth != null)

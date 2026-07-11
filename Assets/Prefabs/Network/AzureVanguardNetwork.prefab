@@ -337,6 +337,7 @@ GameObject:
   - component: {fileID: 2771179622683400984}
   - component: {fileID: 4865374277487425726}
   - component: {fileID: 3109310316574340005}
+  - component: {fileID: 8920872948964082688}
   - component: {fileID: 4247868301067704926}
   - component: {fileID: 2998532347789012997}
   - component: {fileID: 3171935849099911085}
@@ -549,6 +550,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: CierzoArena.Runtime::CierzoArena.Core.TeamMember
   team: 1
+--- !u!114 &8920872948964082688
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7012766082569407939}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: aa8140753d6c4dd6a347fb7f3ed2b167, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: CierzoArena.Runtime::CierzoArena.Units.HeroUnit
 --- !u!114 &4247868301067704926
 MonoBehaviour:
   m_ObjectHideFlags: 0
