@@ -197,7 +197,9 @@ GameObject:
   - component: {fileID: 2807730405123660855}
   - component: {fileID: 2029083694589430193}
   - component: {fileID: 4439619367869220330}
+  - component: {fileID: 1955836224006375395}
   - component: {fileID: 2683587916189926954}
+  - component: {fileID: 8410742579835175018}
   - component: {fileID: 927442471704871207}
   m_Layer: 0
   m_Name: EmberTowerNetwork
@@ -421,6 +423,31 @@ MonoBehaviour:
   collidersToDisable:
   - {fileID: 6159465641787955788}
   - {fileID: 3108985606639969057}
+--- !u!114 &1955836224006375395
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5724091805756932616}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 757d624cc8388f74cbe53b1562c1dfdd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: CierzoArena.Runtime::CierzoArena.Combat.BasicAttack
+  damage: 28
+  range: 9
+  attackInterval: 1
+  attacksPerSecond: 0.8
+  attackPoint: 0.35
+  backswing: 0.35
+  delivery: 1
+  meleeImpactTolerance: 0.2
+  projectileSpeed: 15
+  projectileLifetime: 4
+  projectileImpactRadius: 0.2
+  projectileMaterial: {fileID: 0}
+  useUnitDefinition: 0
 --- !u!114 &2683587916189926954
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -433,14 +460,26 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d6ab731c48794492b75741b9b56eabe6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: CierzoArena.Runtime::CierzoArena.Structures.TowerController
-  range: 9
-  damage: 28
-  attackInterval: 1
   searchInterval: 0.2
   targetMask:
     serializedVersion: 2
     m_Bits: 128
   simulationEnabled: 1
+--- !u!114 &8410742579835175018
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5724091805756932616}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c31bf75cc2ea42e5ad86c32eea709b19, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: CierzoArena.Runtime::CierzoArena.Combat.AttackVisual
+  targetRenderer: {fileID: 0}
+  windupColor: {r: 1, g: 0.82, b: 0.28, a: 1}
+  backswingColor: {r: 1, g: 0.5, b: 0.18, a: 1}
 --- !u!114 &927442471704871207
 MonoBehaviour:
   m_ObjectHideFlags: 0

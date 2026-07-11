@@ -69,6 +69,7 @@ namespace CierzoArena.Netcode.EditorTools
             string azureCorePrefabPath = CreateNetworkStructurePrefab("AzureCoreNetwork", "Azure Core", TeamId.Azure, StructureKind.Core, StructureLane.None, StructureTier.Core, azureMaterial, healthBackgroundMaterial, healthFillMaterial);
             string emberCorePrefabPath = CreateNetworkStructurePrefab("EmberCoreNetwork", "Ember Core", TeamId.Ember, StructureKind.Core, StructureLane.None, StructureTier.Core, emberMaterial, healthBackgroundMaterial, healthFillMaterial);
             string matchPrefabPath = CreateNetworkMatchPrefab();
+            string projectilePrefabPath = CreateNetworkProjectilePrefab(emberMaterial);
 
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
@@ -80,12 +81,14 @@ namespace CierzoArena.Netcode.EditorTools
             NetworkObject azureCorePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(azureCorePrefabPath).GetComponent<NetworkObject>();
             NetworkObject emberCorePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(emberCorePrefabPath).GetComponent<NetworkObject>();
             NetworkObject matchPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(matchPrefabPath).GetComponent<NetworkObject>();
+            NetworkProjectileVisual projectilePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(projectilePrefabPath).GetComponent<NetworkProjectileVisual>();
 
-            NetworkPrefabsList spikePrefabs = CreateNetworkPrefabsList(azurePrefab.gameObject, emberPrefab.gameObject, azureTowerPrefab.gameObject, emberTowerPrefab.gameObject, azureCorePrefab.gameObject, emberCorePrefab.gameObject, matchPrefab.gameObject);
+            NetworkPrefabsList spikePrefabs = CreateNetworkPrefabsList(azurePrefab.gameObject, emberPrefab.gameObject, azureTowerPrefab.gameObject, emberTowerPrefab.gameObject, azureCorePrefab.gameObject, emberCorePrefab.gameObject, matchPrefab.gameObject, projectilePrefab.gameObject);
 
             CreateNetworkManager(spikePrefabs);
 
             CreateConnectionBootstrap(azurePrefab, emberPrefab, matchPrefab, azureTowerPrefab, emberTowerPrefab, azureCorePrefab, emberCorePrefab);
+            CreateProjectileSpawner(projectilePrefab);
             CreateLighting();
             CreateMobaCamera();
             CreateCommandController();
@@ -203,7 +206,15 @@ namespace CierzoArena.Netcode.EditorTools
             CreateHealthBar(unit.transform, health, healthBackgroundMaterial, healthFillMaterial);
 
             unit.AddComponent<ClickMover>();
-            unit.AddComponent<BasicAttack>();
+            BasicAttack attack = unit.AddComponent<BasicAttack>();
+            ConfigureAttack(attack, team == TeamId.Azure ? AttackDelivery.Melee : AttackDelivery.Ranged,
+                team == TeamId.Azure ? 2.2f : 7f,
+                definition.AttackDamage,
+                team == TeamId.Azure ? 1.25f : 1.4f,
+                0.3f,
+                0.35f);
+            AttackVisual attackVisual = unit.AddComponent<AttackVisual>();
+            SetObjectReference(attackVisual, "targetRenderer", unit.GetComponent<Renderer>());
             unit.AddComponent<UnitOrderController>();
             unit.AddComponent<NetworkUnitController>();
 
@@ -308,11 +319,10 @@ namespace CierzoArena.Netcode.EditorTools
             if (kind == StructureKind.Tower)
             {
                 TowerController tower = structureObject.AddComponent<TowerController>();
-                SetFloat(tower, "range", 9f);
-                SetFloat(tower, "damage", 28f);
-                SetFloat(tower, "attackInterval", 1f);
                 SetFloat(tower, "searchInterval", 0.2f);
                 SetInt(tower, "targetMask", 1 << SelectableLayer);
+                ConfigureAttack(structureObject.GetComponent<BasicAttack>(), AttackDelivery.Ranged, 9f, 28f, 1f, 0.35f, 0.35f);
+                structureObject.AddComponent<AttackVisual>();
             }
 
             structureObject.AddComponent<NetworkStructureController>();
@@ -332,6 +342,24 @@ namespace CierzoArena.Netcode.EditorTools
             match.AddComponent<NetworkMatchStateController>();
             PrefabUtility.SaveAsPrefabAsset(match, path);
             Object.DestroyImmediate(match);
+            return path;
+        }
+
+        private static string CreateNetworkProjectilePrefab(Material material)
+        {
+            EnsureFolder("Assets", "Prefabs");
+            EnsureFolder("Assets/Prefabs", "Network");
+            const string path = "Assets/Prefabs/Network/AttackProjectileNetwork.prefab";
+            GameObject projectile = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            projectile.name = "Attack Projectile";
+            projectile.transform.localScale = Vector3.one * 0.28f;
+            projectile.GetComponent<Renderer>().sharedMaterial = material;
+            Object.DestroyImmediate(projectile.GetComponent<Collider>());
+            projectile.AddComponent<NetworkObject>();
+            projectile.AddComponent<NetworkTransform>();
+            projectile.AddComponent<NetworkProjectileVisual>();
+            PrefabUtility.SaveAsPrefabAsset(projectile, path);
+            Object.DestroyImmediate(projectile);
             return path;
         }
 
@@ -555,10 +583,32 @@ namespace CierzoArena.Netcode.EditorTools
             serialized.ApplyModifiedPropertiesWithoutUndo();
         }
 
+        private static void CreateProjectileSpawner(NetworkProjectileVisual projectilePrefab)
+        {
+            GameObject spawnerObject = new GameObject("Network Projectile Spawner");
+            NetworkProjectileSpawner spawner = spawnerObject.AddComponent<NetworkProjectileSpawner>();
+            SetObjectReference(spawner, "projectilePrefab", projectilePrefab);
+        }
+
         private static void SetInt(Object target, string propertyName, int value)
         {
             SerializedObject serialized = new SerializedObject(target);
             serialized.FindProperty(propertyName).intValue = value;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static void ConfigureAttack(BasicAttack attack, AttackDelivery delivery, float range, float damage, float interval, float attackPoint, float backswing)
+        {
+            SerializedObject serialized = new SerializedObject(attack);
+            serialized.FindProperty("delivery").enumValueIndex = (int)delivery;
+            serialized.FindProperty("range").floatValue = range;
+            serialized.FindProperty("damage").floatValue = damage;
+            serialized.FindProperty("attackInterval").floatValue = interval;
+            serialized.FindProperty("attackPoint").floatValue = attackPoint;
+            serialized.FindProperty("backswing").floatValue = backswing;
+            serialized.FindProperty("projectileSpeed").floatValue = 15f;
+            serialized.FindProperty("projectileLifetime").floatValue = 4f;
+            serialized.FindProperty("useUnitDefinition").boolValue = false;
             serialized.ApplyModifiedPropertiesWithoutUndo();
         }
 

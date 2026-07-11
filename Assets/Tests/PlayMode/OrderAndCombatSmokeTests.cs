@@ -33,6 +33,10 @@ namespace CierzoArena.Tests.PlayMode
 
             yield return null;
 
+            // M6 keeps the target unharmed until the configured attack point.
+            Assert.That(emberHealth.Current, Is.EqualTo(emberHealth.Max));
+            yield return new WaitForSeconds(0.4f);
+
             Assert.That(emberHealth.Current, Is.LessThan(emberHealth.Max));
             Assert.That(orders.IssueMove(new Vector3(3f, 1f, 0f)), Is.True);
             Assert.That(GetAttackTarget(orders), Is.Null);

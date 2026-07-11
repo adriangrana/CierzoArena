@@ -9,11 +9,9 @@ namespace CierzoArena.Structures
     /// allocation-free; target choice is nearest enemy health, then instance id.
     /// </summary>
     [RequireComponent(typeof(StructureEntity))]
+    [RequireComponent(typeof(BasicAttack))]
     public sealed class TowerController : MonoBehaviour
     {
-        [SerializeField, Min(0f)] private float range = 9f;
-        [SerializeField, Min(0f)] private float damage = 35f;
-        [SerializeField, Min(0.01f)] private float attackInterval = 1f;
         [SerializeField, Min(0.01f)] private float searchInterval = 0.2f;
         [SerializeField] private LayerMask targetMask = ~0;
         [SerializeField] private bool simulationEnabled = true;
@@ -21,13 +19,11 @@ namespace CierzoArena.Structures
         private readonly Collider[] overlapBuffer = new Collider[32];
         private StructureEntity structure;
         private TeamMember teamMember;
+        private BasicAttack attack;
         private Health currentTarget;
-        private float attackElapsed;
         private float searchElapsed;
 
-        public float Range => Mathf.Max(0f, range);
-        public float Damage => Mathf.Max(0f, damage);
-        public float AttackInterval => Mathf.Max(0.01f, attackInterval);
+        public float Range => attack != null ? attack.Range : 0f;
         public Health CurrentTarget => currentTarget;
         public bool SimulationEnabled => simulationEnabled;
 
@@ -35,13 +31,11 @@ namespace CierzoArena.Structures
         {
             structure = GetComponent<StructureEntity>();
             teamMember = GetComponent<TeamMember>();
+            attack = GetComponent<BasicAttack>();
         }
 
         private void OnValidate()
         {
-            range = Mathf.Max(0f, range);
-            damage = Mathf.Max(0f, damage);
-            attackInterval = Mathf.Max(0.01f, attackInterval);
             searchInterval = Mathf.Max(0.01f, searchInterval);
         }
 
@@ -56,7 +50,7 @@ namespace CierzoArena.Structures
             if (!enabled)
             {
                 currentTarget = null;
-                attackElapsed = 0f;
+                attack?.ClearTarget();
             }
         }
 
@@ -67,6 +61,7 @@ namespace CierzoArena.Structures
                 (MatchStateController.Active != null && !MatchStateController.Active.IsPlaying))
             {
                 currentTarget = null;
+                attack?.ClearTarget();
                 return false;
             }
 
@@ -80,26 +75,12 @@ namespace CierzoArena.Structures
 
             if (currentTarget == null)
             {
-                attackElapsed = 0f;
+                attack.ClearTarget();
                 return false;
             }
 
-            attackElapsed += deltaTime;
-            if (attackElapsed < AttackInterval)
-            {
-                return false;
-            }
-
-            // One attack per simulation tick caps a large hitch instead of creating a
-            // burst of retroactive hits. Keep only the remainder for stable cadence.
-            attackElapsed -= AttackInterval;
-            if (!IsValidTarget(currentTarget) || Damage <= 0f)
-            {
-                return false;
-            }
-
-            currentTarget.ApplyDamage(Damage);
-            return true;
+            attack.SetTarget(currentTarget);
+            return attack.Simulate(deltaTime);
         }
 
         public bool IsValidTarget(Health candidate)

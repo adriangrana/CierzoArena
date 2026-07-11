@@ -119,7 +119,7 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
---- !u!1 &111538871
+--- !u!1 &116883902
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -127,112 +127,43 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 111538875}
-  - component: {fileID: 111538874}
-  - component: {fileID: 111538873}
-  - component: {fileID: 111538872}
-  m_Layer: 6
-  m_Name: Spike Ground
+  - component: {fileID: 116883904}
+  - component: {fileID: 116883903}
+  m_Layer: 0
+  m_Name: Local Hero Provider
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!23 &111538872
-MeshRenderer:
+--- !u!114 &116883903
+MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 111538871}
+  m_GameObject: {fileID: 116883902}
   m_Enabled: 1
-  m_CastShadows: 1
-  m_ReceiveShadows: 1
-  m_DynamicOccludee: 1
-  m_StaticShadowCaster: 0
-  m_MotionVectors: 1
-  m_LightProbeUsage: 1
-  m_ReflectionProbeUsage: 1
-  m_RayTracingMode: 2
-  m_RayTraceProcedural: 0
-  m_RayTracingAccelStructBuildFlagsOverride: 0
-  m_RayTracingAccelStructBuildFlags: 1
-  m_SmallMeshCulling: 1
-  m_ForceMeshLod: -1
-  m_MeshLodSelectionBias: 0
-  m_RenderingLayerMask: 1
-  m_RendererPriority: 0
-  m_Materials:
-  - {fileID: 2100000, guid: 10df7320eca9fc946bab95460638bb95, type: 2}
-  m_StaticBatchInfo:
-    firstSubMesh: 0
-    subMeshCount: 0
-  m_StaticBatchRoot: {fileID: 0}
-  m_ProbeAnchor: {fileID: 0}
-  m_LightProbeVolumeOverride: {fileID: 0}
-  m_ScaleInLightmap: 1
-  m_ReceiveGI: 1
-  m_PreserveUVs: 1
-  m_IgnoreNormalsForChartDetection: 0
-  m_ImportantGI: 0
-  m_StitchLightmapSeams: 1
-  m_SelectedEditorRenderState: 3
-  m_MinimumChartSize: 4
-  m_AutoUVMaxDistance: 0.5
-  m_AutoUVMaxAngle: 89
-  m_LightmapParameters: {fileID: 0}
-  m_GlobalIlluminationMeshLod: 0
-  m_SortingLayerID: 0
-  m_SortingLayer: 0
-  m_SortingOrder: 0
-  m_MaskInteraction: 0
-  m_AdditionalVertexStreams: {fileID: 0}
---- !u!64 &111538873
-MeshCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 111538871}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 0
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 10209, guid: 0000000000000000e000000000000000, type: 0}
---- !u!33 &111538874
-MeshFilter:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 111538871}
-  m_Mesh: {fileID: 10209, guid: 0000000000000000e000000000000000, type: 0}
---- !u!4 &111538875
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 77a36d8973cdde8488e478fd25d5b4fc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: CierzoArena.Runtime::CierzoArena.CameraSystem.LocalHeroProvider
+--- !u!4 &116883904
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 111538871}
+  m_GameObject: {fileID: 116883902}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 3.5, y: 1, z: 3.5}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &156587136
+--- !u!1 &276187201
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -240,10 +171,10 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 156587140}
-  - component: {fileID: 156587137}
-  - component: {fileID: 156587139}
-  - component: {fileID: 156587138}
+  - component: {fileID: 276187205}
+  - component: {fileID: 276187202}
+  - component: {fileID: 276187204}
+  - component: {fileID: 276187203}
   m_Layer: 0
   m_Name: MOBA Camera
   m_TagString: MainCamera
@@ -251,13 +182,13 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!20 &156587137
+--- !u!20 &276187202
 Camera:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 156587136}
+  m_GameObject: {fileID: 276187201}
   m_Enabled: 1
   serializedVersion: 2
   m_ClearFlags: 1
@@ -302,13 +233,13 @@ Camera:
   m_OcclusionCulling: 1
   m_StereoConvergence: 10
   m_StereoSeparation: 0.022
---- !u!114 &156587138
+--- !u!114 &276187203
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 156587136}
+  m_GameObject: {fileID: 276187201}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 905e69040a596364c8e199dcf936de0d, type: 3}
@@ -321,19 +252,19 @@ MonoBehaviour:
   zoomSpeed: 2
   minOrthographicSize: 6
   maxOrthographicSize: 16
-  targetCamera: {fileID: 156587137}
-  worldBounds: {fileID: 156587139}
+  targetCamera: {fileID: 276187202}
+  worldBounds: {fileID: 276187204}
   groundPlaneY: 0
-  heroProvider: {fileID: 683024350}
+  heroProvider: {fileID: 116883903}
   recenterKey: 32
   followPlaneOffset: {x: 0, y: -9.802906}
---- !u!114 &156587139
+--- !u!114 &276187204
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 156587136}
+  m_GameObject: {fileID: 276187201}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: caa97f028eb0e47489029cea1f1575a4, type: 3}
@@ -345,13 +276,13 @@ MonoBehaviour:
   maxZ: 20
   drawGizmos: 1
   gizmoY: 0
---- !u!4 &156587140
+--- !u!4 &276187205
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 156587136}
+  m_GameObject: {fileID: 276187201}
   serializedVersion: 2
   m_LocalRotation: {x: 0.46174863, y: 0, z: 0, w: 0.8870109}
   m_LocalPosition: {x: 0, y: 14, z: -9.802906}
@@ -360,7 +291,7 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &519396931
+--- !u!1 &461381143
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -368,9 +299,62 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 519396934}
-  - component: {fileID: 519396933}
-  - component: {fileID: 519396932}
+  - component: {fileID: 461381145}
+  - component: {fileID: 461381144}
+  m_Layer: 0
+  m_Name: Spike Connection Bootstrap
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &461381144
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 461381143}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3a1e47b1c1bb0474c8b0b1f8747564ed, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: CierzoArena.Netcode::CierzoArena.Netcode.SpikeConnectionBootstrap
+  azurePrefab: {fileID: 7557648011630557009, guid: 9a9e54fc7c0653b4389779cd1d624794, type: 3}
+  emberPrefab: {fileID: 568964958708931209, guid: 24ae54bdf717e8046b7103c1ed199f75, type: 3}
+  matchStatePrefab: {fileID: 4543074280121334809, guid: 362bdf740279e704cba2d13de379c0c2, type: 3}
+  azureTowerPrefab: {fileID: 4885317931127936091, guid: 734437aa73293c6479b09439785672b1, type: 3}
+  emberTowerPrefab: {fileID: 5208495322038310233, guid: e95e7ba5f084b0e4c9e35aae36dc85d5, type: 3}
+  azureCorePrefab: {fileID: 3274990304959850185, guid: 7151c12c71748bb4299ae0124bd04509, type: 3}
+  emberCorePrefab: {fileID: 602074498154498381, guid: 27715db4d11411a49aa2c552eb2dd441, type: 3}
+  azureSpawnPosition: {x: -4, y: 1, z: -2}
+  emberSpawnPosition: {x: 4, y: 1, z: 1}
+--- !u!4 &461381145
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 461381143}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &566265512
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 566265515}
+  - component: {fileID: 566265514}
+  - component: {fileID: 566265513}
   m_Layer: 0
   m_Name: Network Manager
   m_TagString: Untagged
@@ -378,13 +362,13 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &519396932
+--- !u!114 &566265513
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 519396931}
+  m_GameObject: {fileID: 566265512}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 6960e84d07fb87f47956e7a81d71c4e6, type: 3}
@@ -409,13 +393,13 @@ MonoBehaviour:
     PacketDelayMS: 0
     PacketJitterMS: 0
     PacketDropRate: 0
---- !u!114 &519396933
+--- !u!114 &566265514
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 519396931}
+  m_GameObject: {fileID: 566265512}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 593a2fe42fa9d37498c96f9a383b6521, type: 3}
@@ -424,7 +408,7 @@ MonoBehaviour:
   NetworkManagerExpanded: 0
   NetworkConfig:
     ProtocolVersion: 0
-    NetworkTransport: {fileID: 519396932}
+    NetworkTransport: {fileID: 566265513}
     PlayerPrefab: {fileID: 0}
     Prefabs:
       NetworkPrefabsLists:
@@ -451,13 +435,13 @@ MonoBehaviour:
     OldPrefabList: []
   RunInBackground: 1
   LogLevel: 1
---- !u!4 &519396934
+--- !u!4 &566265515
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 519396931}
+  m_GameObject: {fileID: 566265512}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
@@ -466,7 +450,7 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &683024349
+--- !u!1 &957771060
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -474,34 +458,35 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 683024351}
-  - component: {fileID: 683024350}
+  - component: {fileID: 957771062}
+  - component: {fileID: 957771061}
   m_Layer: 0
-  m_Name: Local Hero Provider
+  m_Name: Network Projectile Spawner
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &683024350
+--- !u!114 &957771061
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 683024349}
+  m_GameObject: {fileID: 957771060}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 77a36d8973cdde8488e478fd25d5b4fc, type: 3}
+  m_Script: {fileID: 11500000, guid: 9eb4cc215b5543f1a59441caefda9961, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: CierzoArena.Runtime::CierzoArena.CameraSystem.LocalHeroProvider
---- !u!4 &683024351
+  m_EditorClassIdentifier: CierzoArena.Netcode::CierzoArena.Netcode.NetworkProjectileSpawner
+  projectilePrefab: {fileID: 1280830878350730222, guid: 2a5db8a42faee874f9ddb621bced8b37, type: 3}
+--- !u!4 &957771062
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 683024349}
+  m_GameObject: {fileID: 957771060}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
@@ -510,7 +495,7 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &1026026547
+--- !u!1 &1526919568
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -518,43 +503,42 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 1026026549}
-  - component: {fileID: 1026026548}
+  - component: {fileID: 1526919570}
+  - component: {fileID: 1526919569}
   m_Layer: 0
-  m_Name: Spike Connection Bootstrap
+  m_Name: Network Player Command Controller
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1026026548
+--- !u!114 &1526919569
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1026026547}
+  m_GameObject: {fileID: 1526919568}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3a1e47b1c1bb0474c8b0b1f8747564ed, type: 3}
+  m_Script: {fileID: 11500000, guid: 956a10b71435adf4195ac56d92148b04, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: CierzoArena.Netcode::CierzoArena.Netcode.SpikeConnectionBootstrap
-  azurePrefab: {fileID: 7557648011630557009, guid: 9a9e54fc7c0653b4389779cd1d624794, type: 3}
-  emberPrefab: {fileID: 568964958708931209, guid: 24ae54bdf717e8046b7103c1ed199f75, type: 3}
-  matchStatePrefab: {fileID: 4543074280121334809, guid: 362bdf740279e704cba2d13de379c0c2, type: 3}
-  azureTowerPrefab: {fileID: 4885317931127936091, guid: 734437aa73293c6479b09439785672b1, type: 3}
-  emberTowerPrefab: {fileID: 5208495322038310233, guid: e95e7ba5f084b0e4c9e35aae36dc85d5, type: 3}
-  azureCorePrefab: {fileID: 3274990304959850185, guid: 7151c12c71748bb4299ae0124bd04509, type: 3}
-  emberCorePrefab: {fileID: 602074498154498381, guid: 27715db4d11411a49aa2c552eb2dd441, type: 3}
-  azureSpawnPosition: {x: -4, y: 1, z: -2}
-  emberSpawnPosition: {x: 4, y: 1, z: 1}
---- !u!4 &1026026549
+  m_EditorClassIdentifier: CierzoArena.Netcode::CierzoArena.Netcode.NetworkPlayerCommandController
+  commandCamera: {fileID: 276187202}
+  groundMask:
+    serializedVersion: 2
+    m_Bits: 64
+  selectableMask:
+    serializedVersion: 2
+    m_Bits: 128
+  stopKey: 115
+--- !u!4 &1526919570
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1026026547}
+  m_GameObject: {fileID: 1526919568}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
@@ -563,7 +547,7 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &1308630850
+--- !u!1 &1881559323
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -571,8 +555,121 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 1308630852}
-  - component: {fileID: 1308630851}
+  - component: {fileID: 1881559327}
+  - component: {fileID: 1881559326}
+  - component: {fileID: 1881559325}
+  - component: {fileID: 1881559324}
+  m_Layer: 6
+  m_Name: Spike Ground
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!23 &1881559324
+MeshRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1881559323}
+  m_Enabled: 1
+  m_CastShadows: 1
+  m_ReceiveShadows: 1
+  m_DynamicOccludee: 1
+  m_StaticShadowCaster: 0
+  m_MotionVectors: 1
+  m_LightProbeUsage: 1
+  m_ReflectionProbeUsage: 1
+  m_RayTracingMode: 2
+  m_RayTraceProcedural: 0
+  m_RayTracingAccelStructBuildFlagsOverride: 0
+  m_RayTracingAccelStructBuildFlags: 1
+  m_SmallMeshCulling: 1
+  m_ForceMeshLod: -1
+  m_MeshLodSelectionBias: 0
+  m_RenderingLayerMask: 1
+  m_RendererPriority: 0
+  m_Materials:
+  - {fileID: 2100000, guid: 10df7320eca9fc946bab95460638bb95, type: 2}
+  m_StaticBatchInfo:
+    firstSubMesh: 0
+    subMeshCount: 0
+  m_StaticBatchRoot: {fileID: 0}
+  m_ProbeAnchor: {fileID: 0}
+  m_LightProbeVolumeOverride: {fileID: 0}
+  m_ScaleInLightmap: 1
+  m_ReceiveGI: 1
+  m_PreserveUVs: 1
+  m_IgnoreNormalsForChartDetection: 0
+  m_ImportantGI: 0
+  m_StitchLightmapSeams: 1
+  m_SelectedEditorRenderState: 3
+  m_MinimumChartSize: 4
+  m_AutoUVMaxDistance: 0.5
+  m_AutoUVMaxAngle: 89
+  m_LightmapParameters: {fileID: 0}
+  m_GlobalIlluminationMeshLod: 0
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 0
+  m_MaskInteraction: 0
+  m_AdditionalVertexStreams: {fileID: 0}
+--- !u!64 &1881559325
+MeshCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1881559323}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 5
+  m_Convex: 0
+  m_CookingOptions: 30
+  m_Mesh: {fileID: 10209, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!33 &1881559326
+MeshFilter:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1881559323}
+  m_Mesh: {fileID: 10209, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!4 &1881559327
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1881559323}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 3.5, y: 1, z: 3.5}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1976867951
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1976867953}
+  - component: {fileID: 1976867952}
   m_Layer: 0
   m_Name: Sun Key Light
   m_TagString: Untagged
@@ -580,13 +677,13 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!108 &1308630851
+--- !u!108 &1976867952
 Light:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1308630850}
+  m_GameObject: {fileID: 1976867951}
   m_Enabled: 1
   serializedVersion: 13
   m_Type: 1
@@ -645,67 +742,15 @@ Light:
   m_LightUnit: 1
   m_LuxAtDistance: 1
   m_EnableSpotReflector: 1
---- !u!4 &1308630852
+--- !u!4 &1976867953
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1308630850}
+  m_GameObject: {fileID: 1976867951}
   serializedVersion: 2
   m_LocalRotation: {x: 0.40821794, y: -0.23456973, z: 0.10938166, w: 0.8754261}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &1432667663
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1432667665}
-  - component: {fileID: 1432667664}
-  m_Layer: 0
-  m_Name: Network Player Command Controller
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &1432667664
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1432667663}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 956a10b71435adf4195ac56d92148b04, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: CierzoArena.Netcode::CierzoArena.Netcode.NetworkPlayerCommandController
-  commandCamera: {fileID: 156587137}
-  groundMask:
-    serializedVersion: 2
-    m_Bits: 64
-  selectableMask:
-    serializedVersion: 2
-    m_Bits: 128
-  stopKey: 115
---- !u!4 &1432667665
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1432667663}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -716,10 +761,11 @@ Transform:
 SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
-  - {fileID: 111538875}
-  - {fileID: 519396934}
-  - {fileID: 1026026549}
-  - {fileID: 1308630852}
-  - {fileID: 683024351}
-  - {fileID: 156587140}
-  - {fileID: 1432667665}
+  - {fileID: 1881559327}
+  - {fileID: 566265515}
+  - {fileID: 461381145}
+  - {fileID: 957771062}
+  - {fileID: 1976867953}
+  - {fileID: 116883904}
+  - {fileID: 276187205}
+  - {fileID: 1526919570}

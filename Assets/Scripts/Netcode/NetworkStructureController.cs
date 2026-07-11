@@ -23,12 +23,14 @@ namespace CierzoArena.Netcode
         private Health health;
         private StructureEntity structure;
         private TowerController tower;
+        private BasicAttack attack;
 
         private void Awake()
         {
             health = GetComponent<Health>();
             structure = GetComponent<StructureEntity>();
             TryGetComponent(out tower);
+            TryGetComponent(out attack);
 
             // Prevent a client from simulating before OnNetworkSpawn establishes its
             // role. The host/server explicitly enables the tower below.
@@ -39,10 +41,15 @@ namespace CierzoArena.Netcode
         {
             if (IsServer)
             {
+                attack?.SetProjectilePresentationEnabled(false);
                 replicatedHealth.Value = health.Current;
                 replicatedDestroyed.Value = structure.IsDestroyed;
                 health.Changed += OnServerHealthChanged;
                 structure.Destroyed += OnServerStructureDestroyed;
+                if (attack != null)
+                {
+                    attack.ProjectileReleased += OnServerProjectileReleased;
+                }
                 tower?.SetSimulationEnabled(true);
                 return;
             }
@@ -58,6 +65,10 @@ namespace CierzoArena.Netcode
             {
                 health.Changed -= OnServerHealthChanged;
                 structure.Destroyed -= OnServerStructureDestroyed;
+                if (attack != null)
+                {
+                    attack.ProjectileReleased -= OnServerProjectileReleased;
+                }
             }
             else
             {
@@ -76,6 +87,11 @@ namespace CierzoArena.Netcode
         private void OnServerStructureDestroyed(StructureEntity _)
         {
             replicatedDestroyed.Value = true;
+        }
+
+        private void OnServerProjectileReleased(BasicAttack source, Health target)
+        {
+            NetworkProjectileSpawner.Active?.SpawnVisual(source, target);
         }
 
         private void OnReplicatedHealthChanged(float _, float current)

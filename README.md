@@ -23,6 +23,7 @@ Prototipo en Unity 6 (`ProjectSettings/ProjectVersion.txt`: Unity 6000.5.3f1) co
 - **M4.3** — Cámara MOBA real, seguimiento del héroe local: la cámara empieza siguiendo al héroe y Space recentra. Un `LocalHeroProvider` desacoplado (en Runtime, sin conocer Netcode) publica el héroe local; `NetworkUnitController` lo registra solo cuando es owner (nunca una unidad remota), tolerando spawn tardío y despawn, sin búsquedas globales por frame ni tráfico de red de cámara. El input manual real pasa la cámara a modo libre.
 - **M4.4** — Cámara MOBA real, integración y cierre: la cámara MOBA sustituye a la cámara técnica M3A en la greybox principal (`MobaGreyboxArena`), arrancando encuadrada y siguiendo a Azure (registrado vía `SceneLocalHeroRegistrar`), con bounds reales a ±86, zoom 12–55 y un `followPlaneOffset` que centra al héroe compensando la inclinación. La escena de red (`MultiplayerSpikeArena`) también usa la cámara MOBA con su propio `LocalHeroProvider`, de modo que host y cliente siguen cada uno su unidad owner. `IsometricCameraRig` permanece disponible para las escenas spike y sus tests. Implementado, pendiente de validación manual (local + host/cliente) y multi-resolución.
 - **M5** — Estructuras, torres y victoria: las torres detectan y atacan unidades enemigas con cadencia configurable. Por cada línea, solo la torre exterior puede dañarse al principio; desbloquea interior y luego puerta. El núcleo se vuelve vulnerable al caer las tres puertas. En red, el servidor decide objetivos, daño y ganador; los clientes solo reciben el estado replicado.
+- **M6** — Modelo avanzado de ataque: `BasicAttack` usa la secuencia Idle → Approaching → Windup → Backswing. Azure prueba melee (daño en el attack point); Ember y torres usan ranged (proyectil visible al attack point y daño únicamente al impacto). Una orden de mover o de atacar a otro objetivo cancela el windup, mientras que el backswing se puede cancelar sin alterar la cadencia. El servidor simula ataques e impactos; Netcode replica solo la visual del proyectil.
 
 La version real del proyecto esta en `ProjectSettings/ProjectVersion.txt`: Unity 6000.5.3f1.
 
@@ -41,9 +42,10 @@ La version real del proyecto esta en `ProjectSettings/ProjectVersion.txt`: Unity
 2. Pulsa Play.
 3. Haz clic izquierdo sobre la unidad azul para seleccionarla.
 4. Haz clic derecho sobre el suelo para moverla o sobre el objetivo Ember para atacarlo.
-5. Comprueba que cada unidad tiene una barra de vida sobre ella y que cada impacto muestra dano flotante y un destello breve.
-6. Pulsa `S` para detener la orden actual.
-7. En `MobaGreyboxArena`, entra en el rango de una torre enemiga para comprobar su ataque. Destruir un núcleo muestra el ganador y bloquea el gameplay restante.
+5. En melee, comprueba que el daño aparece tras un breve windup; en ranged, que el proyectil aparece tras el windup y el daño aparece solo al impactar.
+6. Durante el windup, da una orden de movimiento: no debe haber impacto ni proyectil. Tras liberar un proyectil, cambiar de orden no debe detenerlo ni cambiar su objetivo.
+7. Pulsa `S` para detener la orden actual.
+8. En `MobaGreyboxArena`, entra en el rango de una torre enemiga: debe hacer windup, lanzar un proyectil y mantenerse inmóvil. Destruir un núcleo muestra el ganador y bloquea el gameplay restante, incluidos ataques y proyectiles pendientes.
 
 ## Controles
 
@@ -60,4 +62,4 @@ La version real del proyecto esta en `ProjectSettings/ProjectVersion.txt`: Unity
 
 ## Estado del milestone
 
-Los Milestones 1 a 5 están implementados. M5 añade torres y núcleos a la greybox, una victoria autoritativa y la correspondiente réplica para host/cliente. Para regenerar las escenas tras cambios de builders, usa los menús `Cierzo Arena > Create MOBA Greybox Arena` y `Cierzo Arena > Create Multiplayer Spike Scene`.
+Los Milestones 1 a 6 están implementados. M6 sustituye el daño instantáneo por una línea temporal de ataque, proyectiles autoritativos y cancelación coherente. Para regenerar las escenas tras cambios de builders, usa los menús `Cierzo Arena > Create MOBA Greybox Arena` y `Cierzo Arena > Create Multiplayer Spike Scene`.

@@ -91,6 +91,10 @@ namespace CierzoArena.Tests.Editor
             GameObject towerObject = CreateStructure("Azure Tower", TeamId.Azure, StructureKind.Tower);
             TowerController tower = towerObject.AddComponent<TowerController>();
             InvokePrivate(tower, "Awake");
+            BasicAttack attack = towerObject.GetComponent<BasicAttack>();
+            SetPrivate(attack, "useUnitDefinition", false);
+            SetPrivate(attack, "range", 9f);
+            InvokePrivate(attack, "OnValidate");
             towerObject.transform.position = Vector3.zero;
             GameObject ally = CreateUnit("Azure Ally", TeamId.Azure, new Vector3(1f, 0f, 0f));
             GameObject deadEnemy = CreateUnit("Dead Ember", TeamId.Ember, new Vector3(2f, 0f, 0f));
@@ -109,7 +113,7 @@ namespace CierzoArena.Tests.Editor
         }
 
         [Test]
-        public void TowerCadenceUsesOneHitPerTickAndStopsAfterVictory()
+        public void TowerReleasesOneRangedProjectilePerCadenceAndStopsAfterVictory()
         {
             GameObject matchObject = new GameObject("Match");
             MatchStateController match = matchObject.AddComponent<MatchStateController>();
@@ -118,19 +122,27 @@ namespace CierzoArena.Tests.Editor
             TowerController tower = towerObject.AddComponent<TowerController>();
             InvokePrivate(tower, "Awake");
             GameObject enemy = CreateUnit("Ember", TeamId.Ember, new Vector3(2f, 0f, 0f));
-            SetPrivate(tower, "damage", 10f);
-            SetPrivate(tower, "attackInterval", 1f);
             SetPrivate(tower, "searchInterval", 0.01f);
+            BasicAttack attack = towerObject.GetComponent<BasicAttack>();
+            SetPrivate(attack, "delivery", AttackDelivery.Ranged);
+            SetPrivate(attack, "attackInterval", 1f);
+            SetPrivate(attack, "attackPoint", 0.25f);
+            SetPrivate(attack, "backswing", 0.25f);
+            InvokePrivate(attack, "OnValidate");
+            int releases = 0;
+            attack.ProjectileReleased += (_, _) => releases++;
             Physics.SyncTransforms();
 
-            Assert.That(tower.Simulate(0.5f), Is.False);
-            Assert.That(tower.Simulate(0.5f), Is.True);
-            Assert.That(enemy.GetComponent<Health>().Current, Is.EqualTo(enemy.GetComponent<Health>().Max - 10f));
-            Assert.That(tower.Simulate(5f), Is.True);
-            Assert.That(enemy.GetComponent<Health>().Current, Is.EqualTo(enemy.GetComponent<Health>().Max - 20f));
+            Assert.That(tower.Simulate(0f), Is.False);
+            Assert.That(tower.Simulate(0.24f), Is.False);
+            Assert.That(releases, Is.Zero);
+            Assert.That(tower.Simulate(0.02f), Is.True);
+            Assert.That(releases, Is.EqualTo(1));
+            Assert.That(tower.Simulate(5f), Is.False, "A large tick must not release multiple attacks.");
 
             match.ApplyAuthoritativeState(MatchState.AzureVictory);
             Assert.That(tower.Simulate(5f), Is.False);
+            Assert.That(releases, Is.EqualTo(1));
 
             Object.DestroyImmediate(enemy);
             Object.DestroyImmediate(towerObject);

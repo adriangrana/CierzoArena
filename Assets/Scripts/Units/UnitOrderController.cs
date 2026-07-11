@@ -45,10 +45,11 @@ namespace CierzoArena.Units
                 return;
             }
 
-            if (basicAttack.IsInRange(attackTarget))
+            basicAttack.SetTarget(attackTarget);
+            basicAttack.Simulate(Time.deltaTime);
+            if (!basicAttack.NeedsApproach)
             {
                 mover.Stop();
-                basicAttack.TryAttack(attackTarget);
                 return;
             }
 
@@ -87,13 +88,16 @@ namespace CierzoArena.Units
             {
                 case UnitOrderType.Move:
                     attackTarget = null;
+                    basicAttack.ClearTarget();
                     mover.MoveTo(command.Destination);
                     return true;
                 case UnitOrderType.Attack:
+                    basicAttack.SetTarget(command.Target);
                     attackTarget = command.Target;
                     return true;
                 case UnitOrderType.Stop:
                     attackTarget = null;
+                    basicAttack.ClearTarget();
                     mover.Stop();
                     return true;
                 default:
@@ -122,12 +126,14 @@ namespace CierzoArena.Units
         private void CancelAttack()
         {
             attackTarget = null;
+            basicAttack.ClearTarget();
             mover.Stop();
         }
 
         private void ClearActiveOrderAndStopMovement()
         {
             attackTarget = null;
+            basicAttack.ClearTarget();
             mover.Stop();
         }
 

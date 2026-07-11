@@ -70,7 +70,7 @@ namespace CierzoArena.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator BasicAttackDamagesEnemyAndDeadAttackerCannotAttack()
+        public IEnumerator BasicAttackDamagesOnlyAfterWindupAndDeadAttackerCannotAttack()
         {
             GameObject attackerObject = CreateUnit("Attacker", TeamId.Azure, Vector3.zero);
             BasicAttack attack = attackerObject.AddComponent<BasicAttack>();
@@ -80,8 +80,12 @@ namespace CierzoArena.Tests.PlayMode
             yield return null;
 
             Assert.That(attack.TryAttack(enemyHealth), Is.True);
+            attack.Simulate(0f);
+            attack.Simulate(0.29f);
+            Assert.That(enemyHealth.Current, Is.EqualTo(enemyHealth.Max));
+            // Cross the point rather than relying on an exact floating-point sum.
+            attack.Simulate(0.02f);
             Assert.That(enemyHealth.Current, Is.LessThan(enemyHealth.Max));
-            Assert.That(attack.TryAttack(enemyHealth), Is.False);
 
             attackerHealth.ApplyDamage(attackerHealth.Max);
             Assert.That(attack.CanAttack(enemyHealth), Is.False);

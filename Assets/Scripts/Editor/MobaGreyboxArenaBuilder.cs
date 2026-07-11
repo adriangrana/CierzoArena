@@ -403,14 +403,14 @@ namespace CierzoArena.EditorTools
             CreateTowerNavigationBlocker(root.transform);
             ConfigureStructure(root, team, StructureKind.Tower, lane, tier, 650f, healthBackgroundMaterial, healthFillMaterial, 9.2f);
             TowerController tower = root.AddComponent<TowerController>();
-            SetFloat(tower, "range", 9f);
             // Tuned for the one-hero local validation scene: Azure can destroy a
             // tower while it is firing, making the destruction/victory path testable
             // without a second local player or temporary cheats.
-            SetFloat(tower, "damage", 20f);
-            SetFloat(tower, "attackInterval", 1f);
             SetFloat(tower, "searchInterval", 0.2f);
             SetInt(tower, "targetMask", 1 << SelectableLayer);
+            ConfigureAttack(root.GetComponent<BasicAttack>(), AttackDelivery.Ranged, 9f, 20f, 1f, 0.35f, 0.35f);
+            AttackVisual towerVisual = root.AddComponent<AttackVisual>();
+            SetObjectReference(towerVisual, "targetRenderer", shaft.GetComponent<Renderer>());
         }
 
         private static void CreateSpawnPoint(Transform parent, string name, Vector3 groundPos, Material teamMaterial, Material capMaterial)
@@ -541,7 +541,15 @@ namespace CierzoArena.EditorTools
             // Both units are fully controllable so a distant target can be moved
             // manually to exercise dynamic long-range pursuit.
             unit.AddComponent<ClickMover>();
-            unit.AddComponent<BasicAttack>();
+            BasicAttack attack = unit.AddComponent<BasicAttack>();
+            ConfigureAttack(attack, team == TeamId.Azure ? AttackDelivery.Melee : AttackDelivery.Ranged,
+                team == TeamId.Azure ? 2.2f : 7f,
+                definition.AttackDamage,
+                team == TeamId.Azure ? 1.25f : 1.4f,
+                0.3f,
+                0.35f);
+            AttackVisual attackVisual = unit.AddComponent<AttackVisual>();
+            SetObjectReference(attackVisual, "targetRenderer", unit.GetComponent<Renderer>());
             unit.AddComponent<UnitOrderController>();
 
             GameObject ring = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
@@ -902,6 +910,21 @@ namespace CierzoArena.EditorTools
         {
             SerializedObject serialized = new SerializedObject(target);
             serialized.FindProperty(propertyName).intValue = value;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static void ConfigureAttack(BasicAttack attack, AttackDelivery delivery, float range, float damage, float interval, float attackPoint, float backswing)
+        {
+            SerializedObject serialized = new SerializedObject(attack);
+            serialized.FindProperty("delivery").enumValueIndex = (int)delivery;
+            serialized.FindProperty("range").floatValue = range;
+            serialized.FindProperty("damage").floatValue = damage;
+            serialized.FindProperty("attackInterval").floatValue = interval;
+            serialized.FindProperty("attackPoint").floatValue = attackPoint;
+            serialized.FindProperty("backswing").floatValue = backswing;
+            serialized.FindProperty("projectileSpeed").floatValue = 15f;
+            serialized.FindProperty("projectileLifetime").floatValue = 4f;
+            serialized.FindProperty("useUnitDefinition").boolValue = false;
             serialized.ApplyModifiedPropertiesWithoutUndo();
         }
 

@@ -17,7 +17,8 @@ Objetivo final asumido: MOBA 3D original, competitivo, eventualmente 5v5 online,
 | M3B — Navegación a gran escala | Completed | Manual Play Mode + tests |
 | M3C — Greybox completo del mapa MOBA | Implemented | Pending manual validation |
 | M4 — Cámara MOBA real | Implemented | Automated tests (M4.1–M4.4) + pending manual validation |
-| M5 — Estructuras, torres y victoria | Implemented | Static compilation; pending Unity scene regeneration and test runner |
+| M5 — Estructuras, torres y victoria | Completed | Local and automated validation |
+| M6 — Modelo avanzado de ataque | Implemented | Compilation complete; Unity runner/manual validation pending |
 
 ## Roadmap Principles
 
@@ -302,22 +303,24 @@ Resultado: `La arena ya tiene objetivos defensivos y una condición de victoria 
 
 ### Milestone 6 — Modelo avanzado de ataque
 
-Status: ⬜ Futuro
+Status: 🔵 Implementado / pendiente de validación final en Unity
 
 El ataque actual sirve de prototipo. Aquí se convierte en combate serio.
 
-- [ ] Ataques melee
-- [ ] Ataques ranged
-- [ ] Proyectiles
-- [ ] Attack point / windup
-- [ ] Impacto
-- [ ] Backswing
-- [ ] Cancelación
-- [ ] Animación provisional
-- [ ] Objetivo perdido
-- [ ] Objetivo muerto
-- [ ] Cambio de objetivo
-- [ ] Distancia coherente
+- [x] Ataques melee
+- [x] Ataques ranged
+- [x] Proyectiles
+- [x] Attack point / windup
+- [x] Impacto
+- [x] Backswing
+- [x] Cancelación
+- [x] Animación provisional
+- [x] Objetivo perdido
+- [x] Objetivo muerto
+- [x] Cambio de objetivo
+- [x] Distancia coherente
+
+Resultado: `Los ataques ya tienen una secuencia temporal coherente, impactos reales y cancelación autoritativa.`
 
 > 🚪 Gate: el combate debe sentirse responsivo antes de añadir héroes.
 

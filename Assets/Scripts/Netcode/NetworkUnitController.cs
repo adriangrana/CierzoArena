@@ -31,6 +31,7 @@ namespace CierzoArena.Netcode
 
         private UnitOrderController orderController;
         private Health health;
+        private BasicAttack attack;
         private AuthoritativeOrderProcessor processor;
         private LocalHeroProvider localHeroProvider;
 
@@ -38,6 +39,7 @@ namespace CierzoArena.Netcode
         {
             orderController = GetComponent<UnitOrderController>();
             health = GetComponent<Health>();
+            attack = GetComponent<BasicAttack>();
         }
 
         public override void OnNetworkSpawn()
@@ -45,8 +47,15 @@ namespace CierzoArena.Netcode
             if (IsServer)
             {
                 processor = new AuthoritativeOrderProcessor(orderController, OwnerClientId);
+                // A Runtime projectile remains the authoritative hit simulator. NGO
+                // owns the visible twin, so hide the local mesh on the host/server.
+                attack?.SetProjectilePresentationEnabled(false);
                 replicatedHealth.Value = health.Current;
                 health.Changed += OnServerHealthChanged;
+                if (attack != null)
+                {
+                    attack.ProjectileReleased += OnServerProjectileReleased;
+                }
             }
             else
             {
@@ -73,6 +82,10 @@ namespace CierzoArena.Netcode
             if (IsServer && health != null)
             {
                 health.Changed -= OnServerHealthChanged;
+                if (attack != null)
+                {
+                    attack.ProjectileReleased -= OnServerProjectileReleased;
+                }
             }
             else
             {
@@ -179,6 +192,11 @@ namespace CierzoArena.Netcode
         private void OnServerHealthChanged(Health _, float current, float max)
         {
             replicatedHealth.Value = current;
+        }
+
+        private void OnServerProjectileReleased(BasicAttack source, Health target)
+        {
+            NetworkProjectileSpawner.Active?.SpawnVisual(source, target);
         }
 
         private void LogResult(string order, ulong senderClientId, OrderRequestResult result)

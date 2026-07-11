@@ -342,6 +342,7 @@ GameObject:
   - component: {fileID: 3171935849099911085}
   - component: {fileID: 1284950542094221010}
   - component: {fileID: 5485743708081252552}
+  - component: {fileID: 3316402505964244546}
   - component: {fileID: 4653741214017372180}
   - component: {fileID: 308542167135044382}
   - component: {fileID: 3848645385178074447}
@@ -628,9 +629,34 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 757d624cc8388f74cbe53b1562c1dfdd, type: 3}
   m_Name: 
   m_EditorClassIdentifier: CierzoArena.Runtime::CierzoArena.Combat.BasicAttack
-  damage: 45
-  range: 2.1
-  attacksPerSecond: 0.7
+  damage: 48
+  range: 2.2
+  attackInterval: 1.25
+  attacksPerSecond: 0.8
+  attackPoint: 0.3
+  backswing: 0.35
+  delivery: 0
+  meleeImpactTolerance: 0.2
+  projectileSpeed: 15
+  projectileLifetime: 4
+  projectileImpactRadius: 0.2
+  projectileMaterial: {fileID: 0}
+  useUnitDefinition: 0
+--- !u!114 &3316402505964244546
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7012766082569407939}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c31bf75cc2ea42e5ad86c32eea709b19, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: CierzoArena.Runtime::CierzoArena.Combat.AttackVisual
+  targetRenderer: {fileID: 6768545034488568754}
+  windupColor: {r: 1, g: 0.82, b: 0.28, a: 1}
+  backswingColor: {r: 1, g: 0.5, b: 0.18, a: 1}
 --- !u!114 &4653741214017372180
 MonoBehaviour:
   m_ObjectHideFlags: 0

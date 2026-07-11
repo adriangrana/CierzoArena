@@ -23,13 +23,23 @@ namespace CierzoArena.Tests.PlayMode
             TeamMember enemyTeam = enemy.AddComponent<TeamMember>();
             SetPrivate(enemyTeam, "team", TeamId.Ember);
             Health enemyHealth = enemy.AddComponent<Health>();
-            SetPrivate(tower, "damage", 25f);
-            SetPrivate(tower, "attackInterval", 0.01f);
+            BasicAttack attack = towerObject.GetComponent<BasicAttack>();
+            SetPrivate(attack, "useUnitDefinition", false);
+            SetPrivate(attack, "delivery", AttackDelivery.Ranged);
+            SetPrivate(attack, "range", 9f);
+            SetPrivate(attack, "damage", 25f);
+            SetPrivate(attack, "attackInterval", 1f);
+            SetPrivate(attack, "attackPoint", 0.01f);
+            SetPrivate(attack, "backswing", 0.01f);
+            SetPrivate(attack, "projectileSpeed", 1000f);
             SetPrivate(tower, "searchInterval", 0.01f);
             Physics.SyncTransforms();
 
             yield return null;
-            tower.Simulate(0.1f);
+            tower.enabled = false;
+            tower.Simulate(0f);
+            tower.Simulate(0.02f);
+            yield return null;
             float afterHit = enemyHealth.Current;
             Assert.That(afterHit, Is.LessThan(enemyHealth.Max));
 
