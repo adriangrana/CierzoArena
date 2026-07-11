@@ -58,6 +58,11 @@ namespace CierzoArena.Combat
 
         private void OnHealthChanged(Health _, float current, float max)
         {
+            if (current > 0f && !gameObject.activeSelf)
+            {
+                gameObject.SetActive(true);
+            }
+
             Refresh(current, max);
         }
 

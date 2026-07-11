@@ -425,7 +425,7 @@ MonoBehaviour:
   searchInterval: 0.2
   targetMask:
     serializedVersion: 2
-    m_Bits: 128
+    m_Bits: 4294967295
   simulationEnabled: 1
 --- !u!114 &4032092385409664511
 MonoBehaviour:

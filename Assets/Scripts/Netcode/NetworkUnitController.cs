@@ -75,6 +75,10 @@ namespace CierzoArena.Netcode
             // here (not per frame) via the scene provider's small access point, keeping
             // Runtime Netcode-agnostic.
             RegisterAsLocalHeroIfOwner(LocalHeroProvider.Active, IsOwner);
+            if (IsOwner && TryGetComponent(out SelectableUnit selectable))
+            {
+                selectable.SetSelected(true);
+            }
         }
 
         public override void OnNetworkDespawn()

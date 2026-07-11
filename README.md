@@ -25,6 +25,7 @@ Prototipo en Unity 6 (`ProjectSettings/ProjectVersion.txt`: Unity 6000.5.3f1) co
 - **M5** — Estructuras, torres y victoria: las torres detectan y atacan unidades enemigas con cadencia configurable. Por cada línea, solo la torre exterior puede dañarse al principio; desbloquea interior y luego puerta. El núcleo se vuelve vulnerable al caer las tres puertas. En red, el servidor decide objetivos, daño y ganador; los clientes solo reciben el estado replicado.
 - **M6** — Modelo avanzado de ataque: `BasicAttack` usa la secuencia Idle → Approaching → Windup → Backswing. Azure prueba melee (daño en el attack point); Ember y torres usan ranged (proyectil visible al attack point y daño únicamente al impacto). Una orden de mover o de atacar a otro objetivo cancela el windup, mientras que el backswing se puede cancelar sin alterar la cadencia. El servidor simula ataques e impactos; Netcode replica solo la visual del proyectil.
 - **M7** — Creeps, oleadas y aggro defensivo: seis spawners generan oleadas Azure/Ember en top, mid y bottom. Los creeps melee/ranged siguen rutas, buscan el enemigo válido más cercano, mantienen foco, respetan leash y usan `BasicAttack`. Si un héroe daña a un héroe aliado cercano, creeps y torres cambian temporalmente al agresor. En red, solo el servidor genera y simula creeps.
+- **M8** — Muerte y respawn de héroes: los héroes pasan por `Alive`, `Dead` y `Respawning`; al morir se limpian órdenes y objetivos, se oculta su presentación y reaparecen con vida máxima en el `HeroSpawnPoint` de su equipo. Azure queda seleccionado al iniciar y al reaparecer, por lo que el clic derecho sobre creeps enemigos ordena perseguir y atacar de inmediato. El servidor controla y replica el ciclo en la escena multijugador.
 
 La version real del proyecto esta en `ProjectSettings/ProjectVersion.txt`: Unity 6000.5.3f1.
 
@@ -41,13 +42,14 @@ La version real del proyecto esta en `ProjectSettings/ProjectVersion.txt`: Unity
 
 1. Para crear la version de prueba del Milestone 2.1, usa `Cierzo Arena > Create Prototype Scene`.
 2. Pulsa Play.
-3. Haz clic izquierdo sobre la unidad azul para seleccionarla.
-4. Haz clic derecho sobre el suelo para moverla o sobre el objetivo Ember para atacarlo.
+3. Azure ya empieza seleccionado. Haz clic izquierdo sobre él sólo si necesitas volver a seleccionarlo.
+4. Haz clic derecho sobre el suelo para moverlo o sobre un enemigo —héroe o creep— para perseguirlo y atacarlo.
 5. En melee, comprueba que el daño aparece tras un breve windup; en ranged, que el proyectil aparece tras el windup y el daño aparece solo al impactar.
 6. Durante el windup, da una orden de movimiento: no debe haber impacto ni proyectil. Tras liberar un proyectil, cambiar de orden no debe detenerlo ni cambiar su objetivo.
 7. Pulsa `S` para detener la orden actual.
 8. En `MobaGreyboxArena`, entra en el rango de una torre enemiga: debe hacer windup, lanzar un proyectil y mantenerse inmóvil. Destruir un núcleo muestra el ganador y bloquea el gameplay restante, incluidos ataques y proyectiles pendientes.
 9. Espera las oleadas: los creeps Azure y Ember avanzan por las tres líneas, se enfrentan al encontrarse y retoman su ruta al perder el objetivo.
+10. Para probar M8, deja que una torre, creep o héroe enemigo mate a Azure: debe desaparecer, mostrar `Respawning in X`, rechazar órdenes y reaparecer seleccionado en su base con la barra llena. Space vuelve a centrar la cámara tras reaparecer. En `MultiplayerSpikeArena`, repite la prueba con host y cliente; cada uno conserva ownership y vuelve a su propio spawn.
 
 ## Controles
 
@@ -64,4 +66,4 @@ La version real del proyecto esta en `ProjectSettings/ProjectVersion.txt`: Unity
 
 ## Estado del milestone
 
-Los Milestones 1 a 6 están implementados. M6 sustituye el daño instantáneo por una línea temporal de ataque, proyectiles autoritativos y cancelación coherente. Para regenerar las escenas tras cambios de builders, usa los menús `Cierzo Arena > Create MOBA Greybox Arena` y `Cierzo Arena > Create Multiplayer Spike Scene`.
+Los Milestones 1 a 8 están implementados. M8 añade el ciclo autoritativo de muerte y respawn de héroes. Para regenerar las escenas tras cambios de builders, usa los menús `Cierzo Arena > Create MOBA Greybox Arena` y `Cierzo Arena > Create Multiplayer Spike Scene`.

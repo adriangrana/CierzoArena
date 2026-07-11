@@ -121,6 +121,7 @@ namespace CierzoArena.Units
         }
 
         private bool CanReceiveOrders => health != null && health.IsAlive &&
+            (!TryGetComponent(out HeroLifeCycle heroLife) || heroLife.IsAliveForGameplay) &&
             (MatchStateController.Active == null || MatchStateController.Active.CanAcceptGameplay);
 
         private void CancelAttack()

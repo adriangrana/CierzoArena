@@ -18,7 +18,9 @@ Objetivo final asumido: MOBA 3D original, competitivo, eventualmente 5v5 online,
 | M3C — Greybox completo del mapa MOBA | Implemented | Pending manual validation |
 | M4 — Cámara MOBA real | Implemented | Automated tests (M4.1–M4.4) + pending manual validation |
 | M5 — Estructuras, torres y victoria | Completed | Local and automated validation |
-| M6 — Modelo avanzado de ataque | Implemented | Compilation complete; Unity runner/manual validation pending |
+| M6 — Modelo avanzado de ataque | Completed | Automated + manual validation |
+| M7 — Creeps, oleadas y aggro defensivo | Completed | Automated + manual validation |
+| M8 — Muerte y respawn de héroes | Implemented | Runtime, Netcode, selección persistente y cobertura determinista Edit Mode |
 
 ## Roadmap Principles
 
@@ -341,38 +343,24 @@ Status: 🔵 Implementado / pendiente de validación final en Unity
 
 Resultado: `La arena ya se juega de forma autónoma con oleadas, combate por líneas y aggro defensivo.`
 
-### Milestone 8 — Framework de habilidades
+### Milestone 8 — Muerte y respawn de héroes
 
-Status: ⬜ Futuro
+Status: 🔵 Implementado / pendiente de validación final en Unity
 
-Este es uno de los milestones más importantes del juego.
+- [x] Estados `Alive`, `Dead` y `Respawning` solo para héroes
+- [x] Muerte cancela órdenes, movimiento, windup y target
+- [x] Héroe muerto deja de ser objetivo válido y no bloquea con su collider
+- [x] Temporizador configurable y restauración a vida máxima
+- [x] `HeroSpawnPoint` explícito por equipo, con gizmo y sin depender de nombres
+- [x] Feedback provisional `Respawning in X` y reactivación de presentación/barra
+- [x] Héroe local seleccionado al inicio y tras reaparecer; clic derecho sobre creep enemigo persigue y ataca
+- [x] Victoria tiene prioridad y bloquea respawns posteriores
+- [x] El servidor decide y replica estado, contador, posición y vida; el cliente no tiene RPC de respawn
+- [x] Wiring en `MobaGreyboxArena` y `MultiplayerSpikeArena`
 
-Tipos básicos:
+Resultado: `Los héroes ya tienen un ciclo completo de muerte y reaparición.`
 
-- [ ] Target Unit
-- [ ] Target Point
-- [ ] No Target
-- [ ] Passive
-- [ ] Toggle
-- [ ] Channeling
-
-Sistemas:
-
-- [ ] Cooldown
-- [ ] Coste de maná
-- [ ] Rango
-- [ ] Área
-- [ ] Cast time
-- [ ] Interrupción
-- [ ] Efectos
-- [ ] Buff
-- [ ] Debuff
-- [ ] Stun
-- [ ] Slow
-- [ ] Silence
-- [ ] Damage over time
-
-> 🚪 Gate: crear varias habilidades distintas sin reprogramar el motor cada vez.
+> 🚪 Gate: validar localmente y con host/cliente que no haya órdenes válidas, doble respawn ni pérdida de ownership.
 
 ### Milestone 9 — Primer héroe completo
 

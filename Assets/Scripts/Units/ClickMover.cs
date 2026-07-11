@@ -76,6 +76,27 @@ namespace CierzoArena.Units
             agent.isStopped = true;
         }
 
+        /// <summary>Places the agent at a valid navigation position and clears any old route.</summary>
+        public void WarpTo(Vector3 worldPosition)
+        {
+            if (agent == null)
+            {
+                transform.position = worldPosition;
+                return;
+            }
+
+            if (NavMesh.SamplePosition(worldPosition, out NavMeshHit hit, navMeshSearchRadius, NavMesh.AllAreas))
+            {
+                agent.Warp(hit.position);
+            }
+            else
+            {
+                transform.position = worldPosition;
+            }
+
+            Stop();
+        }
+
         private void ConfigureAgent()
         {
             agent.speed = moveSpeed;

@@ -26,19 +26,31 @@ namespace CierzoArena.Combat
 
         private void OnDied(Health _)
         {
-            foreach (Renderer targetRenderer in renderersToDisable)
+            SetVisible(false);
+        }
+
+        /// <summary>Applies the presentation and collision state for death and respawn.</summary>
+        public void SetVisible(bool visible)
+        {
+            if (renderersToDisable != null)
             {
-                if (targetRenderer != null)
+                foreach (Renderer targetRenderer in renderersToDisable)
                 {
-                    targetRenderer.enabled = false;
+                    if (targetRenderer != null)
+                    {
+                        targetRenderer.enabled = visible;
+                    }
                 }
             }
 
-            foreach (Collider targetCollider in collidersToDisable)
+            if (collidersToDisable != null)
             {
-                if (targetCollider != null)
+                foreach (Collider targetCollider in collidersToDisable)
                 {
-                    targetCollider.enabled = false;
+                    if (targetCollider != null)
+                    {
+                        targetCollider.enabled = visible;
+                    }
                 }
             }
         }

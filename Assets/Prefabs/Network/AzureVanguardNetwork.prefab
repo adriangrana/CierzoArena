@@ -345,7 +345,10 @@ GameObject:
   - component: {fileID: 5485743708081252552}
   - component: {fileID: 3316402505964244546}
   - component: {fileID: 4653741214017372180}
+  - component: {fileID: 8768412026401482626}
+  - component: {fileID: 281907993321800783}
   - component: {fileID: 308542167135044382}
+  - component: {fileID: 946715458302496480}
   - component: {fileID: 3848645385178074447}
   - component: {fileID: 8987734147815320748}
   m_Layer: 7
@@ -643,7 +646,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: CierzoArena.Runtime::CierzoArena.Combat.BasicAttack
   damage: 48
-  range: 2.2
+  range: 3.25
   attackInterval: 1.25
   attacksPerSecond: 0.8
   attackPoint: 0.3
@@ -682,6 +685,32 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 03ac01c66663ff54aba1727e1c9aebcb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: CierzoArena.Runtime::CierzoArena.Units.UnitOrderController
+--- !u!114 &8768412026401482626
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7012766082569407939}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f4981ac08f64a3e9ac95c3d8c8ab003, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: CierzoArena.Runtime::CierzoArena.Units.HeroLifeCycle
+  respawnDelay: 8
+  simulationEnabled: 1
+--- !u!114 &281907993321800783
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7012766082569407939}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f4981ac08f64a3e9ac95c3d8c8ab004, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: CierzoArena.Runtime::CierzoArena.Units.HeroRespawnFeedback
 --- !u!114 &308542167135044382
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -694,6 +723,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8605821bcd810bb47b54114876fc2eee, type: 3}
   m_Name: 
   m_EditorClassIdentifier: CierzoArena.Netcode::CierzoArena.Netcode.NetworkUnitController
+  ShowTopMostFoldoutHeaderGroup: 1
+--- !u!114 &946715458302496480
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7012766082569407939}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f4981ac08f64a3e9ac95c3d8c8ab005, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: CierzoArena.Netcode::CierzoArena.Netcode.NetworkHeroLifeCycle
   ShowTopMostFoldoutHeaderGroup: 1
 --- !u!114 &3848645385178074447
 MonoBehaviour:

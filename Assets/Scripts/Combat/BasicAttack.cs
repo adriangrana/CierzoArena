@@ -1,6 +1,7 @@
 using System;
 using CierzoArena.Core;
 using CierzoArena.Structures;
+using CierzoArena.Units;
 using UnityEngine;
 
 namespace CierzoArena.Combat
@@ -214,6 +215,12 @@ namespace CierzoArena.Combat
             EnsureInitialized();
             if (health == null || !health.IsAlive || candidate == null || !candidate.IsAlive ||
                 (MatchStateController.Active != null && !MatchStateController.Active.CanAcceptGameplay))
+            {
+                return false;
+            }
+
+            if ((TryGetComponent(out HeroLifeCycle attackerLife) && !attackerLife.IsAliveForGameplay) ||
+                (candidate.TryGetComponent(out HeroLifeCycle targetLife) && !targetLife.IsAliveForGameplay))
             {
                 return false;
             }

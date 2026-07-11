@@ -22,9 +22,20 @@ namespace CierzoArena.Units
             }
         }
 
+        private void Start()
+        {
+            // The local MOBA scene starts with its controllable hero ready for an
+            // immediate right-click command; the visible ring and command receiver
+            // must agree on that initial selection.
+            if (selectedUnit == null)
+            {
+                Select(FindDefaultHero());
+            }
+        }
+
         private void Update()
         {
-            if (selectedUnit != null && !IsPlayerControlled(selectedUnit))
+            if (selectedUnit != null && !IsLocalHero(selectedUnit))
             {
                 Select(null);
             }
@@ -120,6 +131,30 @@ namespace CierzoArena.Units
             TeamMember teamMember = unit.GetComponent<TeamMember>();
             Health health = unit.GetComponent<Health>();
             return teamMember != null && health != null && health.IsAlive && teamMember.Team == TeamId.Azure;
+        }
+
+        private static bool IsLocalHero(SelectableUnit unit)
+        {
+            if (unit == null)
+            {
+                return false;
+            }
+
+            return unit.TryGetComponent(out HeroUnit _) &&
+                unit.TryGetComponent(out TeamMember member) && member.Team == TeamId.Azure;
+        }
+
+        private static SelectableUnit FindDefaultHero()
+        {
+            foreach (SelectableUnit candidate in FindObjectsByType<SelectableUnit>(FindObjectsInactive.Exclude))
+            {
+                if (IsLocalHero(candidate))
+                {
+                    return candidate;
+                }
+            }
+
+            return null;
         }
     }
 }

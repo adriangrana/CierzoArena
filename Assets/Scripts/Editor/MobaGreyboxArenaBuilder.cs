@@ -84,6 +84,8 @@ namespace CierzoArena.EditorTools
             BuildLanes(routeMaterial, routeMidMaterial);
             CreateMatchController();
             BuildBases(azureBaseMaterial, emberBaseMaterial, markerMaterial, healthBackgroundMaterial, healthFillMaterial);
+            CreateHeroSpawnPoint("Azure Hero Spawn", AzureBaseCenter + new Vector3(9f, 1f, 9f), TeamId.Azure);
+            CreateHeroSpawnPoint("Ember Hero Spawn", EmberBaseCenter + new Vector3(-9f, 1f, -9f), TeamId.Ember);
             BuildObstacles(obstacleMaterial);
             BuildNeutralZones(neutralMaterial, markerMaterial);
             BuildTowersAndSpawns(azureBaseMaterial, emberBaseMaterial, markerMaterial, healthBackgroundMaterial, healthFillMaterial);
@@ -558,6 +560,8 @@ namespace CierzoArena.EditorTools
             AttackVisual attackVisual = unit.AddComponent<AttackVisual>();
             SetObjectReference(attackVisual, "targetRenderer", unit.GetComponent<Renderer>());
             unit.AddComponent<UnitOrderController>();
+            unit.AddComponent<HeroLifeCycle>();
+            unit.AddComponent<HeroRespawnFeedback>();
 
             GameObject ring = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             ring.name = "Selection Ring";
@@ -584,6 +588,14 @@ namespace CierzoArena.EditorTools
             deathObject.ApplyModifiedPropertiesWithoutUndo();
 
             return unit;
+        }
+
+        private static void CreateHeroSpawnPoint(string name, Vector3 position, TeamId team)
+        {
+            GameObject spawnObject = new GameObject(name);
+            spawnObject.transform.position = position;
+            HeroSpawnPoint spawn = spawnObject.AddComponent<HeroSpawnPoint>();
+            spawn.SetTeam(team);
         }
 
         // ----- M7 lane creeps ------------------------------------------------

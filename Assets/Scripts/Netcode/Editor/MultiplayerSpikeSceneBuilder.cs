@@ -46,6 +46,8 @@ namespace CierzoArena.Netcode.EditorTools
             Material healthFillMaterial = CreateMaterial("Assets/Materials/Prototype_HealthFill.mat", new Color(0.2f, 0.85f, 0.3f));
 
             CreateGround(groundMaterial);
+            CreateHeroSpawnPoint("Azure Hero Spawn", new Vector3(-10f, 1f, -6f), TeamId.Azure);
+            CreateHeroSpawnPoint("Ember Hero Spawn", new Vector3(10f, 1f, 6f), TeamId.Ember);
 
             UnitDefinition azureDefinition = CreateOrLoadUnitDefinition(
                 "Assets/Data/AzureVanguard.asset", 520f, 5.5f, 48f, 2.2f, 0.8f);
@@ -228,7 +230,10 @@ namespace CierzoArena.Netcode.EditorTools
             AttackVisual attackVisual = unit.AddComponent<AttackVisual>();
             SetObjectReference(attackVisual, "targetRenderer", unit.GetComponent<Renderer>());
             unit.AddComponent<UnitOrderController>();
+            unit.AddComponent<HeroLifeCycle>();
+            unit.AddComponent<HeroRespawnFeedback>();
             unit.AddComponent<NetworkUnitController>();
+            unit.AddComponent<NetworkHeroLifeCycle>();
 
             GameObject ring = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             ring.name = "Selection Ring";
@@ -254,6 +259,14 @@ namespace CierzoArena.Netcode.EditorTools
             deathObject.ApplyModifiedPropertiesWithoutUndo();
 
             return unit;
+        }
+
+        private static void CreateHeroSpawnPoint(string name, Vector3 position, TeamId team)
+        {
+            GameObject spawnObject = new GameObject(name);
+            spawnObject.transform.position = position;
+            HeroSpawnPoint spawn = spawnObject.AddComponent<HeroSpawnPoint>();
+            spawn.SetTeam(team);
         }
 
         private static string CreateNetworkCreepPrefab(string assetName, TeamId team, CreepArchetype archetype, Material material, Material healthBackgroundMaterial, Material healthFillMaterial)
