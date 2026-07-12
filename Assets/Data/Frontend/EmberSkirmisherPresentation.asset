@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e08ef5475c0c4ca0b6a0000000000003, type: 3}
+  m_Name: EmberSkirmisherPresentation
+  m_EditorClassIdentifier: 
+  heroName: Ember Skirmisher
+  role: Skirmisher
+  combatStyle: Ranged
+  difficulty: 2
+  description: A nimble ranged prototype built to pressure lanes and reposition quickly.
+  abilities: "Cinder Shot \xB7 Ash Veil \xB7 Copper Dash \xB7 Ember Nova"

@@ -1,4 +1,5 @@
 using CierzoArena.Units;
+using CierzoArena.Frontend;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -79,6 +80,7 @@ namespace CierzoArena.Netcode
             }
 
             NetworkObject instance = Instantiate(prefab, position, Quaternion.identity);
+            ArenaVisualPass.Repair(instance.gameObject);
             instance.Spawn();
             if (instance.TryGetComponent(out CreepController creep))
             {

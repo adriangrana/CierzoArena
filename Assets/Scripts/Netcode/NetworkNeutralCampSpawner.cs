@@ -1,4 +1,5 @@
 using CierzoArena.Units;
+using CierzoArena.Frontend;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -21,7 +22,7 @@ namespace CierzoArena.Netcode
         private void OnServerStopped(bool _)=>camp.SetSimulationEnabled(false);
         private void SpawnRequested(NeutralCamp _,NeutralSpawnEntry entry,Vector3 position)
         {
-            if(manager==null||!manager.IsServer)return;NetworkObject prefab=entry.Category==NeutralCampCategory.Small?smallPrefab:entry.Category==NeutralCampCategory.Medium?mediumPrefab:largePrefab;if(prefab==null)return;NetworkObject instance=Instantiate(prefab,position,Quaternion.identity);instance.Spawn();camp.RegisterSpawned(instance.GetComponent<NeutralUnitController>());
+            if(manager==null||!manager.IsServer)return;NetworkObject prefab=entry.Category==NeutralCampCategory.Small?smallPrefab:entry.Category==NeutralCampCategory.Medium?mediumPrefab:largePrefab;if(prefab==null)return;NetworkObject instance=Instantiate(prefab,position,Quaternion.identity);ArenaVisualPass.Repair(instance.gameObject);instance.Spawn();camp.RegisterSpawned(instance.GetComponent<NeutralUnitController>());
         }
     }
 }

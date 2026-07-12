@@ -1,4 +1,5 @@
 using CierzoArena.CameraSystem;
+using CierzoArena.Frontend;
 using UnityEngine;
 
 namespace CierzoArena.Units
@@ -17,17 +18,17 @@ namespace CierzoArena.Units
         {
             if (LocalHeroProvider.Active == null || LocalHeroProvider.Active.CurrentHero != transform) return;
             EnsureStyles();
-            float scale = Mathf.Max(1f, Screen.height / 1080f); Matrix4x4 old = GUI.matrix; GUI.matrix = Matrix4x4.Scale(new Vector3(scale, scale, 1f));
-            GUI.Box(new Rect(24, 470, 570, 48), $"MANA {mana.CurrentMana:0}/{mana.MaximumMana:0}   Regen {mana.RegenerationPerSecond:0.0}/s   Skill points {abilities.SkillPoints}", style);
+            float scale = HudLayout.Scale; Matrix4x4 old = GUI.matrix; GUI.matrix = Matrix4x4.Scale(new Vector3(scale, scale, 1f));Rect panel=HudLayout.Abilities;
+            GUI.Box(new Rect(panel.x,panel.y,panel.width,48), $"MANA {mana.CurrentMana:0}/{mana.MaximumMana:0}   Regen {mana.RegenerationPerSecond:0.0}/s   Skill points {abilities.SkillPoints}", style);
             string[] keys = { "Q", "W", "E", "R" };
             for (int i = 0; i < 4; i++)
             {
-                AbilityDefinition definition = abilities.GetDefinition(i); float x = 24 + i * 143;
+                AbilityDefinition definition = abilities.GetDefinition(i); float x = panel.x + i * 143;
                 string text = definition == null ? "Empty" : $"{keys[i]} {definition.DisplayName}\nLv {abilities.GetLevel(i)}/{definition.MaximumLevel}  CD {abilities.GetCooldown(i):0.0}\nMana {definition.ManaCost(Mathf.Max(1, abilities.GetLevel(i))):0}";
-                GUI.Box(new Rect(x, 526, 135, 94), text, style);
-                if (definition != null && GUI.Button(new Rect(x + 32, 594, 70, 21), "+ Level")) Upgrade(i);
+                GUI.Box(new Rect(x, panel.y+56, 135, 86), text, style);
+                if (definition != null && GUI.Button(new Rect(x + 32, panel.y+118, 70, 21), "+ Level")) Upgrade(i);
             }
-            if (abilities.CastState == AbilityCastState.Casting) GUI.Label(new Rect(610, 470, 240, 40), "CASTING... (right click cancels)", title);
+            if (abilities.CastState == AbilityCastState.Casting) GUI.Label(new Rect(panel.x-250, panel.y, 240, 40), "CASTING... (right click cancels)", title);
             GUI.matrix = old;
         }
         private void Upgrade(int slot)

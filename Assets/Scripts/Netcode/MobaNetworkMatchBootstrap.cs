@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using CierzoArena.CameraSystem;
 using CierzoArena.Core;
+using CierzoArena.Frontend;
 using CierzoArena.Structures;
 using CierzoArena.Units;
 using Unity.Netcode;
@@ -42,6 +43,7 @@ namespace CierzoArena.Netcode
         private NetworkManager manager;
         private bool networkMode;
         private bool localDevelopmentMode;
+        private bool launchedFromFrontend;
         private GUIStyle labelStyle;
         private GUIStyle buttonStyle;
         private TeamId requestedTeam = TeamId.Azure;
@@ -77,7 +79,17 @@ namespace CierzoArena.Netcode
             manager.OnClientConnectedCallback+=OnClientConnected;
             manager.OnClientDisconnectCallback+=OnClientDisconnected;
             manager.ConnectionApprovalCallback=ApproveConnection;
+            ArenaVisualPass.Repair(gameObject);
+            foreach(Renderer renderer in FindObjectsByType<Renderer>(FindObjectsInactive.Include))ArenaVisualPass.Repair(renderer.gameObject);
             PauseLocalGameplay();
+            if(FrontendLaunchRequest.TryConsume(out FrontendMatchMode mode,out TeamId team,out string address,out ushort port))
+            {
+                launchedFromFrontend=true;requestedTeam=team;
+                if(manager.TryGetComponent(out UnityTransport frontendTransport))frontendTransport.SetConnectionData(address,port);
+                if(mode==FrontendMatchMode.LocalDevelopment)StartLocalDevelopment();
+                else if(mode==FrontendMatchMode.Host)StartHost();
+                else StartClient();
+            }
         }
         private void OnDestroy()
         {
@@ -241,6 +253,7 @@ namespace CierzoArena.Netcode
             }
 
             NetworkObject hero=Instantiate(prefab,position,Quaternion.identity);
+            ArenaVisualPass.Repair(hero.gameObject);
             Debug.Log($"[M18 Spawn] After Instantiate clientId={clientId} instance={(hero!=null?hero.name:"null")} networkObjectFound={hero!=null} isSpawnedBefore={(hero!=null&&hero.IsSpawned)}",this);
             if(hero==null)
             {
@@ -312,16 +325,18 @@ namespace CierzoArena.Netcode
             NetworkObject prefab=source.Kind==StructureKind.Core?(source.Team==TeamId.Azure?azureCorePrefab:emberCorePrefab):(source.Team==TeamId.Azure?azureTowerPrefab:emberTowerPrefab);
             if(prefab==null)return;
             NetworkObject instance=Instantiate(prefab,source.transform.position,source.transform.rotation);
+            ArenaVisualPass.Repair(instance.gameObject);
             if(instance.TryGetComponent(out StructureEntity target))target.Configure(source.Team,source.Kind,source.Lane,source.Tier,source.Health.Max);
             instance.Spawn();infrastructure.Add(instance);
         }
         private void Spawn(NetworkObject prefab,Vector3 position,Quaternion rotation)
         {
-            if(prefab==null)return;NetworkObject instance=Instantiate(prefab,position,rotation);instance.Spawn();infrastructure.Add(instance);
+            if(prefab==null)return;NetworkObject instance=Instantiate(prefab,position,rotation);ArenaVisualPass.Repair(instance.gameObject);instance.Spawn();infrastructure.Add(instance);
         }
 
         private void OnGUI()
         {
+            if(launchedFromFrontend)return;
             manager=NetworkManager.Singleton;if(manager==null)return;EnsureStyles();
             float scale=Mathf.Clamp(Screen.height/1080f,1f,2.25f);Matrix4x4 previous=GUI.matrix;GUI.matrix=Matrix4x4.Scale(new Vector3(scale,scale,1f));
             GUILayout.BeginArea(new Rect(16f,16f,390f,320f),GUI.skin.box);

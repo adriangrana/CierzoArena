@@ -75,16 +75,16 @@ namespace CierzoArena.EditorTools
             EnsureLayerName(SelectableLayer, "Selectable");
             EnsureLayerName(AttackableLayer, "Attackable");
 
-            Material groundMaterial = CreateMaterial("Assets/Materials/Prototype_Ground.mat", new Color(0.30f, 0.37f, 0.33f));
-            Material routeMaterial = CreateMaterial("Assets/Materials/Prototype_Route.mat", new Color(0.68f, 0.58f, 0.34f));
-            Material routeMidMaterial = CreateMaterial("Assets/Materials/Prototype_RouteMid.mat", new Color(0.87f, 0.76f, 0.46f));
-            Material riverMaterial = CreateMaterial("Assets/Materials/Prototype_River.mat", new Color(0.03f, 0.10f, 0.26f));
-            Material bridgeMaterial = CreateMaterial("Assets/Materials/Prototype_Bridge.mat", new Color(0.52f, 0.50f, 0.55f));
-            Material obstacleMaterial = CreateMaterial("Assets/Materials/Prototype_Obstacle.mat", new Color(0.15f, 0.16f, 0.19f));
+            Material groundMaterial = CreateMaterial("Assets/Materials/Prototype_Ground.mat", new Color(0.16f, 0.25f, 0.24f));
+            Material routeMaterial = CreateMaterial("Assets/Materials/Prototype_Route.mat", new Color(0.37f, 0.31f, 0.22f));
+            Material routeMidMaterial = CreateMaterial("Assets/Materials/Prototype_RouteMid.mat", new Color(0.56f, 0.46f, 0.28f));
+            Material riverMaterial = CreateMaterial("Assets/Materials/Prototype_River.mat", new Color(0.025f, 0.16f, 0.31f));
+            Material bridgeMaterial = CreateMaterial("Assets/Materials/Prototype_Bridge.mat", new Color(0.32f, 0.37f, 0.43f));
+            Material obstacleMaterial = CreateMaterial("Assets/Materials/Prototype_Obstacle.mat", new Color(0.10f, 0.14f, 0.18f));
             Material neutralMaterial = CreateMaterial("Assets/Materials/Prototype_Neutral.mat", new Color(0.46f, 0.33f, 0.56f));
             Material boundaryMaterial = CreateMaterial("Assets/Materials/Prototype_Boundary.mat", new Color(0.09f, 0.09f, 0.11f));
-            Material azureBaseMaterial = CreateMaterial("Assets/Materials/Prototype_AzureBase.mat", new Color(0.10f, 0.30f, 0.70f));
-            Material emberBaseMaterial = CreateMaterial("Assets/Materials/Prototype_EmberBase.mat", new Color(0.70f, 0.17f, 0.10f));
+            Material azureBaseMaterial = CreateMaterial("Assets/Materials/Prototype_AzureBase.mat", new Color(0.06f, 0.22f, 0.48f));
+            Material emberBaseMaterial = CreateMaterial("Assets/Materials/Prototype_EmberBase.mat", new Color(0.46f, 0.11f, 0.07f));
             Material azureMaterial = CreateMaterial("Assets/Materials/Prototype_Azure.mat", new Color(0.20f, 0.55f, 1.0f));
             Material emberMaterial = CreateMaterial("Assets/Materials/Prototype_Ember.mat", new Color(0.96f, 0.26f, 0.18f));
             Material ringMaterial = CreateMaterial("Assets/Materials/Prototype_Selection.mat", new Color(0.95f, 0.86f, 0.24f));
@@ -1285,14 +1285,21 @@ namespace CierzoArena.EditorTools
 
         private static Material CreateMaterial(string path, Color color)
         {
+            // The project uses the Built-in Render Pipeline. Selecting a URP shader
+            // here produces Unity's magenta error material on every generated map
+            // surface, including when the arena is entered through MainMenu.
             Shader shader = Shader.Find("Standard");
             Material existing = AssetDatabase.LoadAssetAtPath<Material>(path);
             if (existing != null)
             {
+                if(existing.shader!=shader)existing.shader=shader;
+                if(existing.HasProperty("_BaseColor"))existing.SetColor("_BaseColor",color); else existing.color=color;
+                EditorUtility.SetDirty(existing);
                 return existing;
             }
 
-            Material material = new Material(shader) { color = color };
+            Material material = new Material(shader);
+            if(material.HasProperty("_BaseColor"))material.SetColor("_BaseColor",color); else material.color=color;
             AssetDatabase.CreateAsset(material, path);
             return material;
         }

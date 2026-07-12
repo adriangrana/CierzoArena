@@ -1,4 +1,5 @@
 using CierzoArena.Units;
+using CierzoArena.Frontend;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -13,6 +14,6 @@ namespace CierzoArena.Netcode
         private void OnDestroy(){if(manager!=null)manager.OnServerStarted-=SpawnServerBoss;}
         public void ActivateNetworkMode(){if(networkMode)return;networkMode=true;Connect();}
         private void Connect(){manager=NetworkManager.Singleton;if(manager==null)return;manager.OnServerStarted+=SpawnServerBoss;if(manager.IsServer)SpawnServerBoss();}
-        private void SpawnServerBoss(){if(spawned||manager==null||!manager.IsServer||bossPrefab==null)return;NetworkObject instance=Instantiate(bossPrefab,spawnPosition,Quaternion.identity);instance.Spawn();spawned=true;}
+        private void SpawnServerBoss(){if(spawned||manager==null||!manager.IsServer||bossPrefab==null)return;NetworkObject instance=Instantiate(bossPrefab,spawnPosition,Quaternion.identity);ArenaVisualPass.Repair(instance.gameObject);instance.Spawn();spawned=true;}
     }
 }

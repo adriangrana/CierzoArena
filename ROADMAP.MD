@@ -524,19 +524,21 @@ Status: 🔵 Implementado / pendiente de validación final en Unity
 
 Resultado: `Host Azure y Client Ember completan una partida autoritativa en la greybox, con spawn, cámara, HUD, habilidades, inventario y órdenes desde mapa o minimapa.`
 
-### Milestone 19 — Jungla
+### Milestone 19 — Frontend y vertical slice visual
 
-Status: ⬜ Futuro
+Status: 🔵 Implementado / pendiente de validación final en Unity
 
-- [ ] Campamentos
-- [ ] Spawns
-- [ ] Neutrales
-- [ ] IA
-- [ ] Recompensas
-- [ ] Respawn
-- [ ] Leash
-- [ ] Reset
-- [ ] Campamentos distintos
+- [x] `MainMenu` como escena de entrada con Inicio, Héroes, Jugar, Aprender y Ajustes.
+- [x] Perfil y panel social provisionales, sin backend ni servicios simulados.
+- [x] Transición configurada a Local, Host o Client y modo directo de arena conservado.
+- [x] Tema visual reutilizable, catálogo provisional de héroes y Canvas de frontend.
+- [x] HUD reordenado: habilidades inferiores, inventario separado y tienda conmutada por `B`.
+- [x] Minimapa con marco, cámara con clic izquierdo y movimiento con clic derecho.
+- [x] Materiales de base y niebla compatibles con el pipeline Built-in para evitar superficies magenta.
+
+Resultado: `CierzoArena ya dispone de un frontend propio y una dirección visual coherente para continuar el desarrollo fuera del greybox puro.`
+
+> Próxima pasada visual: la estructura, navegación y flujo actuales son definitivos de forma provisional. Queda una fase artística independiente para consolidar identidad visual, ilustraciones originales, iconografía, tipografía y animación del frontend.
 
 ### Milestone 20 — Objetivo mayor del mapa
 

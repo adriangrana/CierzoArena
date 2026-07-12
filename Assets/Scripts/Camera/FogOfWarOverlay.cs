@@ -19,7 +19,19 @@ namespace CierzoArena.CameraSystem
         private void Awake()
         {
             if(targetCamera==null)targetCamera=GetComponent<Camera>();if(targetCamera==null)targetCamera=Camera.main;
-            mesh=new Mesh { name="Fog Of War Overlay" };Shader shader=Shader.Find("Universal Render Pipeline/Unlit");if(shader==null)shader=Shader.Find("Sprites/Default");material=new Material(shader){name="Fog Of War Material",hideFlags=HideFlags.DontSave};if(material.HasProperty("_BaseColor"))material.SetColor("_BaseColor",fogColor);if(material.HasProperty("_Color"))material.SetColor("_Color",fogColor);if(material.HasProperty("_Surface"))material.SetFloat("_Surface",1f);if(material.HasProperty("_ZWrite"))material.SetFloat("_ZWrite",0f);material.renderQueue=3000;
+            mesh=new Mesh { name="Fog Of War Overlay" };
+            // This project uses the Built-in Render Pipeline. A URP-only material
+            // rendered by Graphics.DrawMesh covers the world in error-magenta.
+            Shader shader=Shader.Find("Unlit/Transparent") ?? Shader.Find("Sprites/Default");
+            if(shader==null||!shader.isSupported)
+            {
+                Debug.LogError("[FogOfWar] No supported Built-in transparent shader was found; the overlay was disabled.",this);
+                enabled=false;
+                return;
+            }
+            material=new Material(shader){name="Fog Of War Material",hideFlags=HideFlags.DontSave};
+            if(material.HasProperty("_Color"))material.SetColor("_Color",fogColor);
+            material.renderQueue=3000;
         }
         private void LateUpdate()
         {

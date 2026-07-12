@@ -5,7 +5,8 @@
     "CierzoArena.Netcode",
     "Unity.Netcode.Runtime",
     "Unity.Netcode.Components",
-    "Unity.Networking.Transport"
+    "Unity.Networking.Transport",
+    "UnityEngine.UI"
   ],
   "includePlatforms": [
     "Editor"

@@ -23,8 +23,9 @@ namespace CierzoArena.CameraSystem
         /// </summary>
         public static bool TryGetWorldPositionAtScreenPoint(Vector2 screenPoint,out Vector3 position)
         {
-            position=default;
-            return Active!=null&&Active.TryGetWorldPositionAtScreenPointInternal(screenPoint,out position);
+            position=Vector3.zero;
+            if(Active==null)return false;
+            return Active.TryGetWorldPositionAtScreenPointInternal(screenPoint,out position);
         }
         private bool TryGetWorldPositionAtScreenPointInternal(Vector2 screenPoint,out Vector3 position)
         {

@@ -1,4 +1,5 @@
 using CierzoArena.CameraSystem;
+using CierzoArena.Frontend;
 using UnityEngine;
 
 namespace CierzoArena.Units
@@ -17,6 +18,7 @@ namespace CierzoArena.Units
         private GUIStyle panelStyle;
         private GUIStyle titleStyle;
         private GUIStyle rowStyle;
+        private bool shopOpen;
 
         private void Awake()
         {
@@ -47,19 +49,21 @@ namespace CierzoArena.Units
             }
 
             EnsureStyles();
-            float scale = Mathf.Max(1f, Screen.height / 1080f);
+            if(Event.current.type==EventType.KeyDown&&Event.current.keyCode==KeyCode.B)shopOpen=!shopOpen;
+            if(Event.current.type==EventType.KeyDown&&Event.current.keyCode==KeyCode.Escape)shopOpen=false;
+            float scale = HudLayout.Scale;
             Matrix4x4 previous = GUI.matrix;
             GUI.matrix = Matrix4x4.Scale(new Vector3(scale, scale, 1f));
 
             ShopZone zone = ShopZone.FindFriendlyContaining(team.Team, transform.position);
             DrawInventory();
-            if (zone != null && zone.Catalog != null)
+            if (shopOpen && zone != null && zone.Catalog != null)
             {
                 DrawShop(zone);
             }
-            else
+            else if(shopOpen)
             {
-                GUI.Label(new Rect(24f, 265f, 560f, 36f), "Shop: enter your team's luminous base circle to buy or sell.", rowStyle);
+                GUI.Label(new Rect(HudLayout.Inventory.x, HudLayout.Inventory.y-34f, 560f, 30f), "Shop: enter your team's luminous base circle to buy or sell.", rowStyle);
             }
 
             GUI.matrix = previous;
@@ -67,14 +71,14 @@ namespace CierzoArena.Units
 
         private void DrawInventory()
         {
-            GUI.Box(new Rect(24f, 315f, 570f, 142f), GUIContent.none, panelStyle);
-            GUI.Label(new Rect(38f, 324f, 520f, 30f), $"INVENTORY  {economy?.Gold ?? 0} GOLD", titleStyle);
+            Rect panel=HudLayout.Inventory;GUI.Box(panel, GUIContent.none, panelStyle);
+            GUI.Label(new Rect(panel.x+14f, panel.y+9f, 520f, 30f), $"INVENTORY  {economy?.Gold ?? 0} GOLD   [B] SHOP", titleStyle);
             for (int i = 0; i < inventory.Capacity; i++)
             {
                 ItemDefinition item = inventory.Slots[i];
-                float x = 38f + i * 90f;
-                GUI.Box(new Rect(x, 362f, 82f, 80f), item == null ? "Empty" : item.DisplayName, rowStyle);
-                if (item != null && GUI.Button(new Rect(x, 416f, 82f, 22f), $"Sell +{item.SalePrice}"))
+                float x = panel.x+14f + i * 90f;
+                GUI.Box(new Rect(x, panel.y+47f, 82f, 80f), item == null ? "Empty" : item.DisplayName, rowStyle);
+                if (item != null && GUI.Button(new Rect(x, panel.y+101f, 82f, 22f), $"Sell +{item.SalePrice}"))
                 {
                     RequestSell(i);
                 }
@@ -83,9 +87,9 @@ namespace CierzoArena.Units
 
         private void DrawShop(ShopZone zone)
         {
-            GUI.Box(new Rect(620f, 96f, 480f, 362f), GUIContent.none, panelStyle);
-            GUI.Label(new Rect(636f, 106f, 440f, 32f), "TEAM SHOP", titleStyle);
-            float y = 145f;
+            Rect panel=HudLayout.Shop;GUI.Box(panel, GUIContent.none, panelStyle);
+            GUI.Label(new Rect(panel.x+16f, panel.y+10f, 440f, 32f), "TEAM SHOP  [B] Cerrar", titleStyle);
+            float y = panel.y+50f;
             foreach (ItemDefinition item in zone.Catalog.Items)
             {
                 if (item == null)
@@ -93,10 +97,10 @@ namespace CierzoArena.Units
                     continue;
                 }
 
-                GUI.Box(new Rect(636f, y, 448f, 55f), GUIContent.none, rowStyle);
-                GUI.Label(new Rect(646f, y + 4f, 260f, 23f), item.DisplayName, rowStyle);
-                GUI.Label(new Rect(646f, y + 27f, 290f, 22f), Bonuses(item), rowStyle);
-                if (GUI.Button(new Rect(960f, y + 14f, 112f, 30f), $"Buy {item.PurchasePrice}"))
+                GUI.Box(new Rect(panel.x+16f, y, panel.width-32f, 55f), GUIContent.none, rowStyle);
+                GUI.Label(new Rect(panel.x+26f, y + 4f, 260f, 23f), item.DisplayName, rowStyle);
+                GUI.Label(new Rect(panel.x+26f, y + 27f, 290f, 22f), Bonuses(item), rowStyle);
+                if (GUI.Button(new Rect(panel.x+340f, y + 14f, 112f, 30f), $"Buy {item.PurchasePrice}"))
                 {
                     RequestBuy(item, zone);
                 }

@@ -36,6 +36,7 @@ Prototipo en Unity 6 (`ProjectSettings/ProjectVersion.txt`: Unity 6000.5.3f1) co
 - **M16** — Objetivo mayor neutral: el Guardián del Cierzo usa amenaza por daño, ataque de M6 y un golpe de área con telegraph. Al caer, concede oro global y el buff temporal Cierzo Ascendant al equipo del último golpe; vuelve tras un respawn largo y es autoritativo en red.
 - **M17** — Estadísticas y marcador: K/D/A, últimos golpes, oro actual y ganado, XP, daño a héroes y estructuras, objetivos, rachas y reloj. `Oro ganado` cuenta adiciones positivas después de registrar al héroe; las compras sólo reducen el oro actual. El daño de héroe usa la reducción efectiva de vida tras mitigación/escudos. Mantén `Tab` para ver el marcador; al finalizar queda visible con victoria o derrota y datos congelados. En red el servidor registra y replica snapshots a host y cliente.
 - **M18** — Arena principal multijugador: `MobaGreyboxArena` espera una elección explícita de modo local, Host o Client. En red, el servidor crea héroes, estructuras, oleadas, jungla y Guardián desde prefabs NGO; Azure y Ember se asignan por ownership. Cada jugador recibe cámara, HUD, inventario y habilidades de su héroe owner. El minimapa centra la cámara con clic izquierdo y ordena movimiento con clic derecho. Validado manualmente con Host Azure + Client Ember.
+- **M19** — Frontend y vertical slice visual: el arranque normal es `Assets/Scenes/MainMenu.unity`, con navegación Inicio/Héroes/Jugar/Ajustes y acceso configurado a Local, Host o Client. La entrada desde menú oculta el bootstrap técnico de arena; abrir `MobaGreyboxArena` directamente conserva ese modo de desarrollo. El HUD reorganiza habilidades, inventario y tienda (`B`); la arena usa materiales `Standard` y niebla `Unlit/Transparent`, compatibles con el pipeline Built-in del proyecto. La estructura y el flujo quedan fijados de forma provisional; una fase artística posterior añadirá identidad, ilustración original, iconografía, tipografía y animación.
 
 La version real del proyecto esta en `ProjectSettings/ProjectVersion.txt`: Unity 6000.5.3f1.
 
@@ -47,6 +48,8 @@ La version real del proyecto esta en `ProjectSettings/ProjectVersion.txt`: Unity
    `C:\Users\adria\Documents\Codex\CierzoArena`
 
 3. Abre el proyecto con Unity 6.5.3f1.
+
+4. Para el flujo normal abre `MainMenu`; para depurar la arena directamente abre `MobaGreyboxArena`, donde sigue disponible el selector técnico Local/Host/Client.
 
 ## Como crear y probar la escena
 

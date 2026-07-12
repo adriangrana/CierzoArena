@@ -1,4 +1,7 @@
 {
   "name": "CierzoArena.Runtime",
-  "rootNamespace": "CierzoArena"
+  "rootNamespace": "CierzoArena",
+  "references": [
+    "UnityEngine.UI"
+  ]
 }

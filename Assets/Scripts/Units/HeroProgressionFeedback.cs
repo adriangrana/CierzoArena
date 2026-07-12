@@ -1,5 +1,6 @@
 using CierzoArena.CameraSystem;
 using CierzoArena.Combat;
+using CierzoArena.Frontend;
 using UnityEngine;
 
 namespace CierzoArena.Units
@@ -53,7 +54,7 @@ namespace CierzoArena.Units
             int next = progression.ExperienceForNextLevel;
             string progress = next > 0 ? $"XP {progression.Experience}/{next}" : "XP MAX";
             EnsureStyles();
-            float scale = Mathf.Max(1f, Screen.height / 1080f);
+            float scale = HudLayout.Scale;
             Matrix4x4 previousMatrix = GUI.matrix;
             GUI.matrix = Matrix4x4.Scale(new Vector3(scale, scale, 1f));
 
