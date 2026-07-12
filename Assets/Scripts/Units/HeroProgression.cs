@@ -21,11 +21,13 @@ namespace CierzoArena.Units
         [SerializeField, Min(0f)] private float maximumHealthPerLevel = 80f;
         [SerializeField, Min(0f)] private float damagePerLevel = 8f;
         [SerializeField, Min(0f)] private float movementSpeedPerLevel = 0.2f;
+        [SerializeField, Min(0f)] private float maximumManaPerLevel = 20f;
         [SerializeField] private bool authorityEnabled = true;
 
         private Health health;
         private BasicAttack attack;
         private ClickMover mover;
+        private HeroMana mana;
         private int level;
         private int experience;
         private int totalExperience;
@@ -83,6 +85,7 @@ namespace CierzoArena.Units
             health = GetComponent<Health>();
             attack = GetComponent<BasicAttack>();
             mover = GetComponent<ClickMover>();
+            TryGetComponent(out mana);
             OnValidate();
             level = Mathf.Clamp(startingLevel, 1, MaximumLevel);
             ApplyInitialLevelStats(level - 1);
@@ -90,6 +93,12 @@ namespace CierzoArena.Units
         }
 
         public void SetAuthorityEnabled(bool enabled) => authorityEnabled = enabled;
+        public void ConfigureHeroGrowth(float healthGrowth, float manaGrowth, float damageGrowth, float moveGrowth)
+        {
+            EnsureInitialized();
+            maximumHealthPerLevel=Mathf.Max(0f,healthGrowth);maximumManaPerLevel=Mathf.Max(0f,manaGrowth);damagePerLevel=Mathf.Max(0f,damageGrowth);movementSpeedPerLevel=Mathf.Max(0f,moveGrowth);
+            attack?.SetLevelDamageBonus(damagePerLevel*Mathf.Max(0,level-1));mover?.SetLevelMoveSpeedBonus(movementSpeedPerLevel*Mathf.Max(0,level-1));
+        }
 
         /// <summary>Attempts an authoritative XP award. Surplus carries through multiple levels.</summary>
         public bool TryGainExperience(int amount)
@@ -166,6 +175,7 @@ namespace CierzoArena.Units
         private void ApplyInitialLevelStats(int completedLevelUps)
         {
             health?.AddMaximumHealth(maximumHealthPerLevel * completedLevelUps);
+            mana?.AddMaximumMana(maximumManaPerLevel * completedLevelUps);
             attack?.SetLevelDamageBonus(damagePerLevel * completedLevelUps);
             mover?.SetLevelMoveSpeedBonus(movementSpeedPerLevel * completedLevelUps);
         }
@@ -173,6 +183,7 @@ namespace CierzoArena.Units
         private void ApplyNewLevelStats()
         {
             health?.AddMaximumHealth(maximumHealthPerLevel);
+            mana?.AddMaximumMana(maximumManaPerLevel);
             attack?.SetLevelDamageBonus(damagePerLevel * (level - 1));
             mover?.SetLevelMoveSpeedBonus(movementSpeedPerLevel * (level - 1));
         }

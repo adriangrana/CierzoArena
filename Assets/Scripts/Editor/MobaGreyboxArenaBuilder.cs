@@ -833,12 +833,14 @@ namespace CierzoArena.EditorTools
             bar.layer = 2;
             if (worldSpaceAnchor)
             {
-                // Structures are static but cores use a large scaled transform. Keep
-                // their UI in world units so it neither scales to a giant size nor
-                // ends up hundreds of units above the core.
-                bar.transform.SetParent(unit.parent);
-                bar.transform.position = unit.position + new Vector3(0f, localHeight, 0f);
-                bar.transform.rotation = Quaternion.identity;
+                // Keep the bar owned by its structure so mode switching and
+                // destruction cannot leave an orphan scene bar behind. Counter-scale
+                // it for cores, preserving world-sized UI without detaching it.
+                bar.transform.SetParent(unit);
+                Vector3 scale = unit.localScale;
+                bar.transform.localPosition = new Vector3(0f, localHeight / Mathf.Max(.001f, scale.y), 0f);
+                bar.transform.localScale = new Vector3(1f / Mathf.Max(.001f, scale.x), 1f / Mathf.Max(.001f, scale.y), 1f / Mathf.Max(.001f, scale.z));
+                bar.transform.localRotation = Quaternion.identity;
             }
             else
             {

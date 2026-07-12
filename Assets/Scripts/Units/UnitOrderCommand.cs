@@ -12,6 +12,7 @@ namespace CierzoArena.Units
     {
         Move,
         Attack,
+        AttackMove,
         Stop
     }
 
@@ -42,6 +43,12 @@ namespace CierzoArena.Units
         public static UnitOrderCommand Attack(Health target)
         {
             return new UnitOrderCommand(UnitOrderType.Attack, Vector3.zero, target);
+        }
+
+        /// <summary>Moves toward a point while acquiring valid enemies on the way.</summary>
+        public static UnitOrderCommand AttackMove(Vector3 destination)
+        {
+            return new UnitOrderCommand(UnitOrderType.AttackMove, destination, null);
         }
 
         public static UnitOrderCommand Stop()

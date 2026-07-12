@@ -31,6 +31,10 @@ namespace CierzoArena.Netcode
             structure = GetComponent<StructureEntity>();
             TryGetComponent(out tower);
             TryGetComponent(out attack);
+            if (structure != null && structure.Kind == StructureKind.Tower && GetComponentInChildren<UnityEngine.AI.NavMeshObstacle>(true) == null)
+            {
+                gameObject.AddComponent<StructureNavigationBlocker>();
+            }
 
             // Prevent a client from simulating before OnNetworkSpawn establishes its
             // role. The host/server explicitly enables the tower below.

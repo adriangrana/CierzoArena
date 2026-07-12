@@ -3,6 +3,7 @@ using CierzoArena.Core;
 using CierzoArena.Units;
 using CierzoArena.CameraSystem;
 using Unity.Netcode;
+using Unity.Collections;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -29,6 +30,10 @@ namespace CierzoArena.Netcode
     {
         private readonly NetworkVariable<float> replicatedHealth =
             new NetworkVariable<float>(0f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private readonly NetworkVariable<FixedString64Bytes> replicatedHeroDefinitionId =
+            new NetworkVariable<FixedString64Bytes>(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private readonly NetworkVariable<byte> replicatedTeam =
+            new NetworkVariable<byte>((byte)TeamId.Neutral, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
         private UnitOrderController orderController;
         private Health health;
@@ -36,6 +41,23 @@ namespace CierzoArena.Netcode
         private AuthoritativeOrderProcessor processor;
         private LocalHeroProvider localHeroProvider;
         private float lastReplicatedHealth;
+        private string pendingHeroDefinitionId;
+        private TeamId pendingTeam = TeamId.Neutral;
+
+        public string HeroDefinitionId => replicatedHeroDefinitionId.Value.ToString();
+        /// <summary>Server-only setup before SpawnWithOwnership. Clients never send a
+        /// prefab or archetype payload; they only receive this validated ID.</summary>
+        public void ConfigureHeroDefinitionServer(string heroId)
+        {
+            pendingHeroDefinitionId=HeroCatalog.Shared.ResolveOrFallback(heroId)?.HeroId ?? string.Empty;
+            if(IsSpawned&&IsServer)replicatedHeroDefinitionId.Value=new FixedString64Bytes(pendingHeroDefinitionId);
+        }
+        public void ConfigureTeamServer(TeamId team)
+        {
+            pendingTeam=team;
+            if(TryGetComponent(out TeamMember member))member.ConfigureTeam(team);
+            if(IsSpawned&&IsServer)replicatedTeam.Value=(byte)team;
+        }
 
         private void Awake()
         {
@@ -52,6 +74,10 @@ namespace CierzoArena.Netcode
             Debug.Log($"[M18 Spawn] NetworkUnitController.OnNetworkSpawn object={name} IsServer={IsServer} IsClient={IsClient} IsOwner={IsOwner} OwnerClientId={OwnerClientId} LocalClientId={localClientId} team={team} EntityId={entityId} NetworkObjectId={NetworkObjectId}",this);
             if (IsServer)
             {
+                if(pendingTeam==TeamId.Neutral&&TryGetComponent(out TeamMember spawnedMember))pendingTeam=spawnedMember.Team;
+                replicatedTeam.Value=(byte)pendingTeam;
+                if(string.IsNullOrWhiteSpace(pendingHeroDefinitionId)&&TryGetComponent(out HeroMatchIdentity spawnedIdentity))pendingHeroDefinitionId=spawnedIdentity.HeroDefinitionId;
+                replicatedHeroDefinitionId.Value=new FixedString64Bytes(pendingHeroDefinitionId ?? string.Empty);
                 processor = new AuthoritativeOrderProcessor(orderController, OwnerClientId);
                 // A Runtime projectile remains the authoritative hit simulator. NGO
                 // owns the visible twin, so hide the local mesh on the host/server.
@@ -75,6 +101,9 @@ namespace CierzoArena.Netcode
                 lastReplicatedHealth = replicatedHealth.Value;
                 ReapplyReplicatedHealth();
                 replicatedHealth.OnValueChanged += OnReplicatedHealthChanged;
+                replicatedHeroDefinitionId.OnValueChanged += OnReplicatedHeroDefinitionChanged;
+                replicatedTeam.OnValueChanged += OnReplicatedTeamChanged;
+                ApplyReplicatedHeroDefinition();
             }
 
             // MOBA camera (M4.3): register this unit as the local hero only when this
@@ -82,6 +111,7 @@ namespace CierzoArena.Netcode
             // here (not per frame) via the scene provider's small access point, keeping
             // Runtime Netcode-agnostic.
             RegisterAsLocalHeroIfOwner(LocalHeroProvider.Active, IsOwner);
+            ApplyReplicatedTeam();
             if(IsOwner&&TryGetComponent(out TeamMember ownerTeam))MobaNetworkMatchBootstrap.Active?.NotifyLocalOwner(ownerTeam.Team);
             if (IsOwner && TryGetComponent(out SelectableUnit selectable))
             {
@@ -102,6 +132,8 @@ namespace CierzoArena.Netcode
             else
             {
                 replicatedHealth.OnValueChanged -= OnReplicatedHealthChanged;
+                replicatedHeroDefinitionId.OnValueChanged -= OnReplicatedHeroDefinitionChanged;
+                replicatedTeam.OnValueChanged -= OnReplicatedTeamChanged;
             }
 
             // Clear the local-hero reference if this owned unit despawns, so the camera
@@ -172,6 +204,14 @@ namespace CierzoArena.Netcode
             Health resolvedTarget = ResolveTargetHealth(targetReference);
             OrderRequestResult result = processor.ProcessAttack(rpcParams.Receive.SenderClientId, resolvedTarget);
             LogResult("Attack", rpcParams.Receive.SenderClientId, result);
+        }
+
+        [Rpc(SendTo.Server)]
+        public void RequestAttackMoveRpc(Vector3 destination, RpcParams rpcParams = default)
+        {
+            SyncOwnerToProcessor();
+            OrderRequestResult result = processor.ProcessAttackMove(rpcParams.Receive.SenderClientId, destination);
+            LogResult("AttackMove", rpcParams.Receive.SenderClientId, result);
         }
 
         [Rpc(SendTo.Server)]
@@ -269,6 +309,25 @@ namespace CierzoArena.Netcode
             // without ever interpreting a state sync as a hit.
             lastReplicatedHealth = current;
             ReapplyReplicatedHealth();
+        }
+
+        private void OnReplicatedHeroDefinitionChanged(FixedString64Bytes _, FixedString64Bytes __) => ApplyReplicatedHeroDefinition();
+        private void ApplyReplicatedHeroDefinition()
+        {
+            if(!TryGetComponent(out HeroMatchIdentity identity))return;
+            HeroDefinition definition=HeroCatalog.Shared.ResolveOrFallback(replicatedHeroDefinitionId.Value.ToString());
+            identity.ConfigureHero(definition);
+            ReapplyReplicatedHealth();
+            if(TryGetComponent(out NetworkHeroAbilities networkAbilities))networkAbilities.ReapplyReplicatedState();
+            if(TryGetComponent(out NetworkHeroProgression networkProgression))networkProgression.ReapplyReplicatedState();
+        }
+        private void OnReplicatedTeamChanged(byte _, byte __) => ApplyReplicatedTeam();
+        private void ApplyReplicatedTeam()
+        {
+            TeamId team=(TeamId)replicatedTeam.Value;
+            if(team!=TeamId.Azure&&team!=TeamId.Ember&&team!=TeamId.Neutral)return;
+            if(TryGetComponent(out TeamMember member))member.ConfigureTeam(team);
+            if(TryGetComponent(out HeroMatchIdentity identity))identity.ApplyTeamPresentation(team);
         }
 
         /// <summary>

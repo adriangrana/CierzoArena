@@ -12,6 +12,8 @@ namespace CierzoArena.Combat
 
         private Camera targetCamera;
 
+        public Health BoundHealth => health;
+
         private void Awake()
         {
             if (health == null)

@@ -540,20 +540,20 @@ Resultado: `CierzoArena ya dispone de un frontend propio y una dirección visual
 
 > Próxima pasada visual: la estructura, navegación y flujo actuales son definitivos de forma provisional. Queda una fase artística independiente para consolidar identidad visual, ilustraciones originales, iconografía, tipografía y animación del frontend.
 
-### Milestone 20 — Objetivo mayor del mapa
+### Milestone 20 — Sistema de héroes y primera plantilla jugable
 
-Status: ⬜ Futuro
+Status: 🔵 Implementado / pendiente de validación final en Unity
 
-Nuestro equivalente original, no una copia de ningún objetivo neutral existente.
+- [x] `HeroDefinition` y `HeroCatalog` data-driven, con IDs estables independientes del equipo.
+- [x] Roles explícitos: Vanguard, Carry, Duelist, Mage, Support y Controller.
+- [x] Seis héroes funcionales: Stone Aegis, Rift Duelist, Skyline Marksman, Storm Warden, Cairn Warden y Tempest Arbiter.
+- [x] Estadísticas base, crecimiento de vida/maná/daño/movimiento, ataque melee o ranged y cuatro habilidades por héroe.
+- [x] Selección de `HeroId` desde Héroes, persistencia de sesión y confirmación en Jugar.
+- [x] Spawn local y de red configurado por ID; el servidor valida el ID y nunca recibe prefab ni estadísticas del cliente.
+- [x] HUD, cámara, inventario, progresión, respawn, selección y presentación reutilizan los componentes comunes.
+- [x] Duplicados permitidos intencionadamente en desarrollo hasta el futuro draft.
 
-- [ ] Criatura/objetivo propio
-- [ ] Zona específica
-- [ ] Mecánica especial
-- [ ] Recompensa
-- [ ] Respawn
-- [ ] Riesgo estratégico
-
-Aquí podemos crear algo con identidad CierzoArena.
+Resultado: `CierzoArena dispone de una primera plantilla de héroes seleccionables, independientes de Azure y Ember, integrada con el gameplay y el spawn autoritativo.`
 
 ---
 

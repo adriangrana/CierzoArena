@@ -12,6 +12,7 @@ namespace CierzoArena.Netcode
         private readonly NetworkVariable<int> replicatedExperience = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
         private readonly NetworkVariable<int> replicatedTotalExperience = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
         private HeroProgression progression;
+        public void ReapplyReplicatedState() { if(IsSpawned&&!IsServer) ApplyReplicatedState(); }
 
         private void Awake()
         {

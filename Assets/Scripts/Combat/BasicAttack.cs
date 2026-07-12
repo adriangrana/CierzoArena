@@ -41,13 +41,14 @@ namespace CierzoArena.Combat
         private float levelDamageBonus;
         private float itemDamageBonus;
         private float itemAttackSpeedBonus;
+        private float abilityAttackSpeedBonus;
         private float statusDamageBonus;
 
         public AttackState State => state;
         public Health Target => target;
         public float Range => Mathf.Max(0f, range);
         public float Damage => Mathf.Max(0f, damage + levelDamageBonus + itemDamageBonus + statusDamageBonus);
-        public float AttackInterval => Mathf.Max(0.01f, attackInterval / (1f + itemAttackSpeedBonus));
+        public float AttackInterval => Mathf.Max(0.01f, attackInterval / (1f + itemAttackSpeedBonus + abilityAttackSpeedBonus));
         public AttackDelivery Delivery => delivery;
         public bool NeedsApproach => state == AttackState.Approaching;
         public float ProjectileSpeed => Mathf.Max(0.01f, projectileSpeed);
@@ -126,6 +127,11 @@ namespace CierzoArena.Combat
         {
             itemDamageBonus = Mathf.Max(0f, damageBonus);
             itemAttackSpeedBonus = Mathf.Max(0f, attackSpeedBonus);
+        }
+        public void SetAbilityAttackSpeedBonus(float bonus) => abilityAttackSpeedBonus = Mathf.Max(0f, bonus);
+        public void ConfigureHeroAttack(float baseDamage, float heroRange, float interval, float point, float recovery, AttackDelivery heroDelivery, float speed)
+        {
+            damage=Mathf.Max(0f,baseDamage);range=Mathf.Max(0f,heroRange);attackInterval=Mathf.Max(.01f,interval);attacksPerSecond=1f/attackInterval;attackPoint=Mathf.Max(0f,point);backswing=Mathf.Max(0f,recovery);delivery=heroDelivery;projectileSpeed=Mathf.Max(.01f,speed);levelDamageBonus=0f;itemDamageBonus=0f;itemAttackSpeedBonus=0f;abilityAttackSpeedBonus=0f;
         }
         public void SetStatusDamageBonus(float bonus) => statusDamageBonus = Mathf.Max(0f, bonus);
 

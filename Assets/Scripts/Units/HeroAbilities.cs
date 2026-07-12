@@ -60,6 +60,11 @@ namespace CierzoArena.Units
         }
 
         public void SetAuthorityEnabled(bool enabled) => authorityEnabled = enabled;
+        public void ConfigureHeroKit(AbilityDefinition[] definitionSet)
+        {
+            abilities=definitionSet!=null&&definitionSet.Length==4?definitionSet:new AbilityDefinition[4];
+            for(int i=0;i<levels.Length;i++){levels[i]=0;cooldowns[i]=0f;}skillPoints=Mathf.Max(0,startingSkillPoints);ClearPending();Changed?.Invoke(this);
+        }
         public bool TryUpgrade(int slot)
         {
             EnsureInitialized();

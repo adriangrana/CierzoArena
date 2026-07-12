@@ -40,6 +40,14 @@ namespace CierzoArena.Units
         public float Cooldown(int level) => Mathf.Max(0f, Value(cooldowns, level, 0f));
         public float EffectValue(int level) => Mathf.Max(0f, Value(effectValues, level, 0f));
 
+        /// <summary>Builds data-only provisional kits for the first roster. Runtime
+        /// instances are immutable after setup and are never sent through Netcode.</summary>
+        public void ConfigureRuntime(string id, string name, string text, AbilityTargeting targetType, AbilityEffect effectType, float mana, float cooldown, float value, float abilityRange, float radius, float effectDuration, float castDelay = .2f, float speed = 14f)
+        {
+            abilityId=id;displayName=name;description=text;targeting=targetType;effect=effectType;castPoint=Mathf.Max(0f,castDelay);range=Mathf.Max(0f,abilityRange);areaRadius=Mathf.Max(0f,radius);duration=Mathf.Max(0f,effectDuration);projectileSpeed=Mathf.Max(.01f,speed);
+            maximumLevel=4;requiredHeroLevels=new[]{1,3,5,7};manaCosts=new[]{mana,mana+5f,mana+10f,mana+15f};cooldowns=new[]{cooldown,Mathf.Max(.1f,cooldown-.4f),Mathf.Max(.1f,cooldown-.8f),Mathf.Max(.1f,cooldown-1.2f)};effectValues=new[]{value,value*1.35f,value*1.7f,value*2.05f};
+        }
+
         private static float Value(float[] values, int level, float fallback) => values != null && level > 0 && level <= values.Length ? values[level - 1] : fallback;
         private static int Value(int[] values, int level, int fallback) => values != null && level > 0 && level <= values.Length ? Mathf.Max(1, values[level - 1]) : fallback;
     }

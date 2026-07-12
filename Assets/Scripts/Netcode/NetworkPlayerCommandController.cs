@@ -18,6 +18,7 @@ namespace CierzoArena.Netcode
         [SerializeField] private LayerMask groundMask;
         [SerializeField] private LayerMask selectableMask;
         [SerializeField] private LayerMask attackableMask;
+        [SerializeField] private KeyCode attackMoveKey = KeyCode.A;
         [SerializeField] private KeyCode stopKey = KeyCode.S;
         [SerializeField] private KeyCode abilityOneKey = KeyCode.Q;
         [SerializeField] private KeyCode abilityTwoKey = KeyCode.W;
@@ -26,6 +27,7 @@ namespace CierzoArena.Netcode
 
         private NetworkUnitController ownedUnit;
         private int pendingAbilitySlot = -1;
+        private bool pendingAttackMove;
 
         private void Awake()
         {
@@ -61,13 +63,27 @@ namespace CierzoArena.Netcode
             if (Input.GetKeyDown(abilityTwoKey)) BeginAbility(unit, 1);
             if (Input.GetKeyDown(abilityThreeKey)) BeginAbility(unit, 2);
             if (Input.GetKeyDown(ultimateKey)) BeginAbility(unit, 3);
-            if (Input.GetKeyDown(KeyCode.Escape)) pendingAbilitySlot = -1;
+            if (Input.GetKeyDown(KeyCode.Escape)) { pendingAbilitySlot = -1; pendingAttackMove = false; }
+            if (Input.GetKeyDown(attackMoveKey))
+            {
+                pendingAbilitySlot = -1;
+                pendingAttackMove = true;
+            }
 
-            if (Input.GetMouseButtonDown(0) && ConfirmAbility(unit)) return;
+            if (Input.GetMouseButtonDown(0))
+            {
+                if (ConfirmAbility(unit)) return;
+                if (pendingAttackMove)
+                {
+                    pendingAttackMove = false;
+                    IssueAttackMove(unit);
+                    return;
+                }
+            }
 
             if (Input.GetMouseButtonDown(1))
             {
-                if (pendingAbilitySlot >= 0) { pendingAbilitySlot = -1; return; }
+                if (pendingAbilitySlot >= 0 || pendingAttackMove) { pendingAbilitySlot = -1; pendingAttackMove = false; return; }
                 IssueCommand(unit);
             }
         }
@@ -125,6 +141,32 @@ namespace CierzoArena.Netcode
             if (Physics.Raycast(ray, out RaycastHit groundHit, 500f, groundMask))
             {
                 unit.RequestMoveRpc(groundHit.point);
+            }
+        }
+
+        private void IssueAttackMove(NetworkUnitController unit)
+        {
+            if(MinimapFeedback.TryGetWorldPositionAtScreenPoint(Input.mousePosition,out Vector3 minimapDestination))
+            {
+                unit.RequestAttackMoveRpc(minimapDestination);
+                return;
+            }
+
+            Ray ray = commandCamera.ScreenPointToRay(Input.mousePosition);
+            LayerMask targetMask = attackableMask.value != 0 ? attackableMask : selectableMask;
+            if (Physics.Raycast(ray, out RaycastHit unitHit, 500f, targetMask))
+            {
+                NetworkObject targetObject = unitHit.collider.GetComponentInParent<NetworkObject>();
+                if (targetObject != null && targetObject.TryGetComponent(out Health _))
+                {
+                    unit.RequestAttackRpc(new NetworkObjectReference(targetObject));
+                    return;
+                }
+            }
+
+            if (Physics.Raycast(ray, out RaycastHit groundHit, 500f, groundMask))
+            {
+                unit.RequestAttackMoveRpc(groundHit.point);
             }
         }
 

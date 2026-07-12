@@ -23,6 +23,15 @@ namespace CierzoArena.Units
         private void Awake() => EnsureInitialized();
         private void Update() => Simulate(Time.deltaTime);
         public void SetAuthorityEnabled(bool enabled) => authorityEnabled = enabled;
+        public void ConfigureHeroMana(float maximum, float regeneration)
+        {
+            maximumMana=Mathf.Max(1f,maximum);regenerationPerSecond=Mathf.Max(0f,regeneration);currentMana=maximumMana;initialized=true;Changed?.Invoke(this);
+        }
+        public void AddMaximumMana(float amount)
+        {
+            EnsureInitialized();if(Mathf.Approximately(amount,0f))return;
+            maximumMana=Mathf.Max(1f,maximumMana+amount);currentMana=amount>0f?Mathf.Min(maximumMana,currentMana+amount):Mathf.Min(currentMana,maximumMana);Changed?.Invoke(this);
+        }
 
         public void EnsureInitialized()
         {

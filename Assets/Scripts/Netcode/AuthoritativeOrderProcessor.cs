@@ -72,6 +72,16 @@ namespace CierzoArena.Netcode
             return Delegate(UnitOrderCommand.Attack(resolvedTarget));
         }
 
+        public OrderRequestResult ProcessAttackMove(ulong senderClientId, Vector3 destination)
+        {
+            if (!IsAuthorized(senderClientId))
+            {
+                return OrderRequestResult.RejectedUnauthorizedSender;
+            }
+
+            return Delegate(UnitOrderCommand.AttackMove(destination));
+        }
+
         public OrderRequestResult ProcessStop(ulong senderClientId)
         {
             if (!IsAuthorized(senderClientId))

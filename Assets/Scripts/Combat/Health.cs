@@ -72,6 +72,22 @@ namespace CierzoArena.Combat
             EnsureInitialized();
         }
 
+        /// <summary>Applies a new hero base before a match starts without changing
+        /// any shared definition asset or carrying old progression/item bonuses.</summary>
+        public void ConfigureHeroBaseHealth(float value)
+        {
+            itemMaximumHealthBonus = 0f;
+            ConfigureMaximumHealth(value);
+        }
+
+        public void Restore(float amount)
+        {
+            EnsureInitialized();
+            if (!IsAlive || amount <= 0f) return;
+            Current = Mathf.Min(maxHealth, Current + amount);
+            Changed?.Invoke(this, Current, maxHealth);
+        }
+
         private UnitDefinition ResolveDefinition()
         {
             return TryGetComponent(out UnitDefinitionProvider provider) ? provider.Definition : null;

@@ -214,6 +214,11 @@ namespace CierzoArena.Units
         }
         public void SetStatusMoveSpeedBonus(float bonus) { statusMoveSpeedBonus = Mathf.Max(0f, bonus); if (agent != null) ConfigureAgent(); }
         public void SetStatusMoveSpeedMultiplier(float multiplier) { statusMoveSpeedMultiplier = Mathf.Clamp(multiplier, .2f, 1f); if (agent != null) ConfigureAgent(); }
+        public void ConfigureHeroMoveSpeed(float value)
+        {
+            moveSpeed=Mathf.Max(0f,value);levelMoveSpeedBonus=0f;itemMoveSpeedBonus=0f;abilityMoveSpeedBonus=0f;statusMoveSpeedBonus=0f;
+            if(agent!=null)ConfigureAgent();
+        }
 
         private void ConfigureAgent()
         {

@@ -15,6 +15,13 @@ namespace CierzoArena.Units
         private ClickMover mover;
         private Health health;
         private Health attackTarget;
+        [SerializeField, Min(1f)] private float attackMoveAcquireRange = 8f;
+        [SerializeField, Min(.05f)] private float attackMoveArrivalDistance = .2f;
+        private bool attackMoveActive;
+        private Vector3 attackMoveDestination;
+
+        public bool IsAttackMoveActive => attackMoveActive;
+        public Vector3 AttackMoveDestination => attackMoveDestination;
 
         private void Awake()
         {
@@ -34,26 +41,57 @@ namespace CierzoArena.Units
 
         private void Update()
         {
-            if (attackTarget == null)
+            if (!CanReceiveOrders)
+            {
+                if (attackTarget != null || attackMoveActive) ClearActiveOrderAndStopMovement();
+                return;
+            }
+
+            if (attackTarget != null)
+            {
+                if (!basicAttack.CanAttack(attackTarget))
+                {
+                    attackTarget = null;
+                    basicAttack.ClearTarget();
+                    if (!attackMoveActive) mover.Stop();
+                }
+                else
+                {
+                    basicAttack.SetTarget(attackTarget);
+                    basicAttack.Simulate(Time.deltaTime);
+                    if (!basicAttack.NeedsApproach)
+                    {
+                        mover.Stop();
+                    }
+                    else
+                    {
+                        mover.MoveTo(basicAttack.GetApproachPosition(attackTarget));
+                    }
+                    return;
+                }
+            }
+
+            if (!attackMoveActive)
             {
                 return;
             }
 
-            if (!CanReceiveOrders || !basicAttack.CanAttack(attackTarget))
+            Health candidate = FindAttackMoveTarget();
+            if (candidate != null)
             {
-                CancelAttack();
+                attackTarget = candidate;
+                basicAttack.SetTarget(candidate);
                 return;
             }
 
-            basicAttack.SetTarget(attackTarget);
-            basicAttack.Simulate(Time.deltaTime);
-            if (!basicAttack.NeedsApproach)
+            if ((transform.position - attackMoveDestination).sqrMagnitude <= attackMoveArrivalDistance * attackMoveArrivalDistance)
             {
+                attackMoveActive = false;
                 mover.Stop();
                 return;
             }
 
-            mover.MoveTo(basicAttack.GetApproachPosition(attackTarget));
+            mover.MoveTo(attackMoveDestination);
         }
 
         public bool IssueMove(Vector3 destination)
@@ -64,6 +102,11 @@ namespace CierzoArena.Units
         public bool IssueAttack(Health target)
         {
             return Execute(UnitOrderCommand.Attack(target));
+        }
+
+        public bool IssueAttackMove(Vector3 destination)
+        {
+            return Execute(UnitOrderCommand.AttackMove(destination));
         }
 
         public void Stop()
@@ -89,21 +132,29 @@ namespace CierzoArena.Units
                 case UnitOrderType.Move:
                     TryGetComponent(out HeroAbilities abilities);
                     abilities?.CancelBeforeRelease();
-                    attackTarget = null;
-                    basicAttack.ClearTarget();
+                    ClearAttackState();
                     mover.MoveTo(command.Destination);
                     return true;
                 case UnitOrderType.Attack:
                     TryGetComponent(out HeroAbilities attackAbilities);
                     attackAbilities?.CancelBeforeRelease();
+                    attackMoveActive = false;
                     basicAttack.SetTarget(command.Target);
                     attackTarget = command.Target;
+                    return true;
+                case UnitOrderType.AttackMove:
+                    TryGetComponent(out HeroAbilities attackMoveAbilities);
+                    attackMoveAbilities?.CancelBeforeRelease();
+                    attackTarget = null;
+                    basicAttack.ClearTarget();
+                    attackMoveDestination = command.Destination;
+                    attackMoveActive = true;
+                    mover.MoveTo(attackMoveDestination);
                     return true;
                 case UnitOrderType.Stop:
                     TryGetComponent(out HeroAbilities stopAbilities);
                     stopAbilities?.CancelBeforeRelease();
-                    attackTarget = null;
-                    basicAttack.ClearTarget();
+                    ClearAttackState();
                     mover.Stop();
                     return true;
                 default:
@@ -116,6 +167,7 @@ namespace CierzoArena.Units
             switch (command.Type)
             {
                 case UnitOrderType.Move:
+                case UnitOrderType.AttackMove:
                     return CanReceiveOrders && (!TryGetComponent(out StatusEffectController moveEffects) || moveEffects.CanMove);
                 case UnitOrderType.Attack:
                     return CanReceiveOrders && (!TryGetComponent(out StatusEffectController attackEffects) || attackEffects.CanAttack) && basicAttack.CanAttack(command.Target);
@@ -130,17 +182,31 @@ namespace CierzoArena.Units
             (!TryGetComponent(out HeroLifeCycle heroLife) || heroLife.IsAliveForGameplay) &&
             (MatchStateController.Active == null || MatchStateController.Active.CanAcceptGameplay);
 
-        private void CancelAttack()
+        private Health FindAttackMoveTarget()
         {
+            float closestDistance = attackMoveAcquireRange * attackMoveAcquireRange;
+            Health closest = null;
+            foreach (Health candidate in FindObjectsByType<Health>(FindObjectsInactive.Exclude))
+            {
+                if (!basicAttack.CanAttack(candidate)) continue;
+                float distance = (candidate.transform.position - transform.position).sqrMagnitude;
+                if (distance > closestDistance) continue;
+                closestDistance = distance;
+                closest = candidate;
+            }
+            return closest;
+        }
+
+        private void ClearAttackState()
+        {
+            attackMoveActive = false;
             attackTarget = null;
             basicAttack.ClearTarget();
-            mover.Stop();
         }
 
         private void ClearActiveOrderAndStopMovement()
         {
-            attackTarget = null;
-            basicAttack.ClearTarget();
+            ClearAttackState();
             mover.Stop();
         }
 

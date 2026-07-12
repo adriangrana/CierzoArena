@@ -41,6 +41,26 @@ namespace CierzoArena.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator AttackMoveAcquiresNearestValidEnemyWhileTravelling()
+        {
+            GameObject ground = CreateGround();
+            GameObject attacker = CreateOrderUnit("Attack Move Attacker", TeamId.Azure, new Vector3(0f, 1f, 0f));
+            GameObject enemy = CreateUnit("Attack Move Enemy", TeamId.Ember, new Vector3(5f, 1f, 0f));
+            UnitOrderController orders = attacker.GetComponent<UnitOrderController>();
+            Health enemyHealth = enemy.GetComponent<Health>();
+
+            Assert.That(orders.Execute(UnitOrderCommand.AttackMove(new Vector3(12f, 1f, 0f))), Is.True);
+            yield return null;
+
+            Assert.That(orders.IsAttackMoveActive, Is.True);
+            Assert.That(GetAttackTarget(orders), Is.EqualTo(enemyHealth));
+
+            Object.Destroy(ground);
+            Object.Destroy(attacker);
+            Object.Destroy(enemy);
+        }
+
+        [UnityTest]
         public IEnumerator InvalidOrdersAreRejectedWithoutMutatingActiveOrder()
         {
             GameObject ground = CreateGround();

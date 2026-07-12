@@ -16,6 +16,7 @@ namespace CierzoArena.Netcode
         private readonly NetworkList<float> cooldowns = new(null, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
         private HeroMana mana; private HeroAbilities abilities;
         public bool IsReady => IsSpawned && IsOwner;
+        public void ReapplyReplicatedState() { if(IsSpawned&&!IsServer) Apply(); }
         public void RequestUpgrade(int slot) => RequestUpgradeRpc(slot);
         public void RequestCast(int slot, Health target, Vector3 point)
         {

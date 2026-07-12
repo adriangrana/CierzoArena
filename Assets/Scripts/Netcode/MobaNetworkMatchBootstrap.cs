@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using System.Text;
+using CierzoArena.Combat;
 using CierzoArena.CameraSystem;
 using CierzoArena.Core;
 using CierzoArena.Frontend;
@@ -39,6 +41,7 @@ namespace CierzoArena.Netcode
 
         private readonly Dictionary<ulong, NetworkObject> heroes = new();
         private readonly Dictionary<ulong, TeamId> clientTeams = new();
+        private readonly Dictionary<ulong, string> clientHeroIds = new();
         private readonly List<NetworkObject> infrastructure = new();
         private NetworkManager manager;
         private bool networkMode;
@@ -47,12 +50,14 @@ namespace CierzoArena.Netcode
         private GUIStyle labelStyle;
         private GUIStyle buttonStyle;
         private TeamId requestedTeam = TeamId.Azure;
+        private string requestedHeroId = "storm_warden";
         private TeamId localAssignedTeam = TeamId.Neutral;
 
         public static MobaNetworkMatchBootstrap Active { get; private set; }
         public bool IsNetworkMatchMode => networkMode;
         public ArenaStartupState State { get; private set; } = ArenaStartupState.WaitingForMode;
         public static bool AreModesExclusive(bool networkMode, bool localActorsActive) => networkMode != localActorsActive;
+        public static string ValidateRequestedHeroId(string requestedHeroId) => HeroCatalog.Shared.ResolveOrFallback(requestedHeroId)?.HeroId ?? string.Empty;
 
         public void Configure(NetworkObject azure, NetworkObject ember, NetworkObject match,
             NetworkObject azureTower, NetworkObject emberTower, NetworkObject azureCore, NetworkObject emberCore,
@@ -69,6 +74,7 @@ namespace CierzoArena.Netcode
             SetSceneLocalHeroRegistration(false);
             manager=NetworkManager.Singleton;
             if(manager==null)return;
+            HeroCatalog.Shared.BindDevelopmentPrefab(azureHeroPrefab != null ? azureHeroPrefab.gameObject : null);
             if(manager.TryGetComponent(out UnityTransport transport))
             {
                 transport.MaxPacketQueueSize=Mathf.Max(transport.MaxPacketQueueSize,ArenaPacketQueueSize);
@@ -82,9 +88,9 @@ namespace CierzoArena.Netcode
             ArenaVisualPass.Repair(gameObject);
             foreach(Renderer renderer in FindObjectsByType<Renderer>(FindObjectsInactive.Include))ArenaVisualPass.Repair(renderer.gameObject);
             PauseLocalGameplay();
-            if(FrontendLaunchRequest.TryConsume(out FrontendMatchMode mode,out TeamId team,out string address,out ushort port))
+            if(FrontendLaunchRequest.TryConsume(out FrontendMatchMode mode,out TeamId team,out string address,out ushort port,out string heroId))
             {
-                launchedFromFrontend=true;requestedTeam=team;
+                launchedFromFrontend=true;requestedTeam=team;requestedHeroId=ValidateRequestedHeroId(heroId);
                 if(manager.TryGetComponent(out UnityTransport frontendTransport))frontendTransport.SetConnectionData(address,port);
                 if(mode==FrontendMatchMode.LocalDevelopment)StartLocalDevelopment();
                 else if(mode==FrontendMatchMode.Host)StartHost();
@@ -108,7 +114,8 @@ namespace CierzoArena.Netcode
             // IsTeamAvailable see its own reservation and incorrectly flip Azure to
             // Ember (and subsequently reject the actual Ember client).
             clientTeams.Remove(NetworkManager.ServerClientId);
-            manager.NetworkConfig.ConnectionData=new[]{(byte)requestedTeam};
+            clientHeroIds[NetworkManager.ServerClientId]=ValidateRequestedHeroId(requestedHeroId);
+            manager.NetworkConfig.ConnectionData=BuildConnectionPayload(requestedTeam,requestedHeroId);
             localAssignedTeam=TeamId.Neutral;
             bool started=manager.StartHost();
             Debug.Log($"[M18 Spawn] StartHost result={started} IsServer={manager.IsServer} IsHost={manager.IsHost} LocalClientId={manager.LocalClientId}",this);
@@ -120,7 +127,7 @@ namespace CierzoArena.Netcode
         public void StartClient()
         {
             if(!EnterNetworkMode(ArenaStartupState.StartingClient))return;
-            manager.NetworkConfig.ConnectionData=new[]{(byte)requestedTeam};manager.StartClient();
+            manager.NetworkConfig.ConnectionData=BuildConnectionPayload(requestedTeam,requestedHeroId);manager.StartClient();
         }
         public void StartLocalDevelopment()
         {
@@ -129,6 +136,7 @@ namespace CierzoArena.Netcode
             localDevelopmentMode=true;
             SetSceneLocalHeroRegistration(true);
             EnableLocalGameplay();
+            ConfigureLocalSelectedHero();
             State=ArenaStartupState.RunningLocal;
         }
         private bool EnterNetworkMode(ArenaStartupState startingState)
@@ -141,7 +149,7 @@ namespace CierzoArena.Netcode
             SetSceneLocalHeroRegistration(false);
             ClearLocalDynamicUnits();
             for(int i=0;i<localOnlyObjects.Length;i++)if(localOnlyObjects[i]!=null)localOnlyObjects[i].SetActive(false);
-            for(int i=0;i<localStructures.Length;i++)if(localStructures[i]!=null)localStructures[i].gameObject.SetActive(false);
+            SetLocalStructuresActive(false);
             // Dynamic sources intentionally remain inactive here. Starting them before
             // the host's player object has spawned can flood the initial NGO receive
             // queue and, more importantly, leaves the local camera/HUD without an
@@ -151,16 +159,33 @@ namespace CierzoArena.Netcode
         private void PauseLocalGameplay()
         {
             for(int i=0;i<localOnlyObjects.Length;i++)if(localOnlyObjects[i]!=null)localOnlyObjects[i].SetActive(false);
-            for(int i=0;i<localStructures.Length;i++)if(localStructures[i]!=null)localStructures[i].gameObject.SetActive(false);
+            SetLocalStructuresActive(false);
             for(int i=0;i<waveSpawners.Length;i++)if(waveSpawners[i]!=null)waveSpawners[i].GetComponent<CreepWaveSpawner>()?.SetSimulationEnabled(false);
             for(int i=0;i<campSpawners.Length;i++)if(campSpawners[i]!=null)campSpawners[i].GetComponent<NeutralCamp>()?.SetSimulationEnabled(false);
         }
         private void EnableLocalGameplay()
         {
             for(int i=0;i<localOnlyObjects.Length;i++)if(localOnlyObjects[i]!=null)localOnlyObjects[i].SetActive(true);
-            for(int i=0;i<localStructures.Length;i++)if(localStructures[i]!=null)localStructures[i].gameObject.SetActive(true);
+            SetLocalStructuresActive(true);
             for(int i=0;i<waveSpawners.Length;i++)if(waveSpawners[i]!=null)waveSpawners[i].GetComponent<CreepWaveSpawner>()?.SetSimulationEnabled(true);
             for(int i=0;i<campSpawners.Length;i++)if(campSpawners[i]!=null)campSpawners[i].GetComponent<NeutralCamp>()?.SetSimulationEnabled(true);
+        }
+        private void SetLocalStructuresActive(bool active)
+        {
+            for(int i=0;i<localStructures.Length;i++)if(localStructures[i]!=null)localStructures[i].gameObject.SetActive(active);
+            foreach(WorldHealthBar bar in FindObjectsByType<WorldHealthBar>(FindObjectsInactive.Include))
+            {
+                if(bar==null||bar.BoundHealth==null)continue;
+                for(int i=0;i<localStructures.Length;i++)
+                {
+                    StructureEntity structure=localStructures[i];
+                    if(structure!=null&&bar.BoundHealth==structure.Health)
+                    {
+                        bar.gameObject.SetActive(active&&structure.IsAlive);
+                        break;
+                    }
+                }
+            }
         }
         /// <summary>
         /// Keeps the scene-owned LocalHeroProvider alive in every mode. Only the
@@ -206,7 +231,7 @@ namespace CierzoArena.Netcode
             ActivateServerGameplaySources();
             State=ArenaStartupState.RunningNetwork;
         }
-        private void OnServerStopped(bool _){heroes.Clear();infrastructure.Clear();clientTeams.Clear();}
+        private void OnServerStopped(bool _){heroes.Clear();infrastructure.Clear();clientTeams.Clear();clientHeroIds.Clear();}
         private void OnClientConnected(ulong clientId)
         {
             if(manager==null)return;
@@ -242,7 +267,9 @@ namespace CierzoArena.Netcode
             if(heroes.TryGetValue(clientId,out NetworkObject existing)&&existing!=null&&existing.IsSpawned)return;
 
             TeamId team=GetAssignedTeam(clientId);
-            NetworkObject prefab=team==TeamId.Ember?emberHeroPrefab:azureHeroPrefab;
+            HeroDefinition definition=HeroCatalog.Shared.ResolveOrFallback(GetRequestedHeroId(clientId));
+            NetworkObject prefab=definition != null && definition.Prefab != null ? definition.Prefab.GetComponent<NetworkObject>() : null;
+            if(prefab==null)prefab=azureHeroPrefab;
             Vector3 position=team==TeamId.Ember?emberSpawn:azureSpawn;
             Debug.Log($"[M18 Spawn] Before hero create clientId={clientId} team={team} prefab={(prefab==null?"null":prefab.name)} hasNetworkObject={(prefab!=null&&prefab.GetComponent<NetworkObject>()!=null)} position={position}",this);
             if(prefab==null)
@@ -254,6 +281,8 @@ namespace CierzoArena.Netcode
 
             NetworkObject hero=Instantiate(prefab,position,Quaternion.identity);
             ArenaVisualPass.Repair(hero.gameObject);
+            if(hero.TryGetComponent(out HeroMatchIdentity identity))identity.ConfigureHero(definition);
+            if(hero.TryGetComponent(out NetworkUnitController networkUnit))networkUnit.ConfigureHeroDefinitionServer(definition?.HeroId);
             Debug.Log($"[M18 Spawn] After Instantiate clientId={clientId} instance={(hero!=null?hero.name:"null")} networkObjectFound={hero!=null} isSpawnedBefore={(hero!=null&&hero.IsSpawned)}",this);
             if(hero==null)
             {
@@ -262,6 +291,7 @@ namespace CierzoArena.Netcode
                 return;
             }
             if(hero.TryGetComponent(out TeamMember teamMember))teamMember.ConfigureTeam(team);
+            if(hero.TryGetComponent(out NetworkUnitController teamNetworkUnit))teamNetworkUnit.ConfigureTeamServer(team);
             try
             {
                 hero.SpawnWithOwnership(clientId);
@@ -307,10 +337,10 @@ namespace CierzoArena.Netcode
         }
         private void ApproveConnection(NetworkManager.ConnectionApprovalRequest request,NetworkManager.ConnectionApprovalResponse response)
         {
-            TeamId requested=request.Payload!=null&&request.Payload.Length>0&&(TeamId)request.Payload[0]==TeamId.Ember?TeamId.Ember:TeamId.Azure;
+            ParseConnectionPayload(request.Payload,out TeamId requested,out string heroId);
             TeamId assigned=IsTeamAvailable(requested)?requested:(requested==TeamId.Azure&&IsTeamAvailable(TeamId.Ember)?TeamId.Ember:TeamId.Neutral);
             response.Approved=assigned!=TeamId.Neutral;response.CreatePlayerObject=false;
-            if(response.Approved)clientTeams[request.ClientNetworkId]=assigned;
+            if(response.Approved){clientTeams[request.ClientNetworkId]=assigned;clientHeroIds[request.ClientNetworkId]=ValidateRequestedHeroId(heroId);}
             Debug.Log($"[M18 Spawn] Approval clientId={request.ClientNetworkId} alreadyRegistered={heroes.ContainsKey(request.ClientNetworkId)} requested={requested} assigned={assigned} approved={response.Approved}",this);
         }
         public void NotifyLocalOwner(TeamId team)
@@ -318,6 +348,33 @@ namespace CierzoArena.Netcode
             localAssignedTeam=team;
             if(!networkMode)return;
             State=ArenaStartupState.RunningNetwork;
+        }
+
+        private string GetRequestedHeroId(ulong clientId) => clientHeroIds.TryGetValue(clientId,out string heroId) ? heroId : requestedHeroId;
+        private static byte[] BuildConnectionPayload(TeamId team,string heroId) => Encoding.UTF8.GetBytes($"{(int)team}|{heroId ?? string.Empty}");
+        private static void ParseConnectionPayload(byte[] payload,out TeamId team,out string heroId)
+        {
+            team=TeamId.Azure;heroId=string.Empty;
+            if(payload==null||payload.Length==0)return;
+            string value=Encoding.UTF8.GetString(payload);string[] split=value.Split('|');
+            if(split.Length>0&&int.TryParse(split[0],out int raw)&&raw==(int)TeamId.Ember)team=TeamId.Ember;
+            if(split.Length>1)heroId=split[1];
+        }
+        private void ConfigureLocalSelectedHero()
+        {
+            HeroDefinition definition=HeroCatalog.Shared.ResolveOrFallback(requestedHeroId);
+            foreach(HeroMatchIdentity identity in FindObjectsByType<HeroMatchIdentity>(FindObjectsInactive.Exclude))
+            {
+                if(identity.TryGetComponent(out NetworkObject _))continue;
+                if(identity.TryGetComponent(out TeamMember member))member.ConfigureTeam(requestedTeam);
+                identity.ConfigureHero(definition);
+                HeroSpawnPoint spawn=HeroSpawnPoint.FindFor(requestedTeam);
+                if(spawn!=null){identity.transform.SetPositionAndRotation(spawn.transform.position,spawn.transform.rotation);if(identity.TryGetComponent(out ClickMover mover))mover.WarpTo(spawn.transform.position);}
+                LocalHeroProvider.Active?.Register(identity.transform);
+                if(identity.TryGetComponent(out SelectableUnit selectable))selectable.SetSelected(true);
+                return;
+            }
+            Debug.LogWarning("[M20] No scene-local hero was found; local mode kept its configured fallback.",this);
         }
         private void SpawnStructure(StructureEntity source)
         {
