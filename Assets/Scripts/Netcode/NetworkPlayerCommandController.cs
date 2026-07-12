@@ -1,4 +1,5 @@
 using CierzoArena.Combat;
+using CierzoArena.CameraSystem;
 using CierzoArena.Units;
 using Unity.Netcode;
 using UnityEngine;
@@ -100,6 +101,12 @@ namespace CierzoArena.Netcode
 
         private void IssueCommand(NetworkUnitController unit)
         {
+            if(MinimapFeedback.TryGetWorldPositionAtScreenPoint(Input.mousePosition,out Vector3 minimapDestination))
+            {
+                unit.RequestMoveRpc(minimapDestination);
+                return;
+            }
+
             Ray ray = commandCamera.ScreenPointToRay(Input.mousePosition);
 
             // Intent resolution only. Whether the target is a valid enemy, alive and

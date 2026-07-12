@@ -13,17 +13,17 @@ namespace CierzoArena.Netcode
 
         private CreepWaveSpawner spawner;
         private NetworkManager manager;
+        private bool networkMode;
 
         private void Awake()
         {
             spawner = GetComponent<CreepWaveSpawner>();
-            spawner.SetSimulationEnabled(false);
-            spawner.SetExternalSpawner(true);
             spawner.CreepRequested += SpawnRequestedCreep;
         }
 
         private void Start()
         {
+            if(!networkMode)return;
             manager = NetworkManager.Singleton;
             if (manager == null)
             {
@@ -49,6 +49,17 @@ namespace CierzoArena.Netcode
                 manager.OnServerStarted -= OnServerStarted;
                 manager.OnServerStopped -= OnServerStopped;
             }
+        }
+
+        /// <summary>Called by the explicit arena bootstrap when switching out of local mode.</summary>
+        public void ActivateNetworkMode()
+        {
+            if(networkMode)return;networkMode=true;
+            spawner.SetSimulationEnabled(false);spawner.SetExternalSpawner(true);
+            manager=NetworkManager.Singleton;
+            if(manager==null)return;
+            manager.OnServerStarted+=OnServerStarted;manager.OnServerStopped+=OnServerStopped;
+            if(manager.IsServer)OnServerStarted();
         }
 
         private void OnServerStarted() => spawner.SetSimulationEnabled(true);

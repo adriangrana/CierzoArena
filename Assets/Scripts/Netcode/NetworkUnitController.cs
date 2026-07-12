@@ -1,4 +1,5 @@
 using CierzoArena.Combat;
+using CierzoArena.Core;
 using CierzoArena.Units;
 using CierzoArena.CameraSystem;
 using Unity.Netcode;
@@ -45,6 +46,10 @@ namespace CierzoArena.Netcode
 
         public override void OnNetworkSpawn()
         {
+            TeamId team=TryGetComponent(out TeamMember member)?member.Team:TeamId.Neutral;
+            int entityId=TryGetComponent(out HeroMatchIdentity identity)?identity.HeroId:-1;
+            ulong localClientId=NetworkManager.Singleton!=null?NetworkManager.Singleton.LocalClientId:ulong.MaxValue;
+            Debug.Log($"[M18 Spawn] NetworkUnitController.OnNetworkSpawn object={name} IsServer={IsServer} IsClient={IsClient} IsOwner={IsOwner} OwnerClientId={OwnerClientId} LocalClientId={localClientId} team={team} EntityId={entityId} NetworkObjectId={NetworkObjectId}",this);
             if (IsServer)
             {
                 processor = new AuthoritativeOrderProcessor(orderController, OwnerClientId);
@@ -77,6 +82,7 @@ namespace CierzoArena.Netcode
             // here (not per frame) via the scene provider's small access point, keeping
             // Runtime Netcode-agnostic.
             RegisterAsLocalHeroIfOwner(LocalHeroProvider.Active, IsOwner);
+            if(IsOwner&&TryGetComponent(out TeamMember ownerTeam))MobaNetworkMatchBootstrap.Active?.NotifyLocalOwner(ownerTeam.Team);
             if (IsOwner && TryGetComponent(out SelectableUnit selectable))
             {
                 selectable.SetSelected(true);

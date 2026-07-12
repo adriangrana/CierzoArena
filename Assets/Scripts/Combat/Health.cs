@@ -64,6 +64,14 @@ namespace CierzoArena.Combat
             initialized = true;
         }
 
+        /// <summary>Configures a dynamically spawned entity before its first damage.</summary>
+        public void ConfigureMaximumHealth(float value)
+        {
+            maxHealth = Mathf.Max(1f, value);
+            initialized = false;
+            EnsureInitialized();
+        }
+
         private UnitDefinition ResolveDefinition()
         {
             return TryGetComponent(out UnitDefinitionProvider provider) ? provider.Definition : null;

@@ -1,7 +1,11 @@
 {
   "name": "CierzoArena.Editor",
   "references": [
-    "CierzoArena.Runtime"
+    "CierzoArena.Runtime",
+    "CierzoArena.Netcode",
+    "Unity.Netcode.Runtime",
+    "Unity.Netcode.Components",
+    "Unity.Networking.Transport"
   ],
   "includePlatforms": [
     "Editor"

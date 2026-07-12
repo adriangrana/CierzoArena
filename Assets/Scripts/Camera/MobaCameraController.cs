@@ -216,9 +216,16 @@ namespace CierzoArena.CameraSystem
 
         private void OnHeroChanged(Transform hero)
         {
-            // Late spawn / respawn: caching here means FollowHero starts (or resumes)
-            // following on the next LateUpdate without any global search.
+            // A network client starts with the scene camera positioned at Azure while
+            // its owner object has not arrived yet. Edge scrolling can put the camera
+            // in Free during those first frames, which would otherwise leave an Ember
+            // client looking at Azure after its own hero arrives. Ownership registration
+            // is an explicit local-focus event: resume follow and snap now.
             cachedHero = hero;
+            if(cachedHero==null)return;
+            mode=CameraTrackingMode.FollowHero;
+            transform.position=ComputeFollowPosition(transform.position,cachedHero.position,followPlaneOffset);
+            ClampToBounds();
         }
 
         private void Update()

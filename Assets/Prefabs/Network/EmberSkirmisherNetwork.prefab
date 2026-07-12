@@ -316,7 +316,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 11bed5b59fc94b74eb10195075806402, type: 3}
   m_Name: 
   m_EditorClassIdentifier: CierzoArena.Runtime::CierzoArena.Combat.WorldHealthBar
-  health: {fileID: 5969650336328642903}
+  health: {fileID: 5642189244517815403}
   fill: {fileID: 7603299707665650217}
   width: 1.5
   height: 0.12
@@ -338,9 +338,12 @@ GameObject:
   - component: {fileID: 1416988353720639048}
   - component: {fileID: 1921831010044735786}
   - component: {fileID: 2602603738890590035}
+  - component: {fileID: 191701003001001001}
+  - component: {fileID: 5969650336328642903}
+  - component: {fileID: 191701003001001002}
   - component: {fileID: 294762924900011928}
   - component: {fileID: 4153086074896405208}
-  - component: {fileID: 5969650336328642903}
+  - component: {fileID: 5642189244517815403}
   - component: {fileID: 8465829700490593894}
   - component: {fileID: 3121652942512695483}
   - component: {fileID: 5634898767531938692}
@@ -369,8 +372,6 @@ GameObject:
   - component: {fileID: 5934175165122644420}
   - component: {fileID: 7126724211638202764}
   - component: {fileID: 425501353679911678}
-  - component: {fileID: 191701003001001001}
-  - component: {fileID: 191701003001001002}
   m_Layer: 7
   m_Name: EmberSkirmisherNetwork
   m_TagString: Untagged
@@ -378,32 +379,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &191701003001001001
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6261903388354511552}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9429a148674e44e599dcec5d13fd0f81, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: CierzoArena.Runtime::CierzoArena.Units.HeroMatchIdentity
-  matchSlot: 0
-  displayName: Ember Skirmisher
---- !u!114 &191701003001001002
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6261903388354511552}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4e938afbb2b340d79b5201a875db3c74, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: CierzoArena.Runtime::CierzoArena.Units.HeroMatchStatistics
 --- !u!4 &8622710510955818888
 Transform:
   m_ObjectHideFlags: 0
@@ -611,6 +586,45 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: aa8140753d6c4dd6a347fb7f3ed2b167, type: 3}
   m_Name: 
   m_EditorClassIdentifier: CierzoArena.Runtime::CierzoArena.Units.HeroUnit
+--- !u!114 &191701003001001001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6261903388354511552}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9429a148674e44e599dcec5d13fd0f81, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: CierzoArena.Runtime::CierzoArena.Units.HeroMatchIdentity
+  matchSlot: 0
+  displayName: Ember Skirmisher
+--- !u!114 &5969650336328642903
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6261903388354511552}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: abe5404442122494bb4b53270ffe9967, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: CierzoArena.Runtime::CierzoArena.Combat.Health
+  maxHealth: 500
+--- !u!114 &191701003001001002
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6261903388354511552}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e938afbb2b340d79b5201a875db3c74, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: CierzoArena.Runtime::CierzoArena.Units.HeroMatchStatistics
 --- !u!114 &294762924900011928
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -636,7 +650,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b7ac6f67c2f949c6afd8c17e15a3f302, type: 3}
   m_Name: 
   m_EditorClassIdentifier: CierzoArena.Runtime::CierzoArena.Units.VisionVisibility
---- !u!114 &5969650336328642903
+--- !u!114 &5642189244517815403
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}

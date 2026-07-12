@@ -36,6 +36,16 @@ namespace CierzoArena.Structures
             }
         }
 
+        private void OnEnable()
+        {
+            if (active == null) active = this;
+        }
+
+        private void OnDisable()
+        {
+            if (active == this) active = null;
+        }
+
         public void Register(StructureEntity structure)
         {
             if (structure != null && !structures.Contains(structure))

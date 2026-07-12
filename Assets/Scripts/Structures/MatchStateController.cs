@@ -53,6 +53,16 @@ namespace CierzoArena.Structures
             }
         }
 
+        private void OnEnable()
+        {
+            if (active == null) active = this;
+        }
+
+        private void OnDisable()
+        {
+            if (active == this) active = null;
+        }
+
         /// <summary>Called by the Netcode bridge on spawn; Runtime stays transport-agnostic.</summary>
         public void SetLocalAuthority(bool enabled)
         {

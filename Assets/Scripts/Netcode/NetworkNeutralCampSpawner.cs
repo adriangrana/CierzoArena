@@ -11,10 +11,12 @@ namespace CierzoArena.Netcode
         [SerializeField] private NetworkObject smallPrefab;
         [SerializeField] private NetworkObject mediumPrefab;
         [SerializeField] private NetworkObject largePrefab;
-        private NeutralCamp camp;private NetworkManager manager;
-        private void Awake(){camp=GetComponent<NeutralCamp>();camp.SetSimulationEnabled(false);camp.SetExternalSpawner(true);camp.SpawnRequested+=SpawnRequested;}
-        private void Start(){manager=NetworkManager.Singleton;if(manager==null)return;manager.OnServerStarted+=OnServerStarted;manager.OnServerStopped+=OnServerStopped;if(manager.IsServer)OnServerStarted();}
+        private NeutralCamp camp;private NetworkManager manager;private bool networkMode;
+        private void Awake(){camp=GetComponent<NeutralCamp>();camp.SpawnRequested+=SpawnRequested;}
+        private void Start(){if(!networkMode)return;Connect();}
         private void OnDestroy(){if(camp!=null)camp.SpawnRequested-=SpawnRequested;if(manager!=null){manager.OnServerStarted-=OnServerStarted;manager.OnServerStopped-=OnServerStopped;}}
+        public void ActivateNetworkMode(){if(networkMode)return;networkMode=true;camp.SetSimulationEnabled(false);camp.SetExternalSpawner(true);Connect();}
+        private void Connect(){manager=NetworkManager.Singleton;if(manager==null)return;manager.OnServerStarted+=OnServerStarted;manager.OnServerStopped+=OnServerStopped;if(manager.IsServer)OnServerStarted();}
         private void OnServerStarted()=>camp.SetSimulationEnabled(true);
         private void OnServerStopped(bool _)=>camp.SetSimulationEnabled(false);
         private void SpawnRequested(NeutralCamp _,NeutralSpawnEntry entry,Vector3 position)

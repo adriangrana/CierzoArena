@@ -25,6 +25,19 @@ namespace CierzoArena.CameraSystem
             Register();
         }
 
+        private void OnEnable()
+        {
+            Register();
+        }
+
+        private void OnDisable()
+        {
+            if (provider != null && hero != null)
+            {
+                provider.Unregister(hero);
+            }
+        }
+
         private void OnDestroy()
         {
             if (provider != null && hero != null)

@@ -1,4 +1,5 @@
 using CierzoArena.Combat;
+using CierzoArena.CameraSystem;
 using CierzoArena.Core;
 using UnityEngine;
 
@@ -128,12 +129,19 @@ namespace CierzoArena.Units
 
         private void IssueCommand()
         {
-            Ray ray = commandCamera.ScreenPointToRay(Input.mousePosition);
             UnitOrderController orders = selectedUnit.GetComponent<UnitOrderController>();
             if (orders == null)
             {
                 return;
             }
+
+            if(MinimapFeedback.TryGetWorldPositionAtScreenPoint(Input.mousePosition,out Vector3 minimapDestination))
+            {
+                orders.Execute(UnitOrderCommand.Move(minimapDestination));
+                return;
+            }
+
+            Ray ray = commandCamera.ScreenPointToRay(Input.mousePosition);
 
             // Resolve player intent only: clicked unit -> Attack request, ground -> Move
             // request. Whether the order is valid (enemy, alive, in team rules) is

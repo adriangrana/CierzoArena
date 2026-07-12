@@ -59,6 +59,15 @@ namespace CierzoArena.Structures
 
         public event Action<StructureEntity> Destroyed;
 
+        /// <summary>Server-side setup for a dynamically spawned copy of an authored structure.</summary>
+        public void Configure(TeamId owner, StructureKind nextKind, StructureLane nextLane, StructureTier nextTier, float maximumHealth)
+        {
+            kind=nextKind;lane=nextLane;tier=nextTier;
+            EnsureInitialized();
+            teamMember?.ConfigureTeam(owner);
+            health?.ConfigureMaximumHealth(maximumHealth);
+        }
+
         private void Awake()
         {
             EnsureInitialized();

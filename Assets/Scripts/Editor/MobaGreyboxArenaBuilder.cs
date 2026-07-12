@@ -1,14 +1,19 @@
 #if UNITY_EDITOR
+using System.Collections.Generic;
+using System.Linq;
 using CierzoArena.CameraSystem;
 using CierzoArena.Combat;
 using CierzoArena.Core;
 using CierzoArena.Navigation;
+using CierzoArena.Netcode;
 using CierzoArena.Structures;
 using CierzoArena.Units;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.AI;
+using Unity.Netcode;
+using Unity.Netcode.Transports.UTP;
 using UnityEngine.SceneManagement;
 
 namespace CierzoArena.EditorTools
@@ -90,7 +95,7 @@ namespace CierzoArena.EditorTools
             BuildGroundAndRiver(groundMaterial, riverMaterial);
             BuildBridges(bridgeMaterial);
             BuildLanes(routeMaterial, routeMidMaterial);
-            CreateMatchController();
+            GameObject matchController = CreateMatchController();
             BuildBases(azureBaseMaterial, emberBaseMaterial, markerMaterial, healthBackgroundMaterial, healthFillMaterial);
             CreateHeroSpawnPoint("Azure Hero Spawn", AzureBaseCenter + new Vector3(9f, 1f, 9f), TeamId.Azure);
             CreateHeroSpawnPoint("Ember Hero Spawn", EmberBaseCenter + new Vector3(-9f, 1f, -9f), TeamId.Ember);
@@ -113,7 +118,7 @@ namespace CierzoArena.EditorTools
                 azureMaterial, ringMaterial, healthBackgroundMaterial, healthFillMaterial, azureDefinition, abilityKit, startSelected: true);
             azure.AddComponent<NavPathProbe>();
 
-            CreateUnit(
+            GameObject ember = CreateUnit(
                 "Ember Skirmisher", EmberBaseCenter + new Vector3(-9f, 1f, -9f), TeamId.Ember,
                 emberMaterial, ringMaterial, healthBackgroundMaterial, healthFillMaterial, emberDefinition, abilityKit, startSelected: false);
 
@@ -126,6 +131,7 @@ namespace CierzoArena.EditorTools
             CreateLighting();
             CreateMobaCamera(azure.transform);
             CreateCommandController();
+            CreateNetworkArenaBootstrap(matchController, azure, ember);
 
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene, ScenePath);
@@ -867,6 +873,89 @@ namespace CierzoArena.EditorTools
             barObject.ApplyModifiedPropertiesWithoutUndo();
         }
 
+        // ----- Multiplayer integration (M18) ---------------------------------
+
+        private static void CreateNetworkArenaBootstrap(GameObject localMatch, GameObject azure, GameObject ember)
+        {
+            NetworkObject azurePrefab=LoadNetworkPrefab("Assets/Prefabs/Network/AzureVanguardNetwork.prefab");
+            NetworkObject emberPrefab=LoadNetworkPrefab("Assets/Prefabs/Network/EmberSkirmisherNetwork.prefab");
+            NetworkObject matchPrefab=LoadNetworkPrefab("Assets/Prefabs/Network/MatchStateNetwork.prefab");
+            NetworkObject azureTower=LoadNetworkPrefab("Assets/Prefabs/Network/AzureTowerNetwork.prefab");
+            NetworkObject emberTower=LoadNetworkPrefab("Assets/Prefabs/Network/EmberTowerNetwork.prefab");
+            NetworkObject azureCore=LoadNetworkPrefab("Assets/Prefabs/Network/AzureCoreNetwork.prefab");
+            NetworkObject emberCore=LoadNetworkPrefab("Assets/Prefabs/Network/EmberCoreNetwork.prefab");
+            NetworkPrefabsList prefabs=AssetDatabase.LoadAssetAtPath<NetworkPrefabsList>("Assets/Data/SpikeNetworkPrefabs.asset");
+            if(azurePrefab==null||emberPrefab==null||matchPrefab==null||prefabs==null)return;
+
+            GameObject managerObject=new GameObject("Network Manager");
+            NetworkManager manager=managerObject.AddComponent<NetworkManager>();
+            UnityTransport transport=managerObject.AddComponent<UnityTransport>();transport.SetConnectionData("127.0.0.1",7777);transport.MaxPacketQueueSize=1024;
+            manager.NetworkConfig=new NetworkConfig{NetworkTransport=transport,EnableSceneManagement=true,ConnectionApproval=true,SpawnTimeout=10f};
+            manager.NetworkConfig.Prefabs.NetworkPrefabsLists.Add(prefabs);
+            GameObject projectileSpawnerObject=new GameObject("Network Projectile Spawner");
+            NetworkProjectileSpawner projectileSpawner=projectileSpawnerObject.AddComponent<NetworkProjectileSpawner>();
+            SetObjectReference(projectileSpawner,"projectilePrefab",AssetDatabase.LoadAssetAtPath<NetworkProjectileVisual>("Assets/Prefabs/Network/AttackProjectileNetwork.prefab"));
+
+            NetworkObject azureMelee=LoadNetworkPrefab("Assets/Prefabs/Network/AzureMeleeCreepNetwork.prefab");
+            NetworkObject azureRanged=LoadNetworkPrefab("Assets/Prefabs/Network/AzureRangedCreepNetwork.prefab");
+            NetworkObject emberMelee=LoadNetworkPrefab("Assets/Prefabs/Network/EmberMeleeCreepNetwork.prefab");
+            NetworkObject emberRanged=LoadNetworkPrefab("Assets/Prefabs/Network/EmberRangedCreepNetwork.prefab");
+            NetworkCreepWaveSpawner[] waves=Object.FindObjectsByType<CreepWaveSpawner>()
+                .Select(item=>ConfigureNetworkWaveSpawner(item.gameObject.AddComponent<NetworkCreepWaveSpawner>(),item.gameObject.name.StartsWith("Azure"),azureMelee,azureRanged,emberMelee,emberRanged)).ToArray();
+            NetworkObject neutralSmall=LoadNetworkPrefab("Assets/Prefabs/Network/NeutralSmallNetwork.prefab");
+            NetworkObject neutralMedium=LoadNetworkPrefab("Assets/Prefabs/Network/NeutralMediumNetwork.prefab");
+            NetworkObject neutralLarge=LoadNetworkPrefab("Assets/Prefabs/Network/NeutralLargeNetwork.prefab");
+            NetworkNeutralCampSpawner[] camps=Object.FindObjectsByType<NeutralCamp>()
+                .Select(item=>ConfigureNetworkCampSpawner(item.gameObject.AddComponent<NetworkNeutralCampSpawner>(),neutralSmall,neutralMedium,neutralLarge)).ToArray();
+            NeutralBossController localBoss=Object.FindAnyObjectByType<NeutralBossController>();
+            GameObject bossObject=new GameObject("Network Guardian Spawner");
+            NetworkNeutralBossSpawner boss=bossObject.AddComponent<NetworkNeutralBossSpawner>();
+            SerializedObject bossSerialized=new SerializedObject(boss);
+            bossSerialized.FindProperty("bossPrefab").objectReferenceValue=LoadNetworkPrefab("Assets/Prefabs/Network/CierzoGuardianNetwork.prefab");
+            bossSerialized.FindProperty("spawnPosition").vector3Value=localBoss!=null?localBoss.transform.position:BossPitCenter;
+            bossSerialized.ApplyModifiedPropertiesWithoutUndo();
+
+            MobaNetworkMatchBootstrap bootstrap=managerObject.AddComponent<MobaNetworkMatchBootstrap>();
+            List<GameObject> localActors=new List<GameObject>{localMatch,azure,ember};
+            GameObject localCommands=GameObject.Find("Player Command Controller");
+            if(localCommands!=null)localActors.Add(localCommands);
+            if(localBoss!=null)localActors.Add(localBoss.gameObject);
+            // The registrar is local-only, but its GameObject also owns
+            // LocalHeroProvider. Keep that provider active for network ownership
+            // callbacks; MobaNetworkMatchBootstrap disables only the registrar.
+            bootstrap.Configure(azurePrefab,emberPrefab,matchPrefab,azureTower,emberTower,azureCore,emberCore,
+                azure.transform.position,ember.transform.position,localActors.ToArray(),Object.FindObjectsByType<StructureEntity>(),waves,camps,boss);
+
+            // M18 starts with no match running. Local actors remain authored for a
+            // fast development match, but only the bootstrap may activate them after
+            // the player explicitly chooses Start Local. Network mode never revives
+            // these objects; it spawns the authoritative prefab counterparts instead.
+            foreach(GameObject actor in localActors)if(actor!=null)actor.SetActive(false);
+            foreach(StructureEntity structure in Object.FindObjectsByType<StructureEntity>())if(structure!=null)structure.gameObject.SetActive(false);
+            foreach(NetworkCreepWaveSpawner wave in waves)if(wave!=null)wave.GetComponent<CreepWaveSpawner>().SetSimulationEnabled(false);
+            foreach(NetworkNeutralCampSpawner camp in camps)if(camp!=null)camp.GetComponent<NeutralCamp>().SetSimulationEnabled(false);
+            EditorUtility.SetDirty(manager);
+        }
+
+        private static NetworkObject LoadNetworkPrefab(string path)
+        {
+            GameObject prefab=AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            return prefab!=null?prefab.GetComponent<NetworkObject>():null;
+        }
+
+        private static NetworkCreepWaveSpawner ConfigureNetworkWaveSpawner(NetworkCreepWaveSpawner bridge,bool azure,NetworkObject azureMelee,NetworkObject azureRanged,NetworkObject emberMelee,NetworkObject emberRanged)
+        {
+            SetObjectReference(bridge,"meleePrefab",azure?azureMelee:emberMelee);
+            SetObjectReference(bridge,"rangedPrefab",azure?azureRanged:emberRanged);
+            return bridge;
+        }
+
+        private static NetworkNeutralCampSpawner ConfigureNetworkCampSpawner(NetworkNeutralCampSpawner bridge,NetworkObject small,NetworkObject medium,NetworkObject large)
+        {
+            SetObjectReference(bridge,"smallPrefab",small);SetObjectReference(bridge,"mediumPrefab",medium);SetObjectReference(bridge,"largePrefab",large);
+            return bridge;
+        }
+
         // ----- Support objects ------------------------------------------------
 
         private static void CreateNavMeshBootstrap()
@@ -881,7 +970,7 @@ namespace CierzoArena.EditorTools
             serialized.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        private static void CreateMatchController()
+        private static GameObject CreateMatchController()
         {
             GameObject matchObject = new GameObject("Match State Controller");
             matchObject.AddComponent<MatchStateController>();
@@ -889,6 +978,7 @@ namespace CierzoArena.EditorTools
             matchObject.AddComponent<MatchScoreboardController>();
             matchObject.AddComponent<StructureProgressionController>();
             matchObject.AddComponent<MatchVictoryDisplay>();
+            return matchObject;
         }
 
         private static void ConfigureStructure(GameObject structureObject, TeamId team, StructureKind kind, StructureLane lane, StructureTier tier, float maxHealth, Material healthBackgroundMaterial, Material healthFillMaterial, float healthBarHeight)
@@ -1067,6 +1157,17 @@ namespace CierzoArena.EditorTools
             commandObject.FindProperty("selectableMask").intValue = 1 << SelectableLayer;
             commandObject.FindProperty("attackableMask").intValue = (1 << SelectableLayer) | (1 << AttackableLayer);
             commandObject.ApplyModifiedPropertiesWithoutUndo();
+
+            // The network controller is inert until Host/Client starts, then sends
+            // requests only through the hero owned by this local connection.
+            GameObject networkController=new GameObject("Network Player Command Controller");
+            NetworkPlayerCommandController networkCommands=networkController.AddComponent<NetworkPlayerCommandController>();
+            SerializedObject networkObject=new SerializedObject(networkCommands);
+            networkObject.FindProperty("commandCamera").objectReferenceValue=Camera.main;
+            networkObject.FindProperty("groundMask").intValue=1<<GroundLayer;
+            networkObject.FindProperty("selectableMask").intValue=1<<SelectableLayer;
+            networkObject.FindProperty("attackableMask").intValue=(1<<SelectableLayer)|(1<<AttackableLayer);
+            networkObject.ApplyModifiedPropertiesWithoutUndo();
         }
 
         // ----- Assets / helpers ----------------------------------------------

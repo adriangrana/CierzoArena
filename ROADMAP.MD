@@ -307,7 +307,7 @@ Resultado: `La arena ya tiene objetivos defensivos y una condición de victoria 
 
 ### Milestone 6 — Modelo avanzado de ataque
 
-Status: 🔵 Implementado / pendiente de validación final en Unity
+Status: ✅ Completado y validado manualmente en Unity
 
 El ataque actual sirve de prototipo. Aquí se convierte en combate serio.
 
@@ -511,18 +511,18 @@ Resultado: `La partida ya registra y presenta estadísticas completas de rendimi
 
 ## FASE VIII — Mapa completo
 
-### Milestone 18 — Tres líneas funcionales
+### Milestone 18 — Arena principal multijugador
 
-Status: ⬜ Futuro
+Status: 🔵 Implementado / pendiente de validación final en Unity
 
-- [ ] Top completa
-- [ ] Mid completa
-- [ ] Bot completa
-- [ ] Oleadas
-- [ ] Torres
-- [ ] Navegación
-- [ ] Spawns
-- [ ] Equilibrio básico de distancias
+- [x] Modo local explícito y entrada Host/Client en la greybox.
+- [x] Spawn autoritativo de héroes, estructuras, oleadas, neutrales y jefe.
+- [x] Ownership de Azure para host y Ember para cliente; cámara/HUD mediante héroe owner.
+- [x] Reutilización de prefabs y puentes validados en MultiplayerSpikeArena.
+- [x] Desconexión mínima, visión por equipo y estadísticas replicadas por los sistemas existentes.
+- [x] Cola de transporte ampliada para el burst inicial de entidades y minimapa con movimiento por clic derecho.
+
+Resultado: `Host Azure y Client Ember completan una partida autoritativa en la greybox, con spawn, cámara, HUD, habilidades, inventario y órdenes desde mapa o minimapa.`
 
 ### Milestone 19 — Jungla
 

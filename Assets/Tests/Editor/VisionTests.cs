@@ -81,6 +81,14 @@ namespace CierzoArena.Tests.Editor
         {
             GameObject overlayObject=new GameObject("Fog");FogOfWarOverlay overlay=overlayObject.AddComponent<FogOfWarOverlay>();Assert.That(overlay.IsTerrainVisible(new Vector3(100,0,100)),Is.True);Object.DestroyImmediate(overlayObject);
         }
+        [Test]
+        public void MinimapPointMapsToTheCorrespondingWorldGroundPosition()
+        {
+            Rect map=new Rect(100,200,200,200);
+            Assert.That(MinimapFeedback.GuiPointToWorld(new Vector2(100,200),map,86f),Is.EqualTo(new Vector3(-86,0,86)));
+            Assert.That(MinimapFeedback.GuiPointToWorld(new Vector2(300,400),map,86f),Is.EqualTo(new Vector3(86,0,-86)));
+            Assert.That(MinimapFeedback.GuiPointToWorld(map.center,map,86f),Is.EqualTo(Vector3.zero));
+        }
         private static GameObject Create(string name,TeamId team,Vector3 position,float radius)
         {
             GameObject item=new GameObject(name);item.transform.position=position;TeamMember member=item.AddComponent<TeamMember>();member.GetType().GetField("team",BindingFlags.Instance|BindingFlags.NonPublic).SetValue(member,team);VisionSource source=item.AddComponent<VisionSource>();source.GetType().GetField("radius",BindingFlags.Instance|BindingFlags.NonPublic).SetValue(source,radius);source.EnsureRegistered();return item;

@@ -7,6 +7,7 @@ namespace CierzoArena.Core
         [SerializeField] private TeamId team = TeamId.Neutral;
 
         public TeamId Team => team;
+        public void ConfigureTeam(TeamId value) => team = value;
 
         public bool IsEnemy(TeamMember other)
         {
