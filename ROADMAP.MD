@@ -471,9 +471,18 @@ Status: 🔵 Implementado / pendiente de validación final en Unity
 
 Resultado: `La jungla ya contiene campamentos neutrales con combate, recompensas y respawn.`
 
-### Milestone 16 — Inventario
+### Milestone 16 — Jefe neutral y recompensa global
 
-Status: ⬜ Futuro
+Status: 🔵 Implementado / pendiente de validación final en Unity
+
+- [x] Guardián neutral con vida alta, amenaza por daño y targeting determinista.
+- [x] Ataque M6 y golpe de área autoritativo con telegraph, cooldown y slow.
+- [x] Leash, retorno, cancelación y curación completa al reset.
+- [x] Oro global y Cierzo Ascendant: daño y movimiento para todo el equipo del último golpe.
+- [x] El buff se refresca sin acumularse, persiste tras muerte y se replica con M13.
+- [x] Respawn largo, niebla, anuncio global y bridges Netcode servidor-autoritativos.
+
+Resultado: `La arena ya incluye un objetivo neutral mayor que recompensa la coordinación del equipo.`
 
 - [ ] Slots
 - [ ] Añadir objetos

@@ -23,8 +23,15 @@ namespace CierzoArena.Units
         private float abilityMoveSpeedBonus;
         private float statusMoveSpeedBonus;
         private float statusMoveSpeedMultiplier = 1f;
+        private bool hasMoveCommand;
+        private Vector3 lastRequestedDestination;
 
         public float EffectiveMoveSpeed => Mathf.Max(0f, (moveSpeed + levelMoveSpeedBonus + itemMoveSpeedBonus + abilityMoveSpeedBonus + statusMoveSpeedBonus) * statusMoveSpeedMultiplier);
+        /// <summary>True when the NavMeshAgent is enabled and can accept destinations.</summary>
+        public bool IsNavigationEnabled => agent != null && agent.enabled;
+        public bool IsNavigationStopped => agent == null || !agent.enabled || agent.isStopped;
+        public bool HasMoveCommand => hasMoveCommand;
+        public Vector3 LastRequestedDestination => lastRequestedDestination;
 
         private void Awake()
         {
@@ -55,19 +62,27 @@ namespace CierzoArena.Units
             ConfigureAgent();
         }
 
-        public void MoveTo(Vector3 worldPosition)
+        public bool MoveTo(Vector3 worldPosition)
         {
-            if (TryGetComponent(out StatusEffectController effects) && !effects.CanMove) return;
-            if (agent == null || !agent.isOnNavMesh)
+            if (TryGetComponent(out StatusEffectController effects) && !effects.CanMove) return false;
+            if (!EnsureNavigationReady())
             {
-                return;
+                return false;
             }
 
-            if (NavMesh.SamplePosition(worldPosition, out NavMeshHit hit, 1.5f, NavMesh.AllAreas))
+            if (NavMesh.SamplePosition(worldPosition, out NavMeshHit hit, navMeshSearchRadius, NavMesh.AllAreas))
             {
                 agent.isStopped = false;
-                agent.SetDestination(hit.position);
+                hasMoveCommand = agent.SetDestination(hit.position);
+                if (hasMoveCommand)
+                {
+                    lastRequestedDestination = hit.position;
+                }
+                return hasMoveCommand;
             }
+
+            hasMoveCommand = false;
+            return false;
         }
 
         public void Stop()
@@ -82,6 +97,59 @@ namespace CierzoArena.Units
             // agent would report isStopped == false right after being told to stop.
             agent.ResetPath();
             agent.isStopped = true;
+            hasMoveCommand = false;
+        }
+
+        /// <summary>
+        /// Clears a completed return path and makes the agent ready for a fresh combat
+        /// destination. This is deliberately separate from <see cref="Stop"/>: reset
+        /// completion must not leave the agent permanently stopped.
+        /// </summary>
+        public bool RearmNavigation()
+        {
+            if (agent == null && !TryGetComponent(out agent))
+            {
+                agent = gameObject.AddComponent<NavMeshAgent>();
+            }
+
+            if (!agent.enabled)
+            {
+                agent.enabled = true;
+            }
+
+            agent.updatePosition = true;
+            agent.updateRotation = true;
+            ConfigureAgent();
+            SnapAgentToNavMesh();
+            if (!agent.isOnNavMesh)
+            {
+                hasMoveCommand = false;
+                return false;
+            }
+
+            agent.ResetPath();
+            agent.isStopped = false;
+            hasMoveCommand = false;
+            return true;
+        }
+
+        /// <summary>
+        /// Removes the current route without turning the agent into a stopped agent.
+        /// Autonomous units use this while idle so their next combat destination can
+        /// be accepted immediately.
+        /// </summary>
+        public bool ClearDestinationAndRemainReady()
+        {
+            if (!EnsureNavigationReady())
+            {
+                hasMoveCommand = false;
+                return false;
+            }
+
+            agent.ResetPath();
+            agent.isStopped = false;
+            hasMoveCommand = false;
+            return true;
         }
 
         /// <summary>Places the agent at a valid navigation position and clears any old route.</summary>
@@ -103,6 +171,24 @@ namespace CierzoArena.Units
             }
 
             Stop();
+        }
+
+        private bool EnsureNavigationReady()
+        {
+            if (agent == null || !agent.enabled)
+            {
+                return RearmNavigation();
+            }
+
+            agent.updatePosition = true;
+            agent.updateRotation = true;
+            ConfigureAgent();
+            if (!agent.isOnNavMesh)
+            {
+                SnapAgentToNavMesh();
+            }
+
+            return agent.isOnNavMesh;
         }
 
         /// <summary>Sets the additive per-match movement speed earned from hero levels.</summary>

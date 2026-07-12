@@ -22,8 +22,10 @@ namespace CierzoArena.EditorTools
     ///   each a fortified, team-coloured platform with a core and a lane-facing gate.
     /// - Three parallel lanes (north / mid / south) that read as top/mid/bottom at a
     ///   glance instead of a fan of crossing diagonals; the mid lane is the primary one.
-    /// - A diagonal technical ravine/river that splits the map into two halves.
-    /// - One walkable bridge (chokepoint) per lane crossing the river.
+    /// - A diagonal river band that is fully walkable ground (a distinct zone, not a
+    ///   gap): units can cross it anywhere, and it hosts the neutral boss pit.
+    /// - One highlighted bridge per lane marking where each lane meets the river
+    ///   (visual emphasis / intended chokepoint), no longer the only crossing.
     /// - Two off-lane neutral jungle pockets (north-west and south-east) with markers.
     /// - Large obstacles in the gaps between lanes that force real pathfinding.
     /// - Tower markers (three per lane and team) and three base spawn/access points
@@ -51,6 +53,12 @@ namespace CierzoArena.EditorTools
         private static readonly Vector3 EmberBaseCenter = new Vector3(60f, 0f, 60f);
         private static readonly Vector3 NorthWestCorner = new Vector3(-60f, 0f, 60f);
         private static readonly Vector3 SouthEastCorner = new Vector3(60f, 0f, -60f);
+
+        // Neutral boss pit, on the river's perpendicular-bisector axis (z = -x) between
+        // the two bases, so straight-line distance from Azure and Ember is identical.
+        // Kept off the mid crossing and clear of the jungle camps; the pit walls are
+        // mirror-symmetric across that axis so both teams' approaches match.
+        private static readonly Vector3 BossPitCenter = new Vector3(-18f, 0f, 18f);
 
         [MenuItem("Cierzo Arena/Create MOBA Greybox Arena")]
         public static void CreateMobaGreyboxArena()
@@ -111,6 +119,8 @@ namespace CierzoArena.EditorTools
 
             BuildLaneCreeps(azureMaterial, emberMaterial, healthBackgroundMaterial, healthFillMaterial);
             BuildNeutralCamps(neutralMaterial, healthBackgroundMaterial, healthFillMaterial);
+            BuildBossPit(obstacleMaterial, riverMaterial);
+            BuildMajorObjective(neutralMaterial, healthBackgroundMaterial, healthFillMaterial);
 
             CreateNavMeshBootstrap();
             CreateLighting();
@@ -136,24 +146,23 @@ namespace CierzoArena.EditorTools
         {
             GameObject terrain = new GameObject("Terrain");
 
-            // The arena is a square (corners at Azure SW, Ember NE, plus NW and SE).
-            // The river runs along the NW-SE anti-diagonal and splits the square into
-            // two triangular halves. Each half is a large slab rotated 45 degrees and
-            // offset along the SW-NE main diagonal, leaving a diagonal gap (the river)
-            // that only the three bridges reconnect for navigation.
-            CreateGroundBox(terrain.transform, "Ground Azure Half", new Vector3(-41f, -0.5f, -41f), new Vector3(200f, 1f, 100f), 45f, groundMaterial);
-            CreateGroundBox(terrain.transform, "Ground Ember Half", new Vector3(41f, -0.5f, 41f), new Vector3(200f, 1f, 100f), 45f, groundMaterial);
+            // One continuous walkable ground slab covering the whole square arena, so
+            // the NavMesh is a single connected surface (no gap anywhere). It tucks
+            // under the axis-aligned boundary walls (inner face at +/-82), which carve
+            // the walkable edge cleanly. The river is now a distinct *walkable* zone.
+            CreateGroundBox(terrain.transform, "Ground", new Vector3(0f, -0.5f, 0f), new Vector3(176f, 1f, 176f), 0f, groundMaterial);
 
-            // Visual-only sunken river filling the diagonal gap. It is on the default
-            // layer so it is never collected into the NavMesh; the gap in the ground is
-            // what actually blocks crossing anywhere except the bridges.
+            // River as a thin, walkable visual ribbon on the NW-SE anti-diagonal, laid
+            // flat on top of the ground (not sunken). It is on the default layer with no
+            // collider, so it never affects the NavMesh: units walk straight over it.
+            // The darker material and the boss pit give it its distinct, shadowed read.
             GameObject river = GameObject.CreatePrimitive(PrimitiveType.Cube);
             river.name = "River (visual)";
             river.layer = 0;
             river.transform.SetParent(terrain.transform);
-            river.transform.position = new Vector3(0f, -2.5f, 0f);
+            river.transform.position = new Vector3(0f, 0.05f, 0f);
             river.transform.rotation = Quaternion.Euler(0f, 45f, 0f);
-            river.transform.localScale = new Vector3(210f, 3f, 18f);
+            river.transform.localScale = new Vector3(210f, 0.1f, 18f);
             river.GetComponent<Renderer>().sharedMaterial = riverMaterial;
             Object.DestroyImmediate(river.GetComponent<Collider>());
         }
@@ -162,9 +171,11 @@ namespace CierzoArena.EditorTools
         {
             GameObject bridges = new GameObject("Bridges");
 
-            // One chokepoint per lane, each spanning the river gap where that lane
-            // crosses it: the top lane at the NW corner, the mid lane at the centre,
-            // and the bottom lane at the SE corner. The 45-degree yaw spans the gap.
+            // One highlighted crossing per lane where that lane meets the river: the top
+            // lane at the NW corner, the mid lane at the centre, and the bottom lane at
+            // the SE corner. With the river now walkable these are visual emphasis /
+            // intended chokepoints, not the only way across. The 45-degree yaw aligns
+            // each band with the river.
             CreateGroundBox(bridges.transform, "Top Bridge", new Vector3(-60f, -0.4f, 60f), new Vector3(22f, 1f, 26f), 45f, bridgeMaterial);
             CreateGroundBox(bridges.transform, "Mid Bridge", new Vector3(0f, -0.4f, 0f), new Vector3(16f, 1f, 26f), 45f, bridgeMaterial);
             CreateGroundBox(bridges.transform, "Bottom Bridge", new Vector3(60f, -0.4f, -60f), new Vector3(22f, 1f, 26f), 45f, bridgeMaterial);
@@ -260,7 +271,8 @@ namespace CierzoArena.EditorTools
 
             // Obstacles fill the four jungle triangles between the mid lane and the two
             // side lanes (never on a lane), so units must weave through jungle without
-            // ever losing the walkable lanes. They sit clear of the river gap too.
+            // ever losing the walkable lanes. They sit clear of the river band and the
+            // boss pit too.
             //   - Azure side (SW half, x + z < 0): north and south jungles.
             //   - Ember side (NE half, x + z > 0): north and south jungles.
             CreateObstacle(obstacles.transform, "Azure North Jungle", new Vector3(-44f, 3f, 6f), new Vector3(11f, 6f, 11f), obstacleMaterial, 45f);
@@ -650,6 +662,38 @@ namespace CierzoArena.EditorTools
         {
             string path=$"Assets/Prefabs/Neutrals/{assetName}.prefab";GameObject neutral=GameObject.CreatePrimitive(primitive);neutral.name=assetName;neutral.layer=AttackableLayer;neutral.transform.localScale=category==NeutralCampCategory.Large?Vector3.one*1.15f:Vector3.one*.72f;neutral.GetComponent<Renderer>().sharedMaterial=material;
             TeamMember member=neutral.AddComponent<TeamMember>();SetEnum(member,"team",(int)TeamId.Neutral);Health health=neutral.AddComponent<Health>();SetFloat(health,"maxHealth",maxHealth);neutral.AddComponent<StatusEffectController>();neutral.AddComponent<VisionVisibility>();CreateHealthBar(neutral.transform,health,healthBackgroundMaterial,healthFillMaterial,category==NeutralCampCategory.Large?2.3f:1.65f,1.1f);neutral.AddComponent<ClickMover>();BasicAttack attack=neutral.AddComponent<BasicAttack>();ConfigureAttack(attack,range>3f?AttackDelivery.Ranged:AttackDelivery.Melee,range,damage,interval,.25f,.3f);AttackVisual visual=neutral.AddComponent<AttackVisual>();SetObjectReference(visual,"targetRenderer",neutral.GetComponent<Renderer>());neutral.AddComponent<NeutralUnitController>();ExperienceReward reward=neutral.AddComponent<ExperienceReward>();SetInt(reward,"experienceReward",experience);SetFloat(reward,"experienceRadius",14f);SetInt(reward,"goldReward",gold);SetBool(reward,"shareExperienceWithNearbyHeroes",true);PrefabUtility.SaveAsPrefabAsset(neutral,path);Object.DestroyImmediate(neutral);return AssetDatabase.LoadAssetAtPath<GameObject>(path);
+        }
+
+        private static void BuildBossPit(Material wallMaterial, Material riverMaterial)
+        {
+            GameObject pit = new GameObject("Boss Pit");
+
+            // Shadowed pit floor: a small dark, flush, walkable pad centred on the boss,
+            // on the default layer with no collider so it never blocks navigation.
+            GameObject floor = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            floor.name = "Boss Pit Floor (visual)";
+            floor.layer = 0;
+            floor.transform.SetParent(pit.transform);
+            floor.transform.position = new Vector3(BossPitCenter.x, 0.06f, BossPitCenter.z);
+            floor.transform.rotation = Quaternion.Euler(0f, 45f, 0f);
+            floor.transform.localScale = new Vector3(13f, 0.12f, 13f);
+            floor.GetComponent<Renderer>().sharedMaterial = riverMaterial;
+            Object.DestroyImmediate(floor.GetComponent<Collider>());
+
+            // Two flank walls along the river axis (u = NW-SE), leaving both base-facing
+            // sides (across the river) open. They are mirror-symmetric across the z = -x
+            // axis, so the Azure (SW) and Ember (NE) approaches into the pit are
+            // identical, and they give exactly two entrances (never a single choke).
+            Vector3 u = new Vector3(0.70710678f, 0f, -0.70710678f);
+            Vector3 nw = BossPitCenter + u * 9f;
+            Vector3 se = BossPitCenter - u * 9f;
+            CreateObstacle(pit.transform, "Boss Pit Wall NW", new Vector3(nw.x, 2.5f, nw.z), new Vector3(3f, 5f, 10f), wallMaterial, 45f);
+            CreateObstacle(pit.transform, "Boss Pit Wall SE", new Vector3(se.x, 2.5f, se.z), new Vector3(3f, 5f, 10f), wallMaterial, 45f);
+        }
+
+        private static void BuildMajorObjective(Material material,Material healthBackgroundMaterial,Material healthFillMaterial)
+        {
+            GameObject boss=GameObject.CreatePrimitive(PrimitiveType.Cylinder);boss.name="Cierzo Guardian";boss.layer=AttackableLayer;boss.transform.position=BossPitCenter;boss.transform.localScale=Vector3.one*1.6f;boss.GetComponent<Renderer>().sharedMaterial=material;TeamMember member=boss.AddComponent<TeamMember>();SetEnum(member,"team",(int)TeamId.Neutral);Health health=boss.AddComponent<Health>();SetFloat(health,"maxHealth",2800f);boss.AddComponent<StatusEffectController>();boss.AddComponent<BossAnnouncementFeedback>();boss.AddComponent<VisionVisibility>();CreateHealthBar(boss.transform,health,healthBackgroundMaterial,healthFillMaterial,3.2f,2.5f);boss.AddComponent<ClickMover>();BasicAttack attack=boss.AddComponent<BasicAttack>();ConfigureAttack(attack,AttackDelivery.Melee,2.5f,70f,1.35f,.35f,.35f);AttackVisual visual=boss.AddComponent<AttackVisual>();SetObjectReference(visual,"targetRenderer",boss.GetComponent<Renderer>());GameObject telegraph=GameObject.CreatePrimitive(PrimitiveType.Cylinder);telegraph.name="Guardian Strike Telegraph";telegraph.transform.SetParent(boss.transform);telegraph.transform.localPosition=new Vector3(0f,-.95f,0f);telegraph.transform.localScale=new Vector3(5f,.02f,5f);telegraph.GetComponent<Renderer>().sharedMaterial=CreateMaterial("Assets/Materials/Prototype_BossTelegraph.mat",new Color(.95f,.25f,.08f,.45f));Object.DestroyImmediate(telegraph.GetComponent<Collider>());telegraph.GetComponent<Renderer>().enabled=false;NeutralBossController controller=boss.AddComponent<NeutralBossController>();controller.Configure(boss.transform.position,14f,22f,1.5f,180f);SerializedObject data=new SerializedObject(controller);data.FindProperty("telegraphRenderer").objectReferenceValue=telegraph.GetComponent<Renderer>();SerializedProperty renders=data.FindProperty("presentationRenderers");renders.arraySize=1;renders.GetArrayElementAtIndex(0).objectReferenceValue=boss.GetComponent<Renderer>();SerializedProperty colliders=data.FindProperty("presentationColliders");colliders.arraySize=1;colliders.GetArrayElementAtIndex(0).objectReferenceValue=boss.GetComponent<Collider>();data.ApplyModifiedPropertiesWithoutUndo();
         }
 
         private static void BuildLaneCreeps(Material azureMaterial, Material emberMaterial, Material healthBackgroundMaterial, Material healthFillMaterial)

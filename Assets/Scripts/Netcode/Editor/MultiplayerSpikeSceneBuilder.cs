@@ -86,6 +86,7 @@ namespace CierzoArena.Netcode.EditorTools
             string neutralSmallPath = CreateNetworkNeutralPrefab("NeutralSmallNetwork", NeutralCampCategory.Small, PrimitiveType.Capsule, neutralMaterial, healthBackgroundMaterial, healthFillMaterial, 260f, 22f, 1.9f, 1.15f, 70, 45);
             string neutralMediumPath = CreateNetworkNeutralPrefab("NeutralMediumNetwork", NeutralCampCategory.Medium, PrimitiveType.Sphere, neutralMaterial, healthBackgroundMaterial, healthFillMaterial, 330f, 28f, 5.8f, 1.35f, 90, 60);
             string neutralLargePath = CreateNetworkNeutralPrefab("NeutralLargeNetwork", NeutralCampCategory.Large, PrimitiveType.Cube, neutralMaterial, healthBackgroundMaterial, healthFillMaterial, 620f, 42f, 2.1f, 1.5f, 150, 95);
+            string bossPath = CreateNetworkBossPrefab(neutralMaterial, healthBackgroundMaterial, healthFillMaterial);
 
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
@@ -105,8 +106,9 @@ namespace CierzoArena.Netcode.EditorTools
             NetworkObject neutralSmall = AssetDatabase.LoadAssetAtPath<GameObject>(neutralSmallPath).GetComponent<NetworkObject>();
             NetworkObject neutralMedium = AssetDatabase.LoadAssetAtPath<GameObject>(neutralMediumPath).GetComponent<NetworkObject>();
             NetworkObject neutralLarge = AssetDatabase.LoadAssetAtPath<GameObject>(neutralLargePath).GetComponent<NetworkObject>();
+            NetworkObject bossPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(bossPath).GetComponent<NetworkObject>();
 
-            NetworkPrefabsList spikePrefabs = CreateNetworkPrefabsList(azurePrefab.gameObject, emberPrefab.gameObject, azureTowerPrefab.gameObject, emberTowerPrefab.gameObject, azureCorePrefab.gameObject, emberCorePrefab.gameObject, matchPrefab.gameObject, projectilePrefab.gameObject, azureMeleeCreep.gameObject, azureRangedCreep.gameObject, emberMeleeCreep.gameObject, emberRangedCreep.gameObject, neutralSmall.gameObject, neutralMedium.gameObject, neutralLarge.gameObject);
+            NetworkPrefabsList spikePrefabs = CreateNetworkPrefabsList(azurePrefab.gameObject, emberPrefab.gameObject, azureTowerPrefab.gameObject, emberTowerPrefab.gameObject, azureCorePrefab.gameObject, emberCorePrefab.gameObject, matchPrefab.gameObject, projectilePrefab.gameObject, azureMeleeCreep.gameObject, azureRangedCreep.gameObject, emberMeleeCreep.gameObject, emberRangedCreep.gameObject, neutralSmall.gameObject, neutralMedium.gameObject, neutralLarge.gameObject, bossPrefab.gameObject);
 
             CreateNetworkManager(spikePrefabs);
 
@@ -114,6 +116,7 @@ namespace CierzoArena.Netcode.EditorTools
             CreateProjectileSpawner(projectilePrefab);
             CreateNetworkWaveSpawners(azureMeleeCreep, azureRangedCreep, emberMeleeCreep, emberRangedCreep);
             CreateNetworkNeutralCamp(neutralSmall, neutralMedium, neutralLarge);
+            CreateNetworkBossSpawner(bossPrefab);
             CreateLighting();
             CreateMobaCamera();
             CreateCommandController();
@@ -354,6 +357,11 @@ namespace CierzoArena.Netcode.EditorTools
         {
             EnsureFolder("Assets", "Prefabs"); EnsureFolder("Assets/Prefabs", "Network"); string path=$"Assets/Prefabs/Network/{assetName}.prefab";
             GameObject neutral=GameObject.CreatePrimitive(primitive);neutral.name=assetName;neutral.layer=AttackableLayer;neutral.transform.localScale=category==NeutralCampCategory.Large?Vector3.one*1.15f:Vector3.one*.72f;neutral.GetComponent<Renderer>().sharedMaterial=material;neutral.AddComponent<NetworkObject>();neutral.AddComponent<NetworkTransform>();TeamMember member=neutral.AddComponent<TeamMember>();SetEnum(member,"team",(int)TeamId.Neutral);Health health=neutral.AddComponent<Health>();SetFloat(health,"maxHealth",maxHealth);neutral.AddComponent<StatusEffectController>();neutral.AddComponent<VisionVisibility>();CreateHealthBar(neutral.transform,health,healthBackgroundMaterial,healthFillMaterial,category==NeutralCampCategory.Large?2.3f:1.65f,1.1f);neutral.AddComponent<ClickMover>();BasicAttack attack=neutral.AddComponent<BasicAttack>();ConfigureAttack(attack,range>3f?AttackDelivery.Ranged:AttackDelivery.Melee,range,damage,interval,.25f,.3f);AttackVisual visual=neutral.AddComponent<AttackVisual>();SetObjectReference(visual,"targetRenderer",neutral.GetComponent<Renderer>());neutral.AddComponent<NeutralUnitController>();ExperienceReward reward=neutral.AddComponent<ExperienceReward>();SetInt(reward,"experienceReward",experience);SetFloat(reward,"experienceRadius",14f);SetInt(reward,"goldReward",gold);SetBool(reward,"shareExperienceWithNearbyHeroes",true);neutral.AddComponent<NetworkNeutralController>();PrefabUtility.SaveAsPrefabAsset(neutral,path);Object.DestroyImmediate(neutral);return path;
+        }
+
+        private static string CreateNetworkBossPrefab(Material material,Material healthBackgroundMaterial,Material healthFillMaterial)
+        {
+            EnsureFolder("Assets","Prefabs");EnsureFolder("Assets/Prefabs","Network");const string path="Assets/Prefabs/Network/CierzoGuardianNetwork.prefab";GameObject boss=GameObject.CreatePrimitive(PrimitiveType.Cylinder);boss.name="Cierzo Guardian";boss.layer=AttackableLayer;boss.transform.localScale=Vector3.one*1.6f;boss.GetComponent<Renderer>().sharedMaterial=material;boss.AddComponent<NetworkObject>();boss.AddComponent<NetworkTransform>();TeamMember member=boss.AddComponent<TeamMember>();SetEnum(member,"team",(int)TeamId.Neutral);Health health=boss.AddComponent<Health>();SetFloat(health,"maxHealth",2800f);boss.AddComponent<StatusEffectController>();boss.AddComponent<BossAnnouncementFeedback>();boss.AddComponent<VisionVisibility>();CreateHealthBar(boss.transform,health,healthBackgroundMaterial,healthFillMaterial,3.2f,2.5f);boss.AddComponent<ClickMover>();BasicAttack attack=boss.AddComponent<BasicAttack>();ConfigureAttack(attack,AttackDelivery.Melee,2.5f,70f,1.35f,.35f,.35f);AttackVisual visual=boss.AddComponent<AttackVisual>();SetObjectReference(visual,"targetRenderer",boss.GetComponent<Renderer>());GameObject telegraph=GameObject.CreatePrimitive(PrimitiveType.Cylinder);telegraph.name="Guardian Strike Telegraph";telegraph.transform.SetParent(boss.transform);telegraph.transform.localPosition=new Vector3(0f,-.95f,0f);telegraph.transform.localScale=new Vector3(5f,.02f,5f);telegraph.GetComponent<Renderer>().sharedMaterial=CreateMaterial("Assets/Materials/Prototype_BossTelegraph.mat",new Color(.95f,.25f,.08f,.45f));Object.DestroyImmediate(telegraph.GetComponent<Collider>());telegraph.GetComponent<Renderer>().enabled=false;NeutralBossController controller=boss.AddComponent<NeutralBossController>();controller.Configure(Vector3.zero,14f,22f,1.5f,90f);SerializedObject data=new SerializedObject(controller);data.FindProperty("telegraphRenderer").objectReferenceValue=telegraph.GetComponent<Renderer>();SerializedProperty renders=data.FindProperty("presentationRenderers");renders.arraySize=1;renders.GetArrayElementAtIndex(0).objectReferenceValue=boss.GetComponent<Renderer>();SerializedProperty colliders=data.FindProperty("presentationColliders");colliders.arraySize=1;colliders.GetArrayElementAtIndex(0).objectReferenceValue=boss.GetComponent<Collider>();data.ApplyModifiedPropertiesWithoutUndo();boss.AddComponent<NetworkNeutralBossController>();PrefabUtility.SaveAsPrefabAsset(boss,path);Object.DestroyImmediate(boss);return path;
         }
 
         private static void ConfigureHeroProgression(HeroProgression progression)
@@ -834,6 +842,11 @@ namespace CierzoArena.Netcode.EditorTools
         private static void CreateNetworkNeutralCamp(NetworkObject small, NetworkObject medium, NetworkObject large)
         {
             GameObject root=new GameObject("Neutral Camp Spike");root.transform.position=new Vector3(0f,0f,9f);NeutralCamp camp=root.AddComponent<NeutralCamp>();camp.Configure("spike.neutral",new[]{new NeutralSpawnEntry(NeutralCampCategory.Small,small.gameObject,new Vector3(-1.4f,0f,0f)),new NeutralSpawnEntry(NeutralCampCategory.Medium,medium.gameObject,new Vector3(1.4f,0f,0f)),new NeutralSpawnEntry(NeutralCampCategory.Large,large.gameObject,new Vector3(0f,0f,2f))},8f,14f,1.5f,20f);NetworkNeutralCampSpawner bridge=root.AddComponent<NetworkNeutralCampSpawner>();SetObjectReference(bridge,"smallPrefab",small);SetObjectReference(bridge,"mediumPrefab",medium);SetObjectReference(bridge,"largePrefab",large);
+        }
+
+        private static void CreateNetworkBossSpawner(NetworkObject boss)
+        {
+            GameObject root=new GameObject("Guardian Spawn");NetworkNeutralBossSpawner spawner=root.AddComponent<NetworkNeutralBossSpawner>();SetObjectReference(spawner,"bossPrefab",boss);SerializedObject data=new SerializedObject(spawner);data.FindProperty("spawnPosition").vector3Value=new Vector3(0f,0f,14f);data.ApplyModifiedPropertiesWithoutUndo();
         }
 
         private static LaneRoute CreateSpikeRoute(Transform parent, string name, Vector3[] points, Color color)
