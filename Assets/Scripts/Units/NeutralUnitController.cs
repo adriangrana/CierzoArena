@@ -17,11 +17,11 @@ namespace CierzoArena.Units
         [SerializeField, Min(.1f)] private float deathCleanupDelay=3f;
         [SerializeField] private LayerMask targetMask=~0;
         private readonly Collider[] overlap=new Collider[32];
-        private TeamMember team;private Health health;private BasicAttack attack;private ClickMover mover;private NeutralCamp camp;private Health target;private Vector3 home;private float searchElapsed;private float deathElapsed;private bool returning;private bool simulationEnabled=true;private bool externallyDespawned;
+        private TeamMember team;private Health health;private BasicAttack attack;private ClickMover mover;private NeutralCamp camp;private Health target;private Vector3 home;private float searchElapsed;private float deathElapsed;private bool returning;private bool simulationEnabled=true;private bool externallyDespawned;private bool deathSubscribed;private Renderer[] presentationRenderers;private Collider[] presentationColliders;
         public Health CurrentTarget=>target;public bool IsReturning=>returning;public bool IsInCombat=>target!=null||returning;public Vector3 HomePosition=>home;public event Action<NeutralUnitController> DespawnRequested;
         private void Awake(){Ensure();CombatEvents.DamageApplied+=OnDamageApplied;}
-        private void OnDestroy(){CombatEvents.DamageApplied-=OnDamageApplied;}
-        private void Ensure(){if(team==null)team=GetComponent<TeamMember>();if(health==null)health=GetComponent<Health>();if(attack==null)attack=GetComponent<BasicAttack>();if(mover==null)mover=GetComponent<ClickMover>();if(home==Vector3.zero)home=transform.position;}
+        private void OnDestroy(){CombatEvents.DamageApplied-=OnDamageApplied;if(health!=null&&deathSubscribed)health.Died-=OnDied;}
+        private void Ensure(){if(team==null)team=GetComponent<TeamMember>();if(health==null)health=GetComponent<Health>();if(health!=null&&!deathSubscribed){health.Died+=OnDied;deathSubscribed=true;}if(attack==null)attack=GetComponent<BasicAttack>();if(mover==null)mover=GetComponent<ClickMover>();if(presentationRenderers==null)presentationRenderers=GetComponentsInChildren<Renderer>(true);if(presentationColliders==null)presentationColliders=GetComponentsInChildren<Collider>(true);if(home==Vector3.zero)home=transform.position;}
         public void Configure(NeutralCamp owner,Vector3 origin){Ensure();camp=owner;home=origin;returning=false;target=null;}
         public void SetSimulationEnabled(bool enabled){simulationEnabled=enabled;if(!enabled){target=null;attack?.ClearTarget();mover?.Stop();}}
         public void SetExternalDespawn(bool enabled)=>externallyDespawned=enabled;
@@ -43,6 +43,8 @@ namespace CierzoArena.Units
         private bool WithinAggro(Health candidate){Vector3 d=candidate.transform.position-home;d.y=0f;return camp!=null&&d.sqrMagnitude<=camp.AggroRadius*camp.AggroRadius;}
         private Health FindTarget(){if(camp==null)return null;int count=Physics.OverlapSphereNonAlloc(transform.position,camp.AggroRadius,overlap,targetMask,QueryTriggerInteraction.Ignore);Health best=null;float bestDistance=float.PositiveInfinity;for(int i=0;i<count;i++){Collider hit=overlap[i];overlap[i]=null;Health candidate=hit!=null?hit.GetComponentInParent<Health>():null;if(!IsValidTarget(candidate)||!WithinAggro(candidate))continue;float d=(candidate.transform.position-transform.position).sqrMagnitude;if(d<bestDistance){best=candidate;bestDistance=d;}}return best;}
         private void OnDamageApplied(Health victim,DamageContext context){if(victim!=health||context.Attacker==null||returning)return;Health aggressor=context.Attacker.GetComponent<Health>();if(TryAssist(aggressor))camp?.NotifyEngaged(this,aggressor);}
-        private bool SimulateDeath(float deltaTime){mover.Stop();attack.ClearTarget();deathElapsed+=deltaTime;if(deathElapsed<deathCleanupDelay)return false;DespawnRequested?.Invoke(this);if(!externallyDespawned){if(Application.isPlaying)Destroy(gameObject);else DestroyImmediate(gameObject);}return false;}
+        private void OnDied(Health _){target=null;attack?.ClearTarget();mover?.Stop();SetDeathPresentation();}
+        private bool SimulateDeath(float deltaTime){mover.Stop();attack.ClearTarget();SetDeathPresentation();deathElapsed+=deltaTime;if(deathElapsed<deathCleanupDelay)return false;DespawnRequested?.Invoke(this);if(!externallyDespawned){if(Application.isPlaying)Destroy(gameObject);else DestroyImmediate(gameObject);}return false;}
+        private void SetDeathPresentation(){for(int i=0;i<presentationRenderers.Length;i++)if(presentationRenderers[i]!=null)presentationRenderers[i].enabled=false;for(int i=0;i<presentationColliders.Length;i++)if(presentationColliders[i]!=null)presentationColliders[i].enabled=false;}
     }
 }

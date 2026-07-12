@@ -1,5 +1,6 @@
 using System;
 using CierzoArena.Core;
+using CierzoArena.Units;
 using UnityEngine;
 
 namespace CierzoArena.Structures
@@ -32,6 +33,15 @@ namespace CierzoArena.Structures
             else if (active != this)
             {
                 Debug.LogWarning("Only one MatchStateController should be active in a scene.", this);
+            }
+
+            // Existing prototype scenes remain usable without a forced YAML rewrite.
+            // Builders author these explicitly; this is only a backwards-compatible
+            // runtime bootstrap for scenes created before M17.
+            if (Application.isPlaying)
+            {
+                if (!TryGetComponent(out MatchStatisticsController _)) gameObject.AddComponent<MatchStatisticsController>();
+                if (!TryGetComponent(out MatchScoreboardController _)) gameObject.AddComponent<MatchScoreboardController>();
             }
         }
 

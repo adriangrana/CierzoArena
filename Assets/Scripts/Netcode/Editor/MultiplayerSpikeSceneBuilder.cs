@@ -224,6 +224,9 @@ namespace CierzoArena.Netcode.EditorTools
             TeamMember teamMember = unit.AddComponent<TeamMember>();
             SetEnum(teamMember, "team", (int)team);
             unit.AddComponent<HeroUnit>();
+            HeroMatchIdentity matchIdentity = unit.AddComponent<HeroMatchIdentity>();
+            matchIdentity.Configure(0, name);
+            unit.AddComponent<HeroMatchStatistics>();
             unit.AddComponent<VisionSource>();
             unit.AddComponent<VisionVisibility>();
 
@@ -471,9 +474,12 @@ namespace CierzoArena.Netcode.EditorTools
             GameObject match = new GameObject("Match State Controller");
             match.AddComponent<NetworkObject>();
             match.AddComponent<MatchStateController>();
+            match.AddComponent<MatchStatisticsController>();
+            match.AddComponent<MatchScoreboardController>();
             match.AddComponent<StructureProgressionController>();
             match.AddComponent<MatchVictoryDisplay>();
             match.AddComponent<NetworkMatchStateController>();
+            match.AddComponent<NetworkMatchStatisticsController>();
             PrefabUtility.SaveAsPrefabAsset(match, path);
             Object.DestroyImmediate(match);
             return path;

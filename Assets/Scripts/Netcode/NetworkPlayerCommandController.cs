@@ -129,7 +129,7 @@ namespace CierzoArena.Netcode
             }
 
             ownedUnit = null;
-            foreach (NetworkUnitController candidate in FindObjectsByType<NetworkUnitController>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
+            foreach (NetworkUnitController candidate in FindObjectsByType<NetworkUnitController>(FindObjectsInactive.Exclude))
             {
                 if (candidate.IsSpawned && candidate.IsOwner)
                 {

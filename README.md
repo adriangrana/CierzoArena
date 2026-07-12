@@ -34,6 +34,7 @@ Prototipo en Unity 6 (`ProjectSettings/ProjectVersion.txt`: Unity 6000.5.3f1) co
 - **M14** — Visión y niebla de guerra: héroes, creeps y estructuras aportan visión circular por equipo. Los enemigos móviles desaparecen fuera de visión; el terreno permanece como contexto del mapa y las estructuras enemigas conservan una representación oscurecida de su último estado conocido. Sus barras, ataques y cambios (incluida una destrucción no vista) sólo se actualizan al recuperar visión. El minimapa aplica la misma regla.
 - **M15** — Jungla y campamentos neutrales: campamentos de tres tamaños generan neutrales hostiles a ambos equipos. Tienen aggro, leash, retorno con curación, XP por proximidad, oro por último golpe y respawn íntegro autoritativo. Los neutrales respetan la niebla y en red sólo el servidor los crea y simula.
 - **M16** — Objetivo mayor neutral: el Guardián del Cierzo usa amenaza por daño, ataque de M6 y un golpe de área con telegraph. Al caer, concede oro global y el buff temporal Cierzo Ascendant al equipo del último golpe; vuelve tras un respawn largo y es autoritativo en red.
+- **M17** — Estadísticas y marcador: K/D/A, últimos golpes, oro actual y ganado, XP, daño a héroes y estructuras, objetivos, rachas y reloj. `Oro ganado` cuenta adiciones positivas después de registrar al héroe; las compras sólo reducen el oro actual. El daño de héroe usa la reducción efectiva de vida tras mitigación/escudos. Mantén `Tab` para ver el marcador; al finalizar queda visible con victoria o derrota y datos congelados. En red el servidor registra y replica snapshots a host y cliente.
 
 La version real del proyecto esta en `ProjectSettings/ProjectVersion.txt`: Unity 6000.5.3f1.
 
@@ -65,6 +66,7 @@ La version real del proyecto esta en `ProjectSettings/ProjectVersion.txt`: Unity
 15. Para probar M14, aleja Azure de enemigos: héroes y creeps Ember deben desaparecer, mientras torres y núcleo Ember permanecen como siluetas oscuras sin barra de vida. Destruye una torre cuando Azure no pueda verla y vuelve a acercarte: conserva su último estado hasta que recuperes visión, momento en que se actualiza. El minimapa debe ocultar unidades móviles no vistas y atenuar las estructuras conocidas.
 16. Para probar M15, entra en un campamento neutral: los neutrales deben atacar al objetivo válido cercano. Aléjate más allá de su leash para que vuelvan a origen y se curen. Limpia un campamento para recibir XP por proximidad y oro por último golpe; tras el temporizador reaparece la composición completa. Fuera de visión no deben verse ni aparecer en el minimapa.
 17. Para probar M16, visita al Guardián del Cierzo, cerca de la zona neutral central. Atácalo con dos héroes: debe fijar al que acumule más daño y mostrar un círculo antes de su golpe de área. Si lo alejas, regresa y se cura. El último golpe heroico otorga oro y Cierzo Ascendant al equipo completo; al morir y reaparecer los héroes conservan el buff hasta expirar.
+18. Para probar M17, mantén `Tab`: muestra las filas Azure y Ember con nivel, K/D/A, last hits, oro, XP, daño y objetivos. Mata un héroe con apoyo de otro para comprobar kill/assist; compra un objeto para ver que baja el oro actual sin bajar el oro ganado. Al destruir un núcleo, el marcador se congela y muestra Victoria o Derrota para el héroe local.
 
 ## Controles
 
@@ -81,4 +83,4 @@ La version real del proyecto esta en `ProjectSettings/ProjectVersion.txt`: Unity
 
 ## Estado del milestone
 
-Los Milestones 1 a 16 están implementados. M10 separa experiencia por proximidad y oro por último golpe; M11 permite gastarlo en objetos; M12–M13 añaden habilidades y estados; M14 añade visión por equipo y niebla; M15 añade jungla neutral y M16 un objetivo mayor. Para regenerar las escenas tras cambios de builders, usa los menús `Cierzo Arena > Create MOBA Greybox Arena` y `Cierzo Arena > Create Multiplayer Spike Scene`.
+Los Milestones 1 a 17 están implementados. M10 separa experiencia por proximidad y oro por último golpe; M11 permite gastarlo en objetos; M12–M13 añaden habilidades y estados; M14 añade visión por equipo y niebla; M15 añade jungla neutral, M16 un objetivo mayor y M17 el marcador autoritativo. Para regenerar las escenas tras cambios de builders, usa los menús `Cierzo Arena > Create MOBA Greybox Arena` y `Cierzo Arena > Create Multiplayer Spike Scene`.

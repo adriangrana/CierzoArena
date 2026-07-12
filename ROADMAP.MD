@@ -494,22 +494,18 @@ Resultado: `La arena ya incluye un objetivo neutral mayor que recompensa la coor
 - [ ] Cooldowns
 - [ ] Drag and drop
 
-### Milestone 17 — Tienda y primeros objetos
+### Milestone 17 — Estadísticas de partida y marcador
 
-Status: ⬜ Futuro
+Status: 🔵 Implementado / pendiente de validación final en Unity
 
-Primer catálogo pequeño:
+- [x] Kills, deaths, assists por contribución reciente y rachas autoritativas.
+- [x] Last hits de línea y neutrales; oro actual frente a oro total ganado y XP recibida.
+- [x] Daño efectivo a héroes, recibido de héroes y daño confirmado a estructuras.
+- [x] Participación y secure del Guardián del Cierzo.
+- [x] Reloj de partida, feed de combate, marcador con `Tab` y resultado final congelado.
+- [x] Snapshots Netcode de sólo servidor para host y cliente, sin RPC de estadísticas.
 
-- [ ] 15–25 objetos
-- [ ] Precio
-- [ ] Compra
-- [ ] Venta
-- [ ] Recetas si decidimos usarlas
-- [ ] Estadísticas
-- [ ] Consumibles
-- [ ] Objetos activos
-
-No 200 objetos. Todavía no.
+Resultado: `La partida ya registra y presenta estadísticas completas de rendimiento y resultado.`
 
 ---
 

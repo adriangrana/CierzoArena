@@ -39,6 +39,8 @@ namespace CierzoArena.Units
         public bool CanReceiveExperience => authorityEnabled && (MatchStateController.Active == null || MatchStateController.Active.IsPlaying);
         public event Action<HeroProgression> Changed;
         public event Action<HeroProgression, int> LevelUp;
+        /// <summary>Raised only for an authoritative, accepted positive XP reward.</summary>
+        public event Action<HeroProgression, int> ExperienceGained;
 
         private void Awake() => EnsureInitialized();
 
@@ -123,6 +125,7 @@ namespace CierzoArena.Units
                 experience = 0;
             }
 
+            ExperienceGained?.Invoke(this, amount);
             Changed?.Invoke(this);
             return levelled;
         }

@@ -38,6 +38,8 @@ namespace CierzoArena.Units
         private float deathElapsed;
         private bool externallyDespawned;
         private Vector3 spawnPosition;
+        private Renderer[] presentationRenderers;
+        private Collider[] presentationColliders;
 
         public CreepArchetype Archetype => archetype;
         public Health CurrentTarget => currentTarget;
@@ -52,6 +54,8 @@ namespace CierzoArena.Units
             health = GetComponent<Health>();
             attack = GetComponent<BasicAttack>();
             mover = GetComponent<ClickMover>();
+            presentationRenderers = GetComponentsInChildren<Renderer>(true);
+            presentationColliders = GetComponentsInChildren<Collider>(true);
             spawnPosition = transform.position;
             health.Died += OnDied;
         }
@@ -269,6 +273,13 @@ namespace CierzoArena.Units
             currentTarget = null;
             attack.ClearTarget();
             mover.Stop();
+            SetDeathPresentation();
+        }
+
+        private void SetDeathPresentation()
+        {
+            for(int i=0;i<presentationRenderers.Length;i++)if(presentationRenderers[i]!=null)presentationRenderers[i].enabled=false;
+            for(int i=0;i<presentationColliders.Length;i++)if(presentationColliders[i]!=null)presentationColliders[i].enabled=false;
         }
 
         private bool SimulateDeath(float deltaTime)

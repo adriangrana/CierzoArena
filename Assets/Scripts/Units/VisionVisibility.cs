@@ -17,6 +17,7 @@ namespace CierzoArena.Units
         private const float ObscuredBrightness = 0.28f;
 
         private TeamMember team;
+        private Health health;
         private StructureEntity structure;
         private Renderer[] renderers;
         private Collider[] colliders;
@@ -45,6 +46,7 @@ namespace CierzoArena.Units
             }
 
             team = GetComponent<TeamMember>();
+            TryGetComponent(out health);
             structure = GetComponent<StructureEntity>();
             renderers = GetComponentsInChildren<Renderer>(true);
             colliders = GetComponentsInChildren<Collider>(true);
@@ -111,6 +113,9 @@ namespace CierzoArena.Units
 
         private void ApplyMobileVisibility(bool visible)
         {
+            // Fog updates must never resurrect the presentation of a dead mobile
+            // unit during its despawn/respawn grace period.
+            visible &= health == null || health.IsAlive;
             IsObscured = false;
             for (int i = 0; i < renderers.Length; i++)
             {

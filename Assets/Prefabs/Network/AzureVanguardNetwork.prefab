@@ -369,6 +369,8 @@ GameObject:
   - component: {fileID: 7963021220088169899}
   - component: {fileID: 3848645385178074447}
   - component: {fileID: 8987734147815320748}
+  - component: {fileID: 191701002001001001}
+  - component: {fileID: 191701002001001002}
   m_Layer: 7
   m_Name: AzureVanguardNetwork
   m_TagString: Untagged
@@ -376,6 +378,32 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
+--- !u!114 &191701002001001001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7012766082569407939}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9429a148674e44e599dcec5d13fd0f81, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: CierzoArena.Runtime::CierzoArena.Units.HeroMatchIdentity
+  matchSlot: 0
+  displayName: Azure Vanguard
+--- !u!114 &191701002001001002
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7012766082569407939}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e938afbb2b340d79b5201a875db3c74, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: CierzoArena.Runtime::CierzoArena.Units.HeroMatchStatistics
 --- !u!4 &3456683192973744427
 Transform:
   m_ObjectHideFlags: 0

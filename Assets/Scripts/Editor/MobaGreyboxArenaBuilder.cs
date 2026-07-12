@@ -554,6 +554,9 @@ namespace CierzoArena.EditorTools
             TeamMember teamMember = unit.AddComponent<TeamMember>();
             SetEnum(teamMember, "team", (int)team);
             unit.AddComponent<HeroUnit>();
+            HeroMatchIdentity matchIdentity = unit.AddComponent<HeroMatchIdentity>();
+            matchIdentity.Configure(0, name);
+            unit.AddComponent<HeroMatchStatistics>();
             unit.AddComponent<VisionSource>();
             unit.AddComponent<VisionVisibility>();
 
@@ -882,6 +885,8 @@ namespace CierzoArena.EditorTools
         {
             GameObject matchObject = new GameObject("Match State Controller");
             matchObject.AddComponent<MatchStateController>();
+            matchObject.AddComponent<MatchStatisticsController>();
+            matchObject.AddComponent<MatchScoreboardController>();
             matchObject.AddComponent<StructureProgressionController>();
             matchObject.AddComponent<MatchVictoryDisplay>();
         }
