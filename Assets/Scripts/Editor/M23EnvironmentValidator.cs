@@ -7,7 +7,9 @@ using CierzoArena.Environment;
 using CierzoArena.Structures;
 using CierzoArena.Units;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.AI;
 
 namespace CierzoArena.EditorTools
 {
@@ -46,6 +48,10 @@ namespace CierzoArena.EditorTools
                 Check(valid, "Palette complete", paletteReport);
             }
             Check(AssetDatabase.LoadAssetAtPath<TeamBaseLayoutDefinition>(FantasyVillagePaletteBuilder.LayoutAssetPath) != null, "Base layout asset present");
+            Check(LayerMask.NameToLayer("Ground") == 6, "Ground layer is navigation source", $"layer {LayerMask.NameToLayer("Ground")}");
+            NavMeshBuildSettings navSettings = NavMesh.GetSettingsByID(0);
+            Check(navSettings.agentRadius > 0f && navSettings.agentHeight > 0f, "NavMesh agent settings are valid",
+                $"radius={navSettings.agentRadius:0.##}, height={navSettings.agentHeight:0.##}, step={navSettings.agentClimb:0.##}, slope={navSettings.agentSlope:0.##}");
 
             StructureEntity[] structures = Object.FindObjectsByType<StructureEntity>(FindObjectsInactive.Include);
             foreach (TeamId team in new[] { TeamId.Azure, TeamId.Ember })
@@ -62,6 +68,8 @@ namespace CierzoArena.EditorTools
             // Decorative visuals must not be targetable / team-owned
             int leakedDecor = CountTargetableDecor();
             Check(leakedDecor == 0, "No decorative visual is targetable", $"{leakedDecor} offending objects");
+
+            ValidateEnvironmentCoherence(Check);
 
             // Material health: inspect the effective material on generated renderers,
             // not merely whether a variant file exists on disk.
@@ -85,6 +93,45 @@ namespace CierzoArena.EditorTools
             Debug.Log(failures.Count == 0
                 ? "M23 material audit: no white, missing or unsupported renderer materials found."
                 : "M23 material audit failures:\n" + string.Join("\n", failures));
+        }
+
+        [MenuItem("Cierzo Arena/Environment/Audit Gameplay Colliders")]
+        public static void AuditGameplayColliders()
+        {
+            var report = new StringBuilder("M23 gameplay collider audit\n\n");
+            foreach (Collider collider in Object.FindObjectsByType<Collider>(FindObjectsInactive.Include)
+                         .OrderBy(c => c.transform.root.name).ThenBy(c => c.name))
+            {
+                if (!IsInsidePlayableArea(collider.bounds)) continue;
+                EnvironmentObstacle metadata = collider.GetComponent<EnvironmentObstacle>();
+                Renderer renderer = collider.GetComponent<Renderer>();
+                bool rootRendererVisible = renderer != null && renderer.enabled;
+                bool hasAssociatedVisual = metadata != null && metadata.VisualRoot != null &&
+                    metadata.VisualRoot.GetComponentsInChildren<Renderer>(true).Any(r => r.enabled);
+                string classification = ClassifyCollider(collider, metadata);
+                string recommendation = hasAssociatedVisual || rootRendererVisible || IsLegitimateUnassociatedCollider(collider)
+                    ? "coherent"
+                    : "replace with visible art or remove";
+                report.AppendLine($"{classification}: {collider.name} | root={collider.transform.root.name} | layer={LayerMask.LayerToName(collider.gameObject.layer)}({collider.gameObject.layer}) | type={collider.GetType().Name} | bounds={collider.bounds} | visual={(hasAssociatedVisual || rootRendererVisible ? "yes" : "no")} | {recommendation}");
+            }
+            Debug.Log(report.ToString());
+            EditorUtility.DisplayDialog("Cierzo Arena - Collider Audit", report.Length > 1200 ? report.ToString(0, 1200) + "\n... (see Console)" : report.ToString(), "OK");
+        }
+
+        [MenuItem("Cierzo Arena/Environment/Regenerate M23 Arched Bridge Decks")]
+        public static void RegenerateArchedBridgeDecks()
+        {
+            FantasyVillageEnvironmentPalette palette = AssetDatabase.LoadAssetAtPath<FantasyVillageEnvironmentPalette>(FantasyVillagePaletteBuilder.PaletteAssetPath);
+            if (!FantasyVillageMapAmbienceBuilder.RebuildBridgeDecks(palette))
+            {
+                EditorUtility.DisplayDialog("Cierzo Arena - M23 Bridges", "Open MobaGreyboxArena with its M23 Map Environment before regenerating bridge decks.", "OK");
+                return;
+            }
+
+            EditorSceneManager.MarkSceneDirty(UnityEngine.SceneManagement.SceneManager.GetActiveScene());
+            EditorSceneManager.SaveOpenScenes();
+            SceneView.RepaintAll();
+            Debug.Log("[M23 Bridge] Rebuilt the three arched visual/gameplay deck pairs and saved the active scene.");
         }
 
         private static void ValidateTeam(TeamId team, StructureEntity[] structures, System.Action<bool, string, string> checkRaw)
@@ -210,6 +257,101 @@ namespace CierzoArena.EditorTools
                 }
             }
             return failures;
+        }
+
+        private static void ValidateEnvironmentCoherence(System.Action<bool, string, string> check)
+        {
+            BridgeVisualProfile[] bridgeProfiles = Object.FindObjectsByType<BridgeVisualProfile>(FindObjectsInactive.Include);
+            check(bridgeProfiles.Length == 3, "Three bridge visual profiles present", $"found {bridgeProfiles.Length}");
+            int alignedDecks = 0;
+            foreach (BridgeVisualProfile profile in bridgeProfiles)
+            {
+                EnvironmentObstacle deck = Object.FindObjectsByType<EnvironmentObstacle>(FindObjectsInactive.Include)
+                    .FirstOrDefault(o => o.ObstacleCategory == EnvironmentObstacle.Category.BridgeDeck && o.VisualRoot == profile.transform);
+                MeshCollider deckCollider = deck != null ? deck.GetComponent<MeshCollider>() : null;
+                if (deckCollider != null && profile.SampleCount >= 7 && profile.SegmentCount >= 6 &&
+                    profile.CrownHeight > profile.EntryHeight + .05f && profile.MaximumVisualDifference <= .15f) alignedDecks++;
+            }
+            check(alignedDecks == bridgeProfiles.Length && bridgeProfiles.Length == 3,
+                "Bridge visual decks use matching arched Ground meshes", $"{alignedDecks}/{bridgeProfiles.Length}");
+
+            EnvironmentObstacle[] environment = Object.FindObjectsByType<EnvironmentObstacle>(FindObjectsInactive.Include);
+            int houses = environment.Count(e => e.ObstacleCategory == EnvironmentObstacle.Category.House);
+            int townCenters = environment.Count(e => e.ObstacleCategory == EnvironmentObstacle.Category.TownCenter);
+            int treeObstacles = environment.Count(e => e.ObstacleCategory == EnvironmentObstacle.Category.TreeObstacle || e.ObstacleCategory == EnvironmentObstacle.Category.TreeCluster);
+            check(houses >= 8, "Main houses have simplified colliders", $"found {houses}");
+            check(townCenters == 2, "Town Centers have simplified colliders", $"found {townCenters}");
+            check(treeObstacles >= 6, "Obstacle trees/groups have simplified colliders", $"found {treeObstacles}");
+
+            int decorativeColliders = Object.FindObjectsByType<Collider>(FindObjectsInactive.Include)
+                .Count(c => HasAncestorNamed(c.transform, "Flowers") || HasAncestorNamed(c.transform, "Jungle Vegetation"));
+            check(decorativeColliders == 0, "Decorative flowers and ambient trees have no colliders", $"found {decorativeColliders}");
+
+            int invisibleLegacy = Object.FindObjectsByType<Collider>(FindObjectsInactive.Include)
+                .Count(c => IsInsidePlayableArea(c.bounds) && IsLegacyInvisibleBlocker(c));
+            check(invisibleLegacy == 0, "No legacy invisible greybox blockers remain", $"found {invisibleLegacy}");
+
+            int protectedIntersections = 0;
+            foreach (EnvironmentObstacle obstacle in environment.Where(e => e.ExcludesFromNavMesh))
+            {
+                Collider collider = obstacle.GetComponent<Collider>();
+                if (collider == null) continue;
+                foreach (Transform anchor in FindProtectedAnchors())
+                {
+                    if (collider.bounds.SqrDistance(anchor.position) < 2.25f)
+                    {
+                        protectedIntersections++;
+                        break;
+                    }
+                }
+            }
+            check(protectedIntersections == 0, "Environment colliders clear spawns, gateways and attack anchors", $"found {protectedIntersections}");
+        }
+
+        private static IEnumerable<Transform> FindProtectedAnchors()
+        {
+            string[] names = { "HeroSpawnAnchor", "RespawnAnchor", "ShopAnchor", "ShopkeeperAnchor", "TopGateway", "MidGateway", "BottomGateway", "CoreDefenseApproach", "CoreApproach" };
+            foreach (Transform transform in Object.FindObjectsByType<Transform>(FindObjectsInactive.Include))
+            {
+                if (names.Contains(transform.name) || transform.name.Contains("AttackAnchors") || transform.name.Contains(" Anchor ")) yield return transform;
+            }
+        }
+
+        private static bool IsInsidePlayableArea(Bounds bounds) =>
+            Mathf.Abs(bounds.center.x) < 82f && Mathf.Abs(bounds.center.z) < 82f;
+
+        private static bool HasAncestorNamed(Transform transform, string name)
+        {
+            for (Transform current = transform; current != null; current = current.parent)
+                if (current.name == name) return true;
+            return false;
+        }
+
+        private static bool IsLegacyInvisibleBlocker(Collider collider)
+        {
+            if (collider == null || collider.isTrigger || IsLegitimateUnassociatedCollider(collider)) return false;
+            EnvironmentObstacle metadata = collider.GetComponent<EnvironmentObstacle>();
+            if (metadata != null && metadata.VisualRoot != null) return false;
+            string name = collider.name.ToLowerInvariant();
+            bool oldName = name.Contains("greybox") || name.Contains("placeholder") || name.Contains("pillar gameplay") || name.Contains("jungle gameplay");
+            return oldName && collider.GetComponent<Renderer>()?.enabled != true;
+        }
+
+        private static bool IsLegitimateUnassociatedCollider(Collider collider)
+        {
+            if (collider.GetComponent<StructureEntity>() != null || collider.GetComponent<TeamMember>() != null) return true;
+            string root = collider.transform.root.name;
+            return root == "EnvironmentRoot" || root == "Boundary" || root == "Towers" || root == "Neutral Zones" ||
+                   collider.name.Contains("Ground") || collider.name.Contains("Core") || collider.isTrigger;
+        }
+
+        private static string ClassifyCollider(Collider collider, EnvironmentObstacle metadata)
+        {
+            if (metadata != null) return metadata.ObstacleCategory.ToString();
+            if (collider.isTrigger) return "trigger";
+            if (collider.GetComponent<StructureEntity>() != null) return "structure collider";
+            if (collider.name.Contains("Ground")) return "ground collider";
+            return IsLegacyInvisibleBlocker(collider) ? "obsolete blocker" : "unknown";
         }
 
         private static bool IsVillageRenderer(Renderer renderer)

@@ -230,16 +230,10 @@ namespace CierzoArena.EditorTools
 
         private static void BuildBridges(Material bridgeMaterial)
         {
-            GameObject bridges = new GameObject("Bridges");
-
-            // One highlighted crossing per lane where that lane meets the river: the top
-            // lane at the NW corner, the mid lane at the centre, and the bottom lane at
-            // the SE corner. With the river now walkable these are visual emphasis /
-            // intended chokepoints, not the only way across. The 45-degree yaw aligns
-            // each band with the river.
-            HideGameplayRenderer(CreateGroundBox(bridges.transform, "Top Bridge Gameplay", new Vector3(-60f, -0.4f, 60f), new Vector3(22f, 1f, 26f), 45f, bridgeMaterial));
-            HideGameplayRenderer(CreateGroundBox(bridges.transform, "Mid Bridge Gameplay", new Vector3(0f, -0.4f, 0f), new Vector3(16f, 1f, 26f), 45f, bridgeMaterial));
-            HideGameplayRenderer(CreateGroundBox(bridges.transform, "Bottom Bridge Gameplay", new Vector3(60f, -0.4f, -60f), new Vector3(22f, 1f, 26f), 45f, bridgeMaterial));
+            // M23 owns the complete visual/gameplay bridge pair in
+            // FantasyVillageMapAmbienceBuilder.  The former hidden slabs at y=-0.4
+            // made actors appear inside the raised package bridge, so no legacy
+            // bridge collider is created here.
         }
 
         // ----- Lanes (visual ribbons) ----------------------------------------
@@ -361,20 +355,9 @@ namespace CierzoArena.EditorTools
 
         private static void BuildObstacles(Material obstacleMaterial)
         {
-            GameObject obstacles = new GameObject("Obstacles");
-
-            // Obstacles fill the four jungle triangles between the mid lane and the two
-            // side lanes (never on a lane), so units must weave through jungle without
-            // ever losing the walkable lanes. They sit clear of the river band and the
-            // boss pit too.
-            //   - Azure side (SW half, x + z < 0): north and south jungles.
-            //   - Ember side (NE half, x + z > 0): north and south jungles.
-            HideGameplayRenderer(CreateObstacle(obstacles.transform, "Azure North Jungle Gameplay", new Vector3(-44f, 3f, 6f), new Vector3(11f, 6f, 11f), obstacleMaterial, 45f));
-            HideGameplayRenderer(CreateObstacle(obstacles.transform, "Azure South Jungle Gameplay", new Vector3(6f, 3f, -44f), new Vector3(11f, 6f, 11f), obstacleMaterial, 45f));
-            HideGameplayRenderer(CreateObstacle(obstacles.transform, "Ember North Jungle Gameplay", new Vector3(-6f, 3f, 44f), new Vector3(11f, 6f, 11f), obstacleMaterial, 45f));
-            HideGameplayRenderer(CreateObstacle(obstacles.transform, "Ember South Jungle Gameplay", new Vector3(44f, 3f, -6f), new Vector3(11f, 6f, 11f), obstacleMaterial, 45f));
-            HideGameplayRenderer(CreateObstacle(obstacles.transform, "Azure Mid Pillar Gameplay", new Vector3(-22f, 3f, -6f), new Vector3(9f, 6f, 9f), obstacleMaterial, 45f));
-            HideGameplayRenderer(CreateObstacle(obstacles.transform, "Ember Mid Pillar Gameplay", new Vector3(22f, 3f, 6f), new Vector3(9f, 6f, 9f), obstacleMaterial, 45f));
+            // The M3C hidden cubes were the source of invisible collisions. Their
+            // exact strategic footprints are now rebuilt as visible tree/rock groups
+            // by FantasyVillageMapAmbienceBuilder after the palette is resolved.
         }
 
         // ----- Neutral zones --------------------------------------------------
@@ -402,9 +385,9 @@ namespace CierzoArena.EditorTools
             // with the two team bases for visual dominance.
             HideGameplayRenderer(CreateGroundBox(pocket.transform, name + " Pad Gameplay", new Vector3(center.x, -0.28f, center.z), new Vector3(15f, 1f, 15f), 45f, neutralMaterial));
 
-            // Low border walls on the outer flank, leaving the lane-facing side open.
-            HideGameplayRenderer(CreateObstacle(pocket.transform, name + " Wall A Gameplay", wallA, new Vector3(13f, 3f, 3f), neutralMaterial, 45f));
-            HideGameplayRenderer(CreateObstacle(pocket.transform, name + " Wall B Gameplay", wallB, new Vector3(3f, 3f, 13f), neutralMaterial, 45f));
+            // The old border walls were hidden greybox colliders with no matching
+            // M23 art.  The camp remains open and readable until it gets authored
+            // cliff/wall presentation in a future environment pass.
 
             HideGameplayRenderer(CreateMarker(pocket.transform, name + " Marker Gameplay", new Vector3(center.x, 0.5f, center.z), markerMaterial, 3f));
         }

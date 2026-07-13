@@ -75,16 +75,16 @@ namespace CierzoArena.EditorTools
             RingAnchors(attack, "CoreGuardRight", r.CoreGuardRight, 3.2f, 4);
             RingAnchors(Child(gameplay, "CoreAttackAnchors"), "Core", r.Core, 7.5f, 6);
 
-            Child(gameplay, "SimplifiedColliders");
+            GameObject simplifiedColliders = Child(gameplay, "SimplifiedColliders");
             Child(gameplay, "VisionAnchors");
 
-            BuildVisuals(visuals, team, r, palette, accent);
+            BuildVisuals(simplifiedColliders, visuals, team, r, palette, accent);
             return anchors;
         }
 
         // ----- Visual composition --------------------------------------------
 
-        private static void BuildVisuals(GameObject visuals, TeamId team, TeamBaseLayoutDefinition.Resolved r, FantasyVillageEnvironmentPalette palette, Color accent)
+        private static void BuildVisuals(GameObject simplifiedColliders, GameObject visuals, TeamId team, TeamBaseLayoutDefinition.Resolved r, FantasyVillageEnvironmentPalette palette, Color accent)
         {
             var rng = new System.Random(team == TeamId.Azure ? 0x0A2BADE : 0xE3BE7);
 
@@ -107,7 +107,10 @@ namespace CierzoArena.EditorTools
             if (palette.MainBuilding != null)
             {
                 Vector3 tcPos = r.Core - r.Forward * 3.5f;
-                Place(palette.MainBuilding, townCenter.transform, tcPos, Yaw(-r.Forward), 14f, ColliderPolicy.Strip, isStatic: true);
+                GameObject townCenterVisual = Place(palette.MainBuilding, townCenter.transform, tcPos, Yaw(-r.Forward), 14f, ColliderPolicy.Strip, isStatic: true);
+                CreateFootprintCollider(simplifiedColliders.transform, "Town Center GameplayCollider", townCenterVisual,
+                    EnvironmentObstacle.Category.TownCenter, 0.76f, r, allowCoreApproach: true);
+                BindCoreColliderToTownCenter(simplifiedColliders.transform.parent != null ? simplifiedColliders.transform.parent.parent : null, townCenterVisual);
             }
 
             // Core plaza: a stone path pad under the core, plus four lantern posts at
@@ -135,7 +138,11 @@ namespace CierzoArena.EditorTools
             // Shop district: a small building + market props around the shop anchor,
             // clear of the exit path. The definitive vendor NPC is not in the package.
             if (palette.SmallHouses.Length > 0)
-                Place(palette.SmallHouses[0], shopDistrict.transform, r.Shop + r.Right * 3.5f, Yaw(-r.Right), 8f, ColliderPolicy.SimplifiedBox, isStatic: true);
+            {
+                GameObject shopHouse = Place(palette.SmallHouses[0], shopDistrict.transform, r.Shop + r.Right * 3.5f, Yaw(-r.Right), 8f, ColliderPolicy.Strip, isStatic: true);
+                CreateFootprintCollider(simplifiedColliders.transform, "Shop House GameplayCollider", shopHouse,
+                    EnvironmentObstacle.Category.House, 0.72f, r, allowCoreApproach: false);
+            }
             if (palette.Crate != null)
             {
                 Place(palette.Crate, crates.transform, r.Shop, Yaw(r.Forward), 1.4f, ColliderPolicy.Strip, isStatic: true);
@@ -167,7 +174,9 @@ namespace CierzoArena.EditorTools
                     GameObject prefab = houses[i % houses.Length];
                     Quaternion facing = Yaw(r.Core - slots[i]);
                     Quaternion jitter = Quaternion.Euler(0f, i % 2 == 0 ? 8f : -8f, 0f);
-                    Place(prefab, buildings.transform, slots[i], facing * jitter, 8.5f, ColliderPolicy.SimplifiedBox, isStatic: true);
+                    GameObject house = Place(prefab, buildings.transform, slots[i], facing * jitter, 8.5f, ColliderPolicy.Strip, isStatic: true);
+                    CreateFootprintCollider(simplifiedColliders.transform, "Village House " + (i + 1) + " GameplayCollider", house,
+                        EnvironmentObstacle.Category.House, 0.72f, r, allowCoreApproach: false);
                 }
             }
 
@@ -183,12 +192,12 @@ namespace CierzoArena.EditorTools
             if (palette.Trees.Length > 0)
             {
                 Vector3[] centers = { r.HeroSpawn - r.Forward * 10f - r.Right * 20f, r.HeroSpawn - r.Forward * 10f + r.Right * 20f };
-                foreach (Vector3 c in centers) ScatterCluster(trees.transform, palette.Trees, c, 5f, 4, rng, ColliderPolicy.TrunkCapsule);
+                foreach (Vector3 c in centers) ScatterCluster(trees.transform, simplifiedColliders.transform, palette.Trees, c, 5f, 4, rng, ColliderPolicy.TrunkCapsule, r);
             }
             if (palette.Flowers.Length > 0)
             {
                 Vector3[] centers = { r.HeroSpawn - r.Right * 9f, r.HeroSpawn + r.Right * 9f, r.Core - r.Right * 11f, r.Core + r.Right * 11f };
-                foreach (Vector3 c in centers) ScatterCluster(flowers.transform, palette.Flowers, c, 2.2f, 3, rng, ColliderPolicy.Strip);
+                foreach (Vector3 c in centers) ScatterCluster(flowers.transform, simplifiedColliders.transform, palette.Flowers, c, 2.2f, 3, rng, ColliderPolicy.Strip, r);
             }
 
             // Team accent tint applied to lanterns via a shared MaterialPropertyBlock,
@@ -276,7 +285,7 @@ namespace CierzoArena.EditorTools
             }
         }
 
-        private static void ScatterCluster(Transform parent, GameObject[] set, Vector3 center, float radius, int count, System.Random rng, ColliderPolicy policy)
+        private static void ScatterCluster(Transform parent, Transform gameplayParent, GameObject[] set, Vector3 center, float radius, int count, System.Random rng, ColliderPolicy policy, TeamBaseLayoutDefinition.Resolved layout)
         {
             if (set == null || set.Length == 0) return;
             float targetMeters = policy == ColliderPolicy.TrunkCapsule ? 6f : 1.4f; // trees vs flowers
@@ -287,8 +296,86 @@ namespace CierzoArena.EditorTools
                 float rad = (float)rng.NextDouble() * radius;
                 Vector3 p = center + new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * rad;
                 float meters = targetMeters * (0.85f + (float)rng.NextDouble() * 0.4f);
-                Place(prefab, parent, p, Quaternion.Euler(0f, (float)rng.NextDouble() * 360f, 0f), meters, policy, isStatic: true);
+                GameObject visual = Place(prefab, parent, p, Quaternion.Euler(0f, (float)rng.NextDouble() * 360f, 0f), meters, ColliderPolicy.Strip, isStatic: true);
+                if (policy == ColliderPolicy.TrunkCapsule)
+                {
+                    CreateTreeCollider(gameplayParent, "Base Tree GameplayCollider", visual, layout);
+                }
             }
+        }
+
+        private static void CreateFootprintCollider(Transform gameplayParent, string name, GameObject visual,
+            EnvironmentObstacle.Category category, float footprintScale, TeamBaseLayoutDefinition.Resolved layout, bool allowCoreApproach)
+        {
+            if (visual == null) return;
+            Bounds bounds = ComputeBounds(visual, out bool hasBounds);
+            if (!hasBounds) return;
+
+            Vector3 size = new Vector3(bounds.size.x * footprintScale, Mathf.Max(2f, bounds.size.y * .8f), bounds.size.z * footprintScale);
+            Vector3 center = new Vector3(bounds.center.x, size.y * .5f, bounds.center.z);
+            if (IntersectsProtectedBaseSpace(center, size, layout, allowCoreApproach)) return;
+
+            GameObject colliderRoot = new GameObject(name);
+            colliderRoot.layer = 6; // Ground: collected by the one-shot runtime NavMesh bake.
+            colliderRoot.transform.SetParent(gameplayParent);
+            colliderRoot.transform.position = center;
+            BoxCollider collider = colliderRoot.AddComponent<BoxCollider>();
+            collider.size = size;
+            EnvironmentObstacle metadata = colliderRoot.AddComponent<EnvironmentObstacle>();
+            metadata.Configure(category, visual.transform, blocksNavigation: true);
+            colliderRoot.isStatic = true;
+        }
+
+        private static void CreateTreeCollider(Transform gameplayParent, string name, GameObject visual, TeamBaseLayoutDefinition.Resolved layout)
+        {
+            if (visual == null) return;
+            Bounds bounds = ComputeBounds(visual, out bool hasBounds);
+            if (!hasBounds) return;
+            float radius = Mathf.Clamp(Mathf.Min(bounds.size.x, bounds.size.z) * .16f, .28f, .72f);
+            float height = Mathf.Max(2f, bounds.size.y * .7f);
+            Vector3 center = new Vector3(bounds.center.x, height * .5f, bounds.center.z);
+            if (IntersectsProtectedBaseSpace(center, new Vector3(radius * 2f, height, radius * 2f), layout, allowCoreApproach: false)) return;
+
+            GameObject colliderRoot = new GameObject(name);
+            colliderRoot.layer = 6;
+            colliderRoot.transform.SetParent(gameplayParent);
+            colliderRoot.transform.position = center;
+            CapsuleCollider collider = colliderRoot.AddComponent<CapsuleCollider>();
+            collider.radius = radius;
+            collider.height = height;
+            EnvironmentObstacle metadata = colliderRoot.AddComponent<EnvironmentObstacle>();
+            metadata.Configure(EnvironmentObstacle.Category.TreeObstacle, visual.transform, blocksNavigation: true);
+            colliderRoot.isStatic = true;
+        }
+
+        private static void BindCoreColliderToTownCenter(Transform baseRoot, GameObject townCenterVisual)
+        {
+            if (baseRoot == null || townCenterVisual == null) return;
+            foreach (Collider collider in baseRoot.GetComponentsInChildren<Collider>(true))
+            {
+                if (!collider.name.EndsWith(" Core")) continue;
+                EnvironmentObstacle metadata = collider.GetComponent<EnvironmentObstacle>();
+                if (metadata == null) metadata = collider.gameObject.AddComponent<EnvironmentObstacle>();
+                metadata.Configure(EnvironmentObstacle.Category.Structure, townCenterVisual.transform, blocksNavigation: true);
+                return;
+            }
+        }
+
+        private static bool IntersectsProtectedBaseSpace(Vector3 center, Vector3 size, TeamBaseLayoutDefinition.Resolved layout, bool allowCoreApproach)
+        {
+            Bounds footprint = new Bounds(center, new Vector3(size.x, 1f, size.z));
+            Vector3[] protectedPoints =
+            {
+                layout.HeroSpawn, layout.Respawn, layout.Shop, layout.Shopkeeper,
+                layout.TopGateway, layout.MidGateway, layout.BottomGateway,
+                layout.TopInterior, layout.MidInterior, layout.BottomInterior,
+                layout.CoreDefenseApproach,
+            };
+            foreach (Vector3 point in protectedPoints)
+            {
+                if (footprint.SqrDistance(point) < 2.25f) return true;
+            }
+            return !allowCoreApproach && footprint.SqrDistance(layout.CoreApproach) < 2.25f;
         }
 
         // Package prefabs have a large, unknown native size. Instead of blind scale
@@ -296,11 +383,11 @@ namespace CierzoArena.EditorTools
         // so its largest dimension becomes "targetMeters" metres, independent of the
         // prefab's authored size. The last Place argument is therefore a real-world
         // target size in metres.
-        private static void Place(GameObject prefab, Transform parent, Vector3 position, Quaternion rotation, float targetMeters, ColliderPolicy policy, bool isStatic)
+        private static GameObject Place(GameObject prefab, Transform parent, Vector3 position, Quaternion rotation, float targetMeters, ColliderPolicy policy, bool isStatic)
         {
-            if (prefab == null) return;
+            if (prefab == null) return null;
             GameObject instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab, parent);
-            if (instance == null) return;
+            if (instance == null) return null;
             instance.transform.position = new Vector3(position.x, 0f, position.z);
             instance.transform.rotation = rotation;
             instance.transform.localScale = Vector3.one;
@@ -325,6 +412,7 @@ namespace CierzoArena.EditorTools
 
             ApplyColliderPolicy(instance, policy);
             if (isStatic) SetStaticRecursive(instance, true);
+            return instance;
         }
 
         private static void ApplyColliderPolicy(GameObject instance, ColliderPolicy policy)
