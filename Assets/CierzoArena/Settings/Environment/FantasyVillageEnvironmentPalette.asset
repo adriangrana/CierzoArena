@@ -1,0 +1,54 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dbae3e6b4c3f7b34e95c0accc9f92395, type: 3}
+  m_Name: FantasyVillageEnvironmentPalette
+  m_EditorClassIdentifier: CierzoArena.Runtime::CierzoArena.Environment.FantasyVillageEnvironmentPalette
+  mainBuilding: {fileID: 8233636598383507252, guid: d4e0f7e6af5fde041b562e69c8777fe6, type: 3}
+  secondaryBuildings:
+  - {fileID: 1216127879520472731, guid: e43b87eec9181834094b5883f6858f76, type: 3}
+  - {fileID: 265591253760320404, guid: 17baadd2d44e62d4e8a91e885ce4144e, type: 3}
+  smallHouses:
+  - {fileID: 1216127879520472731, guid: e43b87eec9181834094b5883f6858f76, type: 3}
+  - {fileID: 265591253760320404, guid: 17baadd2d44e62d4e8a91e885ce4144e, type: 3}
+  - {fileID: 8233636598383507252, guid: d4e0f7e6af5fde041b562e69c8777fe6, type: 3}
+  pathStraight: {fileID: 5415845077446116136, guid: 2159f826a7fb5944b8baff7839d55f5b, type: 3}
+  pathPieces:
+  - {fileID: 6546880557473838952, guid: 2f1bf4cd7a3cdcd4ea279d67496dfee9, type: 3}
+  - {fileID: 8958562254014563, guid: d2067771ddca27f4492d2ac7e25569fd, type: 3}
+  - {fileID: 7104049563911181740, guid: d024553abb470894fbf7d0ca078f50e6, type: 3}
+  bridge: {fileID: 6141891356066675564, guid: d20f7c791b6c5ca459c45f167993e50d, type: 3}
+  trees:
+  - {fileID: 1998616913923603544, guid: f2c96353dc943e34bb0245e8155922fa, type: 3}
+  - {fileID: 5723091785480246579, guid: 2186aabdeb39ce6449ceb9b0878704b5, type: 3}
+  - {fileID: 1811602082504828536, guid: 9c5f0d011cbb74f46a3eca1a97c7a485, type: 3}
+  pineTrees:
+  - {fileID: 4751892824378312366, guid: b494815f7682f6e4db2ff5cd616e1717, type: 3}
+  - {fileID: 5610412344464807517, guid: e735c04079cd2ec41a27bac1b848bfc0, type: 3}
+  flowers:
+  - {fileID: 6284870284092300780, guid: 454c2db2cdbf1b6458ec9b7174b5cc1e, type: 3}
+  - {fileID: 2126758486473033836, guid: 875a520d510886043836c1da07874b53, type: 3}
+  flowerPot: {fileID: 179969503972620271, guid: bf1a024e76f38f84cb744d8e9f56b7ab, type: 3}
+  cliffs:
+  - {fileID: 2475487538999437734, guid: f53d43fa45e2a32458980cb12ee76084, type: 3}
+  - {fileID: 7718913367434838856, guid: f44a5fec597efc8499df8340a7c0c1f3, type: 3}
+  - {fileID: 8334272329370966491, guid: 7e2f34d5420d6d04db0afd91534305d5, type: 3}
+  mountains:
+  - {fileID: 5756111170750341522, guid: 10dda8866777bf44f9ce6862664323b1, type: 3}
+  - {fileID: 7316386993682477049, guid: 283ec6f0a2b15c34e83fa08ce42cf7dc, type: 3}
+  rocks:
+  - {fileID: 2380846811372264750, guid: 4363cc5f6c64c954ba6f12cacb2002f9, type: 3}
+  - {fileID: 8208134182140680753, guid: 56b09d1d274377d4e90681b48d25c7a6, type: 3}
+  bench: {fileID: 5700205785125025109, guid: ee743d366a1d15f4280fcc33f72891e5, type: 3}
+  crate: {fileID: 7785324583566468165, guid: 4e08fdf4080c15941b2b10e6aac7bfa6, type: 3}
+  fence: {fileID: 1332560038659159606, guid: 94f6b81a91774dd40b60e935197c3144, type: 3}
+  lantern: {fileID: 7189047328722756852, guid: cfd9e31c880414441aa66f70b40e16db, type: 3}
+  boat: {fileID: 5777240715420095136, guid: 7c99531c61bfcb649a63fecaa465073c, type: 3}

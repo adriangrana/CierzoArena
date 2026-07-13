@@ -1059,3 +1059,33 @@ Estado: Implementado, pendiente de validación visual final en Unity.
 - binding exclusivo mediante `LocalHeroProvider`, válido en local, host y cliente;
 - Canvas Scaler con referencia 1920×1080 y capas de HUD reproducibles por el builder.
 - marcador ampliado con `Tab`: dos secciones de hasta cinco jugadores, retrato, nivel, K/D/A, LH y estado público.
+
+# Milestone 23 — Rework funcional de bases y Fantasy Village
+
+Estado: Núcleo de gameplay y builder implementados; ambientación artística y validación en Unity pendientes de editor.
+
+- auditoría de **Low Poly Fantasy Village Environment** (OccaSoftware) en `Assets/OccaSoftware/Low Poly Fantasy Village/` (60+ prefabs, escena demo, URP), documentada en `Docs/M23_FANTASY_VILLAGE_ASSET_AUDIT.md`;
+- catálogo de prefabs por categoría (edificios, caminos, puentes, árboles, flores, acantilados, montañas, props);
+- sin dependencia de Buto; se conserva la fog of war propia; sin NPC vendedor en el paquete (se prevé `ShopkeeperAnchor`);
+- separación gameplay/visual en cada base (Core lógico vs. Town Center visual);
+- spawn del héroe **detrás** del núcleo, en el Spawn Courtyard, orientado al centro;
+- zona de tienda junto al spawn (tecla `B` intacta);
+- tres gateways por base; la 3.ª torre de cada carril (`Tier.Gate`) defiende su entrada;
+- **dos Core Guard Towers** (`Tier.CoreGuard`, `Lane.None`) como última línea, generadas por el builder delante del núcleo y espejadas Azure/Ember;
+- núcleo como town center reconocible (mantiene vida, minimapa, selección, victoria);
+- **BaseBreached** = perder las tres torres de cualquier carril → desbloquea ambas Core Guards;
+- **CoreVulnerable** = ambas Core Guards destruidas → desbloquea el núcleo;
+- fuente única de verdad autoritativa en `StructureProgressionController` (`IsBaseBreached`, `AreCoreGuardsVulnerable`, `IsCoreVulnerable`);
+- rutas de creeps hacia Core Guards y núcleo respetando la protección (`IsAttackable`);
+- **paleta** `FantasyVillageEnvironmentPalette` y **layout** reutilizable `TeamBaseLayoutDefinition` (assets en `Assets/CierzoArena/Settings/Environment/`), poblados por `FantasyVillagePaletteBuilder`;
+- `FantasyVillageBaseBuilder` genera por base la jerarquía Gameplay (anchors + attack anchors) y Visuals (town center, plaza, courtyard, shop district, casas, caminos, árboles, flores, farolas, cajas) con colliders simplificados y flags static;
+- spawn/tienda/cámara derivados del layout (spawn detrás del núcleo); `LaneRoute` extendidas con gateway→interior→core-defense→core;
+- `FantasyVillageMapAmbienceBuilder`: primera ambientación determinista de límites, jungla y orillas del río (aditiva, sin afectar NavMesh);
+- validador de editor `M23EnvironmentValidator` (menú `Validate M23 Base Rework`);
+- NavMesh construido en runtime desde colliders Ground (`LargeNavMeshBootstrap`/`RuntimeNavMesh`), sin bake de editor;
+- tests Edit Mode de la cadena de vulnerabilidad y del layout/paleta (`StructureAndMatchTests`, `FantasyVillageM23Tests`);
+- pendiente de editor: ejecutar el builder (poblar paleta + regenerar escena), `Validate M23 Base Rework`, minimapa visual, Play Mode, Netcode Host/Client, capturas y rendimiento.
+
+Documentación: `Docs/M23_BASE_REWORK.md`.
+
+> El antiguo hito online pasa a ser **Milestone 24 — Identidad, salas privadas mundiales y Relay** (Unity Authentication, Relay, Lobby, Sessions, Matchmaking, MMR, medallas, Steam, servidores dedicados quedan fuera de M23).

@@ -229,6 +229,167 @@ namespace CierzoArena.Tests.Editor
             Object.DestroyImmediate(progressionObject);
         }
 
+        // ----- M23 breach chain: single source of truth ----------------------
+
+        [Test]
+        public void BaseBreachRequiresAllThreeTowersAndAnyLaneCounts()
+        {
+            var scenario = BuildBaseDefense(TeamId.Ember, out StructureProgressionController progression);
+
+            Assert.That(progression.IsBaseBreached(TeamId.Ember), Is.False, "Base starts unbreached.");
+
+            DestroyTower(scenario, StructureLane.Mid, StructureTier.Outer);
+            DestroyTower(scenario, StructureLane.Mid, StructureTier.Inner);
+            Assert.That(progression.IsBaseBreached(TeamId.Ember), Is.False, "Two of three towers must not breach a lane.");
+
+            DestroyTower(scenario, StructureLane.Mid, StructureTier.Gate);
+            Assert.That(progression.IsBaseBreached(TeamId.Ember), Is.True, "All three mid towers must breach the base.");
+
+            DisposeBaseDefense(scenario, progression);
+        }
+
+        [Test]
+        public void TopMidBottomEachBreachIndependently()
+        {
+            foreach (StructureLane lane in new[] { StructureLane.Top, StructureLane.Mid, StructureLane.Bottom })
+            {
+                var scenario = BuildBaseDefense(TeamId.Ember, out StructureProgressionController progression);
+                DestroyTower(scenario, lane, StructureTier.Outer);
+                DestroyTower(scenario, lane, StructureTier.Inner);
+                DestroyTower(scenario, lane, StructureTier.Gate);
+                Assert.That(progression.IsBaseBreached(TeamId.Ember), Is.True, $"Clearing {lane} must breach the base.");
+                DisposeBaseDefense(scenario, progression);
+            }
+        }
+
+        [Test]
+        public void CoreGuardsProtectedBeforeBreachAndVulnerableAfter()
+        {
+            var scenario = BuildBaseDefense(TeamId.Ember, out StructureProgressionController progression);
+            StructureEntity guardLeft = scenario.GuardLeft;
+
+            Assert.That(progression.AreCoreGuardsVulnerable(TeamId.Ember), Is.False);
+            Assert.That(progression.IsAttackable(guardLeft), Is.False, "Core Guards are protected before any breach.");
+
+            DestroyTower(scenario, StructureLane.Bottom, StructureTier.Outer);
+            DestroyTower(scenario, StructureLane.Bottom, StructureTier.Inner);
+            DestroyTower(scenario, StructureLane.Bottom, StructureTier.Gate);
+
+            Assert.That(progression.AreCoreGuardsVulnerable(TeamId.Ember), Is.True);
+            Assert.That(progression.IsAttackable(guardLeft), Is.True, "A breach exposes both Core Guards.");
+            Assert.That(progression.IsAttackable(scenario.GuardRight), Is.True);
+
+            DisposeBaseDefense(scenario, progression);
+        }
+
+        [Test]
+        public void CoreProtectedWhileOneGuardAliveAndOpensWhenBothDestroyed()
+        {
+            var scenario = BuildBaseDefense(TeamId.Ember, out StructureProgressionController progression);
+            DestroyTower(scenario, StructureLane.Top, StructureTier.Outer);
+            DestroyTower(scenario, StructureLane.Top, StructureTier.Inner);
+            DestroyTower(scenario, StructureLane.Top, StructureTier.Gate);
+
+            Assert.That(progression.IsCoreVulnerable(TeamId.Ember), Is.False, "Breach alone must not open the core.");
+
+            Destroy(scenario.GuardLeft);
+            Assert.That(progression.IsCoreVulnerable(TeamId.Ember), Is.False, "One surviving guard keeps the core protected.");
+            Assert.That(progression.IsAttackable(scenario.Core), Is.False);
+
+            Destroy(scenario.GuardRight);
+            Assert.That(progression.IsCoreVulnerable(TeamId.Ember), Is.True, "Both guards down opens the core.");
+            Assert.That(progression.IsAttackable(scenario.Core), Is.True);
+
+            DisposeBaseDefense(scenario, progression);
+        }
+
+        [Test]
+        public void BreachAndCoreStateAreTeamScoped()
+        {
+            var scenario = BuildBaseDefense(TeamId.Ember, out StructureProgressionController progression);
+            DestroyTower(scenario, StructureLane.Mid, StructureTier.Outer);
+            DestroyTower(scenario, StructureLane.Mid, StructureTier.Inner);
+            DestroyTower(scenario, StructureLane.Mid, StructureTier.Gate);
+
+            Assert.That(progression.IsBaseBreached(TeamId.Ember), Is.True);
+            Assert.That(progression.IsBaseBreached(TeamId.Azure), Is.False, "Ember breach must not affect Azure.");
+            Assert.That(progression.AreCoreGuardsVulnerable(TeamId.Azure), Is.False);
+
+            DisposeBaseDefense(scenario, progression);
+        }
+
+        private sealed class BaseDefenseScenario
+        {
+            public StructureEntity Core;
+            public StructureEntity GuardLeft;
+            public StructureEntity GuardRight;
+            public readonly System.Collections.Generic.List<StructureEntity> Towers = new System.Collections.Generic.List<StructureEntity>();
+        }
+
+        private BaseDefenseScenario BuildBaseDefense(TeamId team, out StructureProgressionController progression)
+        {
+            GameObject progressionObject = new GameObject("Progression");
+            progression = progressionObject.AddComponent<StructureProgressionController>();
+            InvokePrivate(progression, "Awake");
+
+            var scenario = new BaseDefenseScenario();
+            foreach (StructureLane lane in new[] { StructureLane.Top, StructureLane.Mid, StructureLane.Bottom })
+            {
+                foreach (StructureTier tier in new[] { StructureTier.Outer, StructureTier.Inner, StructureTier.Gate })
+                {
+                    StructureEntity tower = MakeTower(team, lane, tier, $"{team} {lane} {tier}");
+                    scenario.Towers.Add(tower);
+                    progression.Register(tower);
+                }
+            }
+
+            scenario.GuardLeft = MakeTower(team, StructureLane.None, StructureTier.CoreGuard, $"{team} Core Guard Left");
+            scenario.GuardRight = MakeTower(team, StructureLane.None, StructureTier.CoreGuard, $"{team} Core Guard Right");
+            progression.Register(scenario.GuardLeft);
+            progression.Register(scenario.GuardRight);
+
+            scenario.Core = CreateStructure($"{team} Core", team, StructureKind.Core).GetComponent<StructureEntity>();
+            SetPrivate(scenario.Core, "tier", StructureTier.Core);
+            progression.Register(scenario.Core);
+            return scenario;
+        }
+
+        private StructureEntity MakeTower(TeamId team, StructureLane lane, StructureTier tier, string name)
+        {
+            StructureEntity tower = CreateStructure(name, team, StructureKind.Tower).GetComponent<StructureEntity>();
+            SetPrivate(tower, "lane", lane);
+            SetPrivate(tower, "tier", tier);
+            return tower;
+        }
+
+        private static void DestroyTower(BaseDefenseScenario scenario, StructureLane lane, StructureTier tier)
+        {
+            foreach (StructureEntity tower in scenario.Towers)
+            {
+                if (tower.Lane == lane && tower.Tier == tier)
+                {
+                    Destroy(tower);
+                    return;
+                }
+            }
+
+            Assert.Fail($"No tower for {lane} {tier}.");
+        }
+
+        private static void Destroy(StructureEntity structure)
+        {
+            structure.Health.ApplyDamage(structure.Health.Max + 10f);
+        }
+
+        private static void DisposeBaseDefense(BaseDefenseScenario scenario, StructureProgressionController progression)
+        {
+            foreach (StructureEntity tower in scenario.Towers) Object.DestroyImmediate(tower.gameObject);
+            Object.DestroyImmediate(scenario.GuardLeft.gameObject);
+            Object.DestroyImmediate(scenario.GuardRight.gameObject);
+            Object.DestroyImmediate(scenario.Core.gameObject);
+            Object.DestroyImmediate(progression.gameObject);
+        }
+
         private static GameObject CreateStructure(string name, TeamId team, StructureKind kind)
         {
             GameObject item = new GameObject(name);

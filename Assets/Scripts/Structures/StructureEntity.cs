@@ -21,12 +21,17 @@ namespace CierzoArena.Structures
         [SerializeField] private StructureTier tier = StructureTier.Outer;
         [SerializeField] private Renderer[] renderersToDisable;
         [SerializeField] private Collider[] collidersToDisable;
+        // The MOBA arena uses the village hall as the core's visual identity. The
+        // primitive on this object remains the authoritative collision/targeting
+        // volume, but must never be drawn (including after a fog refresh).
+        [SerializeField] private bool useExternalCorePresentation;
 
         private Health health;
         private TeamMember teamMember;
         private Collider[] approachColliders;
         private bool destroyed;
         private bool initialized;
+        private bool corePresentationResolved;
         private GameObject towerMageVisual;
         private static GameObject towerMagePrefab;
         private static bool towerMagePrefabAttempted;
@@ -52,6 +57,7 @@ namespace CierzoArena.Structures
             }
         }
         public bool IsDestroyed => destroyed;
+        public bool UsesExternalCorePresentation => ResolveExternalCorePresentation();
         public bool IsAlive
         {
             get
@@ -62,6 +68,39 @@ namespace CierzoArena.Structures
         }
 
         public event Action<StructureEntity> Destroyed;
+
+        /// <summary>Marks a core root as gameplay-only while a separate authored
+        /// building supplies its presentation. This is also used by the network
+        /// spawner, whose legacy core prefab otherwise contains a visible cube.</summary>
+        public void SetExternalCorePresentation(bool enabled)
+        {
+            useExternalCorePresentation = enabled && kind == StructureKind.Core;
+            corePresentationResolved = useExternalCorePresentation;
+            if (!useExternalCorePresentation) return;
+
+            foreach (Renderer renderer in GetComponents<Renderer>())
+            {
+                if (renderer != null) renderer.enabled = false;
+            }
+        }
+
+        /// <summary>Fog may normally restore known structure renderers. The logical
+        /// core primitive is deliberately excluded so that restoration cannot reveal
+        /// the old coloured box above the village hall.</summary>
+        public bool IsPresentationRendererSuppressed(Renderer renderer)
+        {
+            return ResolveExternalCorePresentation() && renderer != null && renderer.transform == transform;
+        }
+
+        private bool ResolveExternalCorePresentation()
+        {
+            if (useExternalCorePresentation || kind != StructureKind.Core) return useExternalCorePresentation;
+            if (corePresentationResolved) return false;
+            corePresentationResolved = true;
+            if (!TryGetVillageTownCenter(out _)) return false;
+            SetExternalCorePresentation(true);
+            return true;
+        }
 
         /// <summary>Server-side setup for a dynamically spawned copy of an authored structure.</summary>
         public void Configure(TeamId owner, StructureKind nextKind, StructureLane nextLane, StructureTier nextTier, float maximumHealth)
@@ -191,7 +230,39 @@ namespace CierzoArena.Structures
         {
             // Start handles scene object initialization order; Network-spawned
             // structures also register here after the match controller is spawned.
+            AnchorCorePresentationToVillageHall();
             StructureProgressionController.Active?.Register(this);
+        }
+
+        private void AnchorCorePresentationToVillageHall()
+        {
+            if (!ResolveExternalCorePresentation() || !TryGetVillageTownCenter(out Transform townCenter)) return;
+
+            Renderer[] townRenderers = townCenter.GetComponentsInChildren<Renderer>(true);
+            if (townRenderers.Length == 0) return;
+            Bounds bounds = townRenderers[0].bounds;
+            for (int i = 1; i < townRenderers.Length; i++)
+            {
+                if (townRenderers[i] != null) bounds.Encapsulate(townRenderers[i].bounds);
+            }
+
+            WorldHealthBar bar = GetComponentInChildren<WorldHealthBar>(true);
+            if (bar == null) return;
+
+            float width = Mathf.Clamp(Mathf.Max(bounds.size.x, bounds.size.z) * .72f, 8f, 14f);
+            bar.ConfigureWorldPresentation(
+                new Vector3(bounds.center.x, bounds.max.y + .5f, bounds.center.z),
+                width);
+        }
+
+        private bool TryGetVillageTownCenter(out Transform townCenter)
+        {
+            townCenter = null;
+            string baseName = Team == TeamId.Azure ? "Azure Base" : Team == TeamId.Ember ? "Ember Base" : null;
+            if (string.IsNullOrEmpty(baseName)) return false;
+            GameObject baseRoot = GameObject.Find("Bases/" + baseName);
+            townCenter = baseRoot != null ? baseRoot.transform.Find("Visuals/TownCenterVisual") : null;
+            return townCenter != null;
         }
 
         private void OnDestroy()

@@ -127,6 +127,27 @@ namespace CierzoArena.Combat
             Refresh(health.Current, health.Max);
         }
 
+        /// <summary>Repositions and scales a world bar for a substituted visual
+        /// model. The health component remains on its original gameplay owner.</summary>
+        public void ConfigureWorldPresentation(Vector3 worldPosition, float worldWidth)
+        {
+            transform.position = worldPosition;
+            float unitsPerLocalUnit = Mathf.Max(.001f, Mathf.Abs(transform.lossyScale.x));
+            width = Mathf.Max(.1f, worldWidth / unitsPerLocalUnit);
+
+            Transform background = transform.Find("Health Bar Background");
+            if (background != null)
+            {
+                Vector3 scale = background.localScale;
+                scale.x = width;
+                background.localScale = scale;
+            }
+
+            lastHealth = float.NaN;
+            lastMaximum = float.NaN;
+            RefreshNow();
+        }
+
         private void BindToOwningHealth()
         {
             Health ownerHealth = GetComponentInParent<Health>();

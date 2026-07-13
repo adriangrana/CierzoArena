@@ -169,6 +169,11 @@ namespace CierzoArena.Units
             {
                 for (int i = 0; i < renderers.Length; i++)
                 {
+                    if (structure.IsPresentationRendererSuppressed(renderers[i]))
+                    {
+                        if (renderers[i] != null) renderers[i].enabled = false;
+                        continue;
+                    }
                     SetRendererColor(i, true, visible ? 1f : ObscuredBrightness);
                 }
             }

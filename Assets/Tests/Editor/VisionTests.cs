@@ -60,6 +60,25 @@ namespace CierzoArena.Tests.Editor
             Object.DestroyImmediate(azure);Object.DestroyImmediate(tower);
         }
         [Test]
+        public void FogNeverRestoresTheSuppressedLogicalCoreRenderer()
+        {
+            GameObject azure=Create("Azure",TeamId.Azure,Vector3.zero,5f);
+            GameObject core=Create("Village Core",TeamId.Ember,new Vector3(2,0,0),0f);
+            core.AddComponent<Health>();
+            Renderer renderer=core.AddComponent<MeshRenderer>();
+            StructureEntity structure=core.AddComponent<StructureEntity>();
+            Set(structure,"kind",StructureKind.Core);
+            structure.SetExternalCorePresentation(true);
+            VisionVisibility visibility=core.AddComponent<VisionVisibility>();
+            azure.GetComponent<VisionSource>().EnsureRegistered();
+
+            visibility.ApplyVisibilityForTeam(TeamId.Azure);
+
+            Assert.That(renderer.enabled,Is.False,
+                "Fog must not resurrect the hidden gameplay cube when a village hall presents the core.");
+            Object.DestroyImmediate(azure);Object.DestroyImmediate(core);
+        }
+        [Test]
         public void MinimapUsesKnownStructuresButNeverUnseenMobileEnemies()
         {
             GameObject azure=Create("Azure",TeamId.Azure,Vector3.zero,5f);GameObject mobile=Create("Mobile",TeamId.Ember,new Vector3(20,0,0),0f);mobile.AddComponent<VisionVisibility>();GameObject tower=Create("Tower",TeamId.Ember,new Vector3(20,0,2),0f);tower.AddComponent<Health>();tower.AddComponent<MeshRenderer>();StructureEntity structure=tower.AddComponent<StructureEntity>();VisionVisibility visibility=tower.AddComponent<VisionVisibility>();

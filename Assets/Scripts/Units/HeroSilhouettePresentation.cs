@@ -7,10 +7,20 @@ namespace CierzoArena.Units
     public sealed class HeroSilhouettePresentation : MonoBehaviour
     {
         private const string RootName = "Hero Archetype Accent";
+
+        /// <summary>Lets a hero-specific visual suppress only this procedural fallback
+        /// accent while preserving all gameplay-owned children and indicators.</summary>
+        public void SetPresentationVisible(bool visible)
+        {
+            Transform root = transform.Find(RootName);
+            if (root != null) root.gameObject.SetActive(visible);
+        }
+
         public void Apply(HeroDefinition definition)
         {
             if(definition==null)return;Transform root=transform.Find(RootName);
             if(root==null){root=new GameObject(RootName).transform;root.SetParent(transform,false);}
+            root.gameObject.SetActive(true);
             for(int i=root.childCount-1;i>=0;i--)DestroyObject(root.GetChild(i).gameObject);
             switch(definition.PrimaryRole)
             {

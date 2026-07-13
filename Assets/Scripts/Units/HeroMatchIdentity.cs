@@ -39,27 +39,32 @@ namespace CierzoArena.Units
             if(TryGetComponent(out ClickMover mover))mover.ConfigureHeroMoveSpeed(definition.MoveSpeed);
             if(TryGetComponent(out HeroProgression progression))progression.ConfigureHeroGrowth(definition.HealthPerLevel,definition.ManaPerLevel,definition.DamagePerLevel,definition.MoveSpeedPerLevel);
             if(TryGetComponent(out HeroAbilities abilities))abilities.ConfigureHeroKit(new[]{definition.GetAbility(0),definition.GetAbility(1),definition.GetAbility(2),definition.GetAbility(3)});
-            ApplyVisual(definition.ThemeColor);
             (GetComponent<HeroSilhouettePresentation>() ?? gameObject.AddComponent<HeroSilhouettePresentation>()).Apply(definition);
+            (GetComponent<HeroVisualController>() ?? gameObject.AddComponent<HeroVisualController>()).Apply(definition);
+            ApplyPlaceholderVisual(definition.ThemeColor);
             ApplyTeamPresentation(Team);
         }
 
         public void ApplyTeamPresentation(TeamId team)
         {
+            // Team colour is communicated through the health bar, minimap and the
+            // selected hero ring. The old solid disk competed with the character
+            // model and looked like a second blue pedestal below every hero.
             Transform indicator=transform.Find("Team Indicator");
-            if(indicator==null){indicator=GameObject.CreatePrimitive(PrimitiveType.Cylinder).transform;indicator.name="Team Indicator";indicator.SetParent(transform,false);Collider collider=indicator.GetComponent<Collider>();if(Application.isPlaying)Destroy(collider);else DestroyImmediate(collider);}
-            indicator.localPosition=new Vector3(0,-.62f,0);indicator.localScale=new Vector3(1.05f,.025f,1.05f);
-            Renderer renderer=indicator.GetComponent<Renderer>();if(renderer==null)return;Shader shader=Shader.Find("Standard");if(shader==null)return;Material material=renderer.material;material.color=team==TeamId.Ember?new Color(.95f,.22f,.12f):team==TeamId.Azure?new Color(.12f,.68f,1f):Color.gray;
+            if(indicator==null)return;
+            Renderer renderer=indicator.GetComponent<Renderer>();
+            if(renderer!=null)renderer.enabled=false;
         }
 
-        private void ApplyVisual(Color color)
+        private void ApplyPlaceholderVisual(Color color)
         {
-            foreach(Renderer renderer in GetComponentsInChildren<Renderer>(true))
-            {
-                if(renderer.name.Contains("Health")||renderer.name.Contains("Selection"))continue;
-                Material material=renderer.material;
-                if(material.HasProperty("_Color"))material.color=Color.Lerp(material.color,color,.65f);
-            }
+            // The root mesh is the legacy placeholder. Do not walk visual children:
+            // a hero-specific prefab owns shared authored materials and must never be
+            // tinted or cloned by this generic gameplay presentation code.
+            Renderer renderer=GetComponent<Renderer>();
+            if(renderer==null)return;
+            Material material=renderer.material;
+            if(material.HasProperty("_Color"))material.color=Color.Lerp(material.color,color,.65f);
         }
     }
 }

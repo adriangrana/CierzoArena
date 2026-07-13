@@ -410,7 +410,11 @@ namespace CierzoArena.Netcode
             if(prefab==null)return;
             NetworkObject instance=Instantiate(prefab,source.transform.position,source.transform.rotation);
             ArenaVisualPass.Repair(instance.gameObject);
-            if(instance.TryGetComponent(out StructureEntity target))target.Configure(source.Team,source.Kind,source.Lane,source.Tier,source.Health.Max);
+            if(instance.TryGetComponent(out StructureEntity target))
+            {
+                target.Configure(source.Team,source.Kind,source.Lane,source.Tier,source.Health.Max);
+                target.SetExternalCorePresentation(source.UsesExternalCorePresentation);
+            }
             instance.Spawn();infrastructure.Add(instance);
         }
         private void Spawn(NetworkObject prefab,Vector3 position,Quaternion rotation)

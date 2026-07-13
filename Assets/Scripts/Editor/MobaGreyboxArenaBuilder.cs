@@ -4,6 +4,7 @@ using System.Linq;
 using CierzoArena.CameraSystem;
 using CierzoArena.Combat;
 using CierzoArena.Core;
+using CierzoArena.Environment;
 using CierzoArena.Frontend;
 using CierzoArena.Navigation;
 using CierzoArena.Netcode;
@@ -68,6 +69,16 @@ namespace CierzoArena.EditorTools
         // mirror-symmetric across that axis so both teams' approaches match.
         private static readonly Vector3 BossPitCenter = new Vector3(-18f, 0f, 18f);
 
+        // M23 Fantasy Village state, resolved once per build and reused by spawns,
+        // shops and lane routing so Azure and Ember stay mirror-symmetric.
+        private static FantasyVillageEnvironmentPalette s_palette;
+        private static TeamBaseLayoutDefinition s_layout;
+        private static TeamBaseLayoutDefinition.Resolved s_azure;
+        private static TeamBaseLayoutDefinition.Resolved s_ember;
+        private static FantasyVillageBaseBuilder.BaseAnchors s_azureAnchors;
+        private static FantasyVillageBaseBuilder.BaseAnchors s_emberAnchors;
+
+
         [MenuItem("Cierzo Arena/Create MOBA Greybox Arena")]
         public static void CreateMobaGreyboxArena()
         {
@@ -83,16 +94,22 @@ namespace CierzoArena.EditorTools
             // Shared environment assets are now the source of truth for every
             // architectural/terrain surface. Team identity lives in gameplay UI and
             // small non-surface accents, never in flat replacement floor colours.
-            Material groundMaterial = environment.Rocky;
-            Material routeMaterial = environment.Concrete;
-            Material routeMidMaterial = environment.Concrete;
+            // M23 Fase A: natural earthy palette so the map stops reading as greybox
+            // concrete. Ground becomes grass, lanes/base pads become packed dirt. The
+            // rocky/concrete textures still dress walls, bridges and cliffs where a
+            // stone read is correct. Gameplay, colliders and navigation are unchanged.
+            Material grassMaterial = CreateMaterial("Assets/Materials/Env_Grass.mat", new Color(0.33f, 0.46f, 0.24f));
+            Material dirtMaterial = CreateMaterial("Assets/Materials/Env_Dirt.mat", new Color(0.55f, 0.44f, 0.29f));
+            Material groundMaterial = grassMaterial;
+            Material routeMaterial = dirtMaterial;
+            Material routeMidMaterial = dirtMaterial;
             Material riverMaterial = environment.Water;
             Material bridgeMaterial = environment.Concrete;
             Material obstacleMaterial = environment.Rocky;
             Material neutralMaterial = environment.Rocky;
             Material boundaryMaterial = environment.Rocky;
-            Material azureBaseMaterial = environment.Concrete;
-            Material emberBaseMaterial = environment.Concrete;
+            Material azureBaseMaterial = dirtMaterial;
+            Material emberBaseMaterial = dirtMaterial;
             Material azureMaterial = CreateMaterial("Assets/Materials/Prototype_Azure.mat", new Color(0.20f, 0.55f, 1.0f));
             Material emberMaterial = CreateMaterial("Assets/Materials/Prototype_Ember.mat", new Color(0.96f, 0.26f, 0.18f));
             Material ringMaterial = CreateMaterial("Assets/Materials/Prototype_Selection.mat", new Color(0.95f, 0.86f, 0.24f));
@@ -100,16 +117,29 @@ namespace CierzoArena.EditorTools
             Material healthBackgroundMaterial = CreateMaterial("Assets/Materials/Prototype_HealthBackground.mat", new Color(0.08f, 0.08f, 0.08f));
             Material healthFillMaterial = CreateMaterial("Assets/Materials/Prototype_HealthFill.mat", new Color(0.2f, 0.85f, 0.3f));
 
+            // M23: resolve the shared base layout and the Fantasy Village palette once.
+            // Spawns, shops and lane routes all derive from this, never from scattered
+            // hardcoded offsets, so both bases stay mirror-symmetric.
+            s_palette = FantasyVillagePaletteBuilder.EnsurePalette(out _);
+            s_layout = FantasyVillagePaletteBuilder.EnsureLayout();
+            s_azure = s_layout.Resolve(AzureBaseCenter);
+            s_ember = s_layout.Resolve(EmberBaseCenter);
+            s_azureAnchors = null;
+            s_emberAnchors = null;
+            Vector3 azureSpawn = new Vector3(s_azure.HeroSpawn.x, 1f, s_azure.HeroSpawn.z);
+            Vector3 emberSpawn = new Vector3(s_ember.HeroSpawn.x, 1f, s_ember.HeroSpawn.z);
+
             BuildGroundAndRiver(groundMaterial, riverMaterial);
             BuildBridges(bridgeMaterial);
             BuildLanes(routeMaterial, routeMidMaterial);
             GameObject matchController = CreateMatchController();
             BuildBases(azureBaseMaterial, emberBaseMaterial, markerMaterial, healthBackgroundMaterial, healthFillMaterial);
-            CreateHeroSpawnPoint("Azure Hero Spawn", AzureBaseCenter + new Vector3(9f, 1f, 9f), TeamId.Azure);
-            CreateHeroSpawnPoint("Ember Hero Spawn", EmberBaseCenter + new Vector3(-9f, 1f, -9f), TeamId.Ember);
+            CreateHeroSpawnPoint("Azure Hero Spawn", azureSpawn, TeamId.Azure);
+            CreateHeroSpawnPoint("Ember Hero Spawn", emberSpawn, TeamId.Ember);
             BuildObstacles(obstacleMaterial);
             BuildNeutralZones(neutralMaterial, markerMaterial);
             BuildTowersAndSpawns(azureBaseMaterial, emberBaseMaterial, markerMaterial, healthBackgroundMaterial, healthFillMaterial);
+            BuildVillageBases();
             BuildBoundary(boundaryMaterial);
 
             UnitDefinition azureDefinition = CreateOrLoadUnitDefinition(
@@ -118,22 +148,25 @@ namespace CierzoArena.EditorTools
                 "Assets/Data/EmberTarget.asset", 180f, 4.2f, 30f, 1.8f, 0.5f);
             ItemCatalog itemCatalog = CreateShopCatalog();
             AbilityDefinition[] abilityKit = CreateHeroAbilityKit();
-            CreateShopZone("Azure Shop", AzureBaseCenter + new Vector3(9f, 0.05f, 9f), TeamId.Azure, itemCatalog, azureBaseMaterial);
-            CreateShopZone("Ember Shop", EmberBaseCenter + new Vector3(-9f, 0.05f, -9f), TeamId.Ember, itemCatalog, emberBaseMaterial);
+            CreateShopZone("Azure Shop", new Vector3(s_azure.Shop.x, 0.05f, s_azure.Shop.z), TeamId.Azure, itemCatalog, azureBaseMaterial);
+            CreateShopZone("Ember Shop", new Vector3(s_ember.Shop.x, 0.05f, s_ember.Shop.z), TeamId.Ember, itemCatalog, emberBaseMaterial);
 
             GameObject azure = CreateUnit(
-                "Azure Vanguard", AzureBaseCenter + new Vector3(9f, 1f, 9f), TeamId.Azure,
+                "Azure Vanguard", azureSpawn, TeamId.Azure,
                 azureMaterial, ringMaterial, healthBackgroundMaterial, healthFillMaterial, azureDefinition, abilityKit, startSelected: true);
             azure.AddComponent<NavPathProbe>();
 
             GameObject ember = CreateUnit(
-                "Ember Skirmisher", EmberBaseCenter + new Vector3(-9f, 1f, -9f), TeamId.Ember,
+                "Ember Skirmisher", emberSpawn, TeamId.Ember,
                 emberMaterial, ringMaterial, healthBackgroundMaterial, healthFillMaterial, emberDefinition, abilityKit, startSelected: false);
 
             BuildLaneCreeps(azureMaterial, emberMaterial, healthBackgroundMaterial, healthFillMaterial);
             BuildNeutralCamps(neutralMaterial, healthBackgroundMaterial, healthFillMaterial);
             BuildBossPit(obstacleMaterial, riverMaterial);
-            BuildEnvironmentalSlice(environment.Rocky, environment.Concrete, environment.Water);
+            // The M21 slabs were a useful material test, but are visually explicit
+            // greybox. M23 replaces that presentation with authored village visuals;
+            // the gameplay river, pit and colliders were created earlier and remain.
+            FantasyVillageMapAmbienceBuilder.Build(s_palette);
             BuildMajorObjective(neutralMaterial, healthBackgroundMaterial, healthFillMaterial);
 
             CreateNavMeshBootstrap();
@@ -204,9 +237,9 @@ namespace CierzoArena.EditorTools
             // the SE corner. With the river now walkable these are visual emphasis /
             // intended chokepoints, not the only way across. The 45-degree yaw aligns
             // each band with the river.
-            CreateGroundBox(bridges.transform, "Top Bridge", new Vector3(-60f, -0.4f, 60f), new Vector3(22f, 1f, 26f), 45f, bridgeMaterial);
-            CreateGroundBox(bridges.transform, "Mid Bridge", new Vector3(0f, -0.4f, 0f), new Vector3(16f, 1f, 26f), 45f, bridgeMaterial);
-            CreateGroundBox(bridges.transform, "Bottom Bridge", new Vector3(60f, -0.4f, -60f), new Vector3(22f, 1f, 26f), 45f, bridgeMaterial);
+            HideGameplayRenderer(CreateGroundBox(bridges.transform, "Top Bridge Gameplay", new Vector3(-60f, -0.4f, 60f), new Vector3(22f, 1f, 26f), 45f, bridgeMaterial));
+            HideGameplayRenderer(CreateGroundBox(bridges.transform, "Mid Bridge Gameplay", new Vector3(0f, -0.4f, 0f), new Vector3(16f, 1f, 26f), 45f, bridgeMaterial));
+            HideGameplayRenderer(CreateGroundBox(bridges.transform, "Bottom Bridge Gameplay", new Vector3(60f, -0.4f, -60f), new Vector3(22f, 1f, 26f), 45f, bridgeMaterial));
         }
 
         // ----- Lanes (visual ribbons) ----------------------------------------
@@ -227,23 +260,23 @@ namespace CierzoArena.EditorTools
             Vector3 nw = new Vector3(NorthWestCorner.x, 0.06f, NorthWestCorner.z);
             Vector3 se = new Vector3(SouthEastCorner.x, 0.06f, SouthEastCorner.z);
 
-            CreateLaneSegment(lanes.transform, "Mid Lane", azure, ember, routeMidMaterial, 9f);
+            HideGameplayRenderer(CreateLaneSegment(lanes.transform, "Mid Lane Gameplay", azure, ember, routeMidMaterial, 9f));
 
-            CreateLaneSegment(lanes.transform, "Top Lane West", azure, nw, routeMaterial, 6f);
-            CreateLaneSegment(lanes.transform, "Top Lane North", nw, ember, routeMaterial, 6f);
+            HideGameplayRenderer(CreateLaneSegment(lanes.transform, "Top Lane West Gameplay", azure, nw, routeMaterial, 6f));
+            HideGameplayRenderer(CreateLaneSegment(lanes.transform, "Top Lane North Gameplay", nw, ember, routeMaterial, 6f));
 
-            CreateLaneSegment(lanes.transform, "Bottom Lane South", azure, se, routeMaterial, 6f);
-            CreateLaneSegment(lanes.transform, "Bottom Lane East", se, ember, routeMaterial, 6f);
+            HideGameplayRenderer(CreateLaneSegment(lanes.transform, "Bottom Lane South Gameplay", azure, se, routeMaterial, 6f));
+            HideGameplayRenderer(CreateLaneSegment(lanes.transform, "Bottom Lane East Gameplay", se, ember, routeMaterial, 6f));
         }
 
-        private static void CreateLaneSegment(Transform parent, string name, Vector3 from, Vector3 to, Material material, float width)
+        private static GameObject CreateLaneSegment(Transform parent, string name, Vector3 from, Vector3 to, Material material, float width)
         {
             Vector3 delta = to - from;
             delta.y = 0f;
             float length = delta.magnitude;
             if (length < 0.01f)
             {
-                return;
+                return null;
             }
 
             Vector3 dir = delta / length;
@@ -259,6 +292,7 @@ namespace CierzoArena.EditorTools
             ribbon.GetComponent<Renderer>().sharedMaterial = material;
             // Visual only: never block navigation or clicks-to-move on the ground.
             Object.DestroyImmediate(ribbon.GetComponent<Collider>());
+            return ribbon;
         }
 
         // ----- Bases ----------------------------------------------------------
@@ -271,6 +305,32 @@ namespace CierzoArena.EditorTools
             BuildBase(bases.transform, "Ember Base", EmberBaseCenter, TeamId.Ember, emberBaseMaterial, markerMaterial, healthBackgroundMaterial, healthFillMaterial);
         }
 
+        /// <summary>
+        /// M23 Fase C/E: wraps each gameplay base in a fortified mini-village using the
+        /// Fantasy Village palette. Additive and deterministic: it never touches the
+        /// gameplay core, towers or Core Guards, only adds anchors and decorative
+        /// visuals. If the package/palette is unavailable the bases still build (gameplay
+        /// intact), so the arena is never left broken.
+        /// </summary>
+        private static void BuildVillageBases()
+        {
+            if (s_palette == null || !s_palette.Validate(out _) || s_layout == null)
+            {
+                return;
+            }
+
+            GameObject azureRoot = GameObject.Find("Bases/Azure Base");
+            GameObject emberRoot = GameObject.Find("Bases/Ember Base");
+            if (azureRoot != null)
+            {
+                s_azureAnchors = FantasyVillageBaseBuilder.Build(azureRoot.transform, TeamId.Azure, AzureBaseCenter, s_layout, s_palette, new Color(0.2f, 0.72f, 1f));
+            }
+            if (emberRoot != null)
+            {
+                s_emberAnchors = FantasyVillageBaseBuilder.Build(emberRoot.transform, TeamId.Ember, EmberBaseCenter, s_layout, s_palette, new Color(1f, 0.36f, 0.16f));
+            }
+        }
+
         private static void BuildBase(Transform parent, string name, Vector3 center, TeamId team, Material baseMaterial, Material markerMaterial, Material healthBackgroundMaterial, Material healthFillMaterial)
         {
             GameObject baseRoot = new GameObject(name);
@@ -279,16 +339,22 @@ namespace CierzoArena.EditorTools
             // Team-coloured diamond platform in the base corner, flush with the ground,
             // so the whole footprint reads as "this team's base" from the isometric
             // camera. It is the largest, most dominant structure on the map by design.
-            CreateGroundBox(baseRoot.transform, name + " Platform", new Vector3(center.x, -0.30f, center.z), new Vector3(30f, 1f, 30f), 45f, baseMaterial);
+            HideGameplayRenderer(CreateGroundBox(baseRoot.transform, name + " Platform Gameplay", new Vector3(center.x, -0.30f, center.z), new Vector3(30f, 1f, 30f), 45f, baseMaterial));
 
             // Tall solid central core structure (the nucleus to defend in later
             // milestones). Kept high so "this is the base" is unmistakable at play zoom.
             // The three lanes leave the base around this core, so it never blocks exits.
             GameObject core = CreateObstacle(baseRoot.transform, name + " Core", new Vector3(center.x, 7f, center.z), new Vector3(9f, 14f, 9f), baseMaterial, 45f);
             ConfigureStructure(core, team, StructureKind.Core, StructureLane.None, StructureTier.Core, 2000f, healthBackgroundMaterial, healthFillMaterial, 15.5f);
+            // The cube is gameplay-only (selection, health and victory). The
+            // village's TownCenterVisual and the crystal cap are the presentation.
+            HideGameplayRenderer(core);
 
-            // Bright cap crowning the core so the base nucleus pops from above.
-            CreateMarker(baseRoot.transform, name + " Core Cap (marker)", new Vector3(center.x, 14.3f, center.z), markerMaterial, 6f);
+            // The old cylinder cap was a greybox visual and appeared to float over
+            // the Town Center. Keep its transform for any diagnostic tooling, but
+            // hide the primitive; the house, core health bar and team towers now
+            // communicate the base without a prototype cylinder.
+            HideGameplayRenderer(CreateMarker(baseRoot.transform, name + " Core Cap Gameplay", new Vector3(center.x, 14.3f, center.z), markerMaterial, 6f));
         }
 
         // ----- Obstacles ------------------------------------------------------
@@ -303,12 +369,12 @@ namespace CierzoArena.EditorTools
             // boss pit too.
             //   - Azure side (SW half, x + z < 0): north and south jungles.
             //   - Ember side (NE half, x + z > 0): north and south jungles.
-            CreateObstacle(obstacles.transform, "Azure North Jungle", new Vector3(-44f, 3f, 6f), new Vector3(11f, 6f, 11f), obstacleMaterial, 45f);
-            CreateObstacle(obstacles.transform, "Azure South Jungle", new Vector3(6f, 3f, -44f), new Vector3(11f, 6f, 11f), obstacleMaterial, 45f);
-            CreateObstacle(obstacles.transform, "Ember North Jungle", new Vector3(-6f, 3f, 44f), new Vector3(11f, 6f, 11f), obstacleMaterial, 45f);
-            CreateObstacle(obstacles.transform, "Ember South Jungle", new Vector3(44f, 3f, -6f), new Vector3(11f, 6f, 11f), obstacleMaterial, 45f);
-            CreateObstacle(obstacles.transform, "Azure Mid Pillar", new Vector3(-22f, 3f, -6f), new Vector3(9f, 6f, 9f), obstacleMaterial, 45f);
-            CreateObstacle(obstacles.transform, "Ember Mid Pillar", new Vector3(22f, 3f, 6f), new Vector3(9f, 6f, 9f), obstacleMaterial, 45f);
+            HideGameplayRenderer(CreateObstacle(obstacles.transform, "Azure North Jungle Gameplay", new Vector3(-44f, 3f, 6f), new Vector3(11f, 6f, 11f), obstacleMaterial, 45f));
+            HideGameplayRenderer(CreateObstacle(obstacles.transform, "Azure South Jungle Gameplay", new Vector3(6f, 3f, -44f), new Vector3(11f, 6f, 11f), obstacleMaterial, 45f));
+            HideGameplayRenderer(CreateObstacle(obstacles.transform, "Ember North Jungle Gameplay", new Vector3(-6f, 3f, 44f), new Vector3(11f, 6f, 11f), obstacleMaterial, 45f));
+            HideGameplayRenderer(CreateObstacle(obstacles.transform, "Ember South Jungle Gameplay", new Vector3(44f, 3f, -6f), new Vector3(11f, 6f, 11f), obstacleMaterial, 45f));
+            HideGameplayRenderer(CreateObstacle(obstacles.transform, "Azure Mid Pillar Gameplay", new Vector3(-22f, 3f, -6f), new Vector3(9f, 6f, 9f), obstacleMaterial, 45f));
+            HideGameplayRenderer(CreateObstacle(obstacles.transform, "Ember Mid Pillar Gameplay", new Vector3(22f, 3f, 6f), new Vector3(9f, 6f, 9f), obstacleMaterial, 45f));
         }
 
         // ----- Neutral zones --------------------------------------------------
@@ -334,13 +400,13 @@ namespace CierzoArena.EditorTools
             // Small walkable coloured pad, flush with the ground, marks the camp
             // footprint. Kept smaller and flatter than a base so it never competes
             // with the two team bases for visual dominance.
-            CreateGroundBox(pocket.transform, name + " Pad", new Vector3(center.x, -0.28f, center.z), new Vector3(15f, 1f, 15f), 45f, neutralMaterial);
+            HideGameplayRenderer(CreateGroundBox(pocket.transform, name + " Pad Gameplay", new Vector3(center.x, -0.28f, center.z), new Vector3(15f, 1f, 15f), 45f, neutralMaterial));
 
             // Low border walls on the outer flank, leaving the lane-facing side open.
-            CreateObstacle(pocket.transform, name + " Wall A", wallA, new Vector3(13f, 3f, 3f), neutralMaterial, 45f);
-            CreateObstacle(pocket.transform, name + " Wall B", wallB, new Vector3(3f, 3f, 13f), neutralMaterial, 45f);
+            HideGameplayRenderer(CreateObstacle(pocket.transform, name + " Wall A Gameplay", wallA, new Vector3(13f, 3f, 3f), neutralMaterial, 45f));
+            HideGameplayRenderer(CreateObstacle(pocket.transform, name + " Wall B Gameplay", wallB, new Vector3(3f, 3f, 13f), neutralMaterial, 45f));
 
-            CreateMarker(pocket.transform, name + " Marker", new Vector3(center.x, 0.5f, center.z), markerMaterial, 3f);
+            HideGameplayRenderer(CreateMarker(pocket.transform, name + " Marker Gameplay", new Vector3(center.x, 0.5f, center.z), markerMaterial, 3f));
         }
 
         // ----- Towers + spawn points -----------------------------------------
@@ -394,14 +460,26 @@ namespace CierzoArena.EditorTools
 
         private static void BuildCoreGuards(Transform parent, string team, Vector3 baseCenter, TeamId teamId, Material teamMaterial, Material capMaterial, Material healthBackgroundMaterial, Material healthFillMaterial)
         {
-            // Forward points from the base toward the map centre (the origin); right is
-            // the in-plane perpendicular, so the layout mirrors perfectly Azure/Ember.
-            Vector3 forward = new Vector3(-baseCenter.x, 0f, -baseCenter.z).normalized;
-            Vector3 right = new Vector3(forward.z, 0f, -forward.x);
-            const float guardForward = 15f;
-            const float guardSpread = 11f;
-            Vector3 leftPos = baseCenter + forward * guardForward - right * guardSpread;
-            Vector3 rightPos = baseCenter + forward * guardForward + right * guardSpread;
+            // Use the same base-local layout that supplies route and attack anchors.
+            // These guards deliberately sit at the front corners of the town hall,
+            // rather than reading as distant lane towers.
+            TeamBaseLayoutDefinition.Resolved layout = s_layout != null
+                ? s_layout.Resolve(baseCenter, Vector3.zero)
+                : default;
+            Vector3 leftPos;
+            Vector3 rightPos;
+            if (s_layout != null)
+            {
+                leftPos = layout.CoreGuardLeft;
+                rightPos = layout.CoreGuardRight;
+            }
+            else
+            {
+                Vector3 forward = new Vector3(-baseCenter.x, 0f, -baseCenter.z).normalized;
+                Vector3 right = new Vector3(forward.z, 0f, -forward.x);
+                leftPos = baseCenter + forward * 8.5f - right * 8f;
+                rightPos = baseCenter + forward * 8.5f + right * 8f;
+            }
             leftPos.y = 0f; rightPos.y = 0f;
             CreateTowerMarker(parent, $"{team} Core Guard Left", leftPos, teamId, StructureLane.None, StructureTier.CoreGuard, teamMaterial, capMaterial, healthBackgroundMaterial, healthFillMaterial);
             CreateTowerMarker(parent, $"{team} Core Guard Right", rightPos, teamId, StructureLane.None, StructureTier.CoreGuard, teamMaterial, capMaterial, healthBackgroundMaterial, healthFillMaterial);
@@ -494,7 +572,10 @@ namespace CierzoArena.EditorTools
             root.transform.SetParent(parent);
             root.transform.position = groundPos;
 
-            // Flat team-coloured pad marking one of the base's three lane accesses.
+            // Spawn transforms are gameplay anchors for the wave system, not map
+            // art. The old diamond pad + cylinder made each lane exit look like a
+            // greybox monument, so their renderers stay hidden while the transforms
+            // remain available to all existing spawn logic.
             GameObject pad = GameObject.CreatePrimitive(PrimitiveType.Cube);
             pad.name = name + " Pad";
             pad.layer = 0;
@@ -504,9 +585,9 @@ namespace CierzoArena.EditorTools
             pad.transform.localScale = new Vector3(8f, 0.1f, 8f);
             pad.GetComponent<Renderer>().sharedMaterial = teamMaterial;
             Object.DestroyImmediate(pad.GetComponent<Collider>());
+            HideGameplayRenderer(pad);
 
-            // Central pip so the spawn origin is unmistakable from above.
-            CreateMarker(root.transform, name + " Pip", groundPos + new Vector3(0f, 0.35f, 0f), capMaterial, 2.4f);
+            HideGameplayRenderer(CreateMarker(root.transform, name + " Pip Gameplay", groundPos + new Vector3(0f, 0.35f, 0f), capMaterial, 2.4f));
         }
 
         // ----- Boundary -------------------------------------------------------
@@ -517,15 +598,15 @@ namespace CierzoArena.EditorTools
 
             // Axis-aligned containment ring around the square arena. Tall Ground-layer
             // walls so the NavMesh ends cleanly at the play-area edge.
-            CreateObstacle(boundary.transform, "Boundary North", new Vector3(0f, 3f, 84f), new Vector3(180f, 6f, 4f), boundaryMaterial);
-            CreateObstacle(boundary.transform, "Boundary South", new Vector3(0f, 3f, -84f), new Vector3(180f, 6f, 4f), boundaryMaterial);
-            CreateObstacle(boundary.transform, "Boundary East", new Vector3(84f, 3f, 0f), new Vector3(4f, 6f, 180f), boundaryMaterial);
-            CreateObstacle(boundary.transform, "Boundary West", new Vector3(-84f, 3f, 0f), new Vector3(4f, 6f, 180f), boundaryMaterial);
+            HideGameplayRenderer(CreateObstacle(boundary.transform, "Boundary North Gameplay", new Vector3(0f, 3f, 84f), new Vector3(180f, 6f, 4f), boundaryMaterial));
+            HideGameplayRenderer(CreateObstacle(boundary.transform, "Boundary South Gameplay", new Vector3(0f, 3f, -84f), new Vector3(180f, 6f, 4f), boundaryMaterial));
+            HideGameplayRenderer(CreateObstacle(boundary.transform, "Boundary East Gameplay", new Vector3(84f, 3f, 0f), new Vector3(4f, 6f, 180f), boundaryMaterial));
+            HideGameplayRenderer(CreateObstacle(boundary.transform, "Boundary West Gameplay", new Vector3(-84f, 3f, 0f), new Vector3(4f, 6f, 180f), boundaryMaterial));
         }
 
         // ----- Primitive helpers ---------------------------------------------
 
-        private static void CreateGroundBox(Transform parent, string name, Vector3 center, Vector3 size, float yaw, Material material)
+        private static GameObject CreateGroundBox(Transform parent, string name, Vector3 center, Vector3 size, float yaw, Material material)
         {
             GameObject ground = GameObject.CreatePrimitive(PrimitiveType.Cube);
             ground.name = name;
@@ -535,6 +616,7 @@ namespace CierzoArena.EditorTools
             ground.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
             ground.transform.localScale = size;
             ground.GetComponent<Renderer>().sharedMaterial = material;
+            return ground;
         }
 
         private static GameObject CreateObstacle(Transform parent, string name, Vector3 center, Vector3 size, Material material, float yaw = 0f)
@@ -550,6 +632,18 @@ namespace CierzoArena.EditorTools
             obstacle.transform.localScale = size;
             obstacle.GetComponent<Renderer>().sharedMaterial = material;
             return obstacle;
+        }
+
+        private static void HideGameplayRenderer(GameObject gameplayObject)
+        {
+            if (gameplayObject == null) return;
+            // Hide only the placeholder mesh on the gameplay root. Children may be
+            // legitimate presentation owned by the gameplay component (for example
+            // world-space health bars on the core) and must remain functional.
+            foreach (Renderer renderer in gameplayObject.GetComponents<Renderer>())
+            {
+                renderer.enabled = false;
+            }
         }
 
         private static void CreateTowerNavigationBlocker(Transform tower)
@@ -576,7 +670,7 @@ namespace CierzoArena.EditorTools
             obstacle.carveOnlyStationary = false;
         }
 
-        private static void CreateMarker(Transform parent, string name, Vector3 position, Material material, float diameter)
+        private static GameObject CreateMarker(Transform parent, string name, Vector3 position, Material material, float diameter)
         {
             GameObject marker = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             marker.name = name;
@@ -586,6 +680,7 @@ namespace CierzoArena.EditorTools
             marker.transform.localScale = new Vector3(diameter, 0.4f, diameter);
             marker.GetComponent<Renderer>().sharedMaterial = material;
             Object.DestroyImmediate(marker.GetComponent<Collider>());
+            return marker;
         }
 
         // ----- Units ----------------------------------------------------------
@@ -795,12 +890,12 @@ namespace CierzoArena.EditorTools
             Vector3[] mid = { AzureBaseCenter, EmberBaseCenter };
             Vector3[] bottom = { AzureBaseCenter, SouthEastCorner, EmberBaseCenter };
             const float spawnFraction = 0.09f;
-            LaneRoute topAzure = CreateRoute(routes.transform, "Top Azure to Ember", new[] { PointAlong(top, spawnFraction), NorthWestCorner, PointAlong(top, 1f - spawnFraction) }, emberCore, Color.cyan);
-            LaneRoute midAzure = CreateRoute(routes.transform, "Mid Azure to Ember", new[] { PointAlong(mid, spawnFraction), Vector3.zero, PointAlong(mid, 1f - spawnFraction) }, emberCore, Color.cyan);
-            LaneRoute bottomAzure = CreateRoute(routes.transform, "Bottom Azure to Ember", new[] { PointAlong(bottom, spawnFraction), SouthEastCorner, PointAlong(bottom, 1f - spawnFraction) }, emberCore, Color.cyan);
-            LaneRoute topEmber = CreateRoute(routes.transform, "Top Ember to Azure", new[] { PointAlong(top, 1f - spawnFraction), NorthWestCorner, PointAlong(top, spawnFraction) }, azureCore, Color.red);
-            LaneRoute midEmber = CreateRoute(routes.transform, "Mid Ember to Azure", new[] { PointAlong(mid, 1f - spawnFraction), Vector3.zero, PointAlong(mid, spawnFraction) }, azureCore, Color.red);
-            LaneRoute bottomEmber = CreateRoute(routes.transform, "Bottom Ember to Azure", new[] { PointAlong(bottom, 1f - spawnFraction), SouthEastCorner, PointAlong(bottom, spawnFraction) }, azureCore, Color.red);
+            LaneRoute topAzure = CreateRoute(routes.transform, "Top Azure to Ember", WithInterior(new[] { PointAlong(top, spawnFraction), NorthWestCorner, PointAlong(top, 1f - spawnFraction) }, s_emberAnchors, 0), emberCore, Color.cyan);
+            LaneRoute midAzure = CreateRoute(routes.transform, "Mid Azure to Ember", WithInterior(new[] { PointAlong(mid, spawnFraction), Vector3.zero, PointAlong(mid, 1f - spawnFraction) }, s_emberAnchors, 1), emberCore, Color.cyan);
+            LaneRoute bottomAzure = CreateRoute(routes.transform, "Bottom Azure to Ember", WithInterior(new[] { PointAlong(bottom, spawnFraction), SouthEastCorner, PointAlong(bottom, 1f - spawnFraction) }, s_emberAnchors, 2), emberCore, Color.cyan);
+            LaneRoute topEmber = CreateRoute(routes.transform, "Top Ember to Azure", WithInterior(new[] { PointAlong(top, 1f - spawnFraction), NorthWestCorner, PointAlong(top, spawnFraction) }, s_azureAnchors, 0), azureCore, Color.red);
+            LaneRoute midEmber = CreateRoute(routes.transform, "Mid Ember to Azure", WithInterior(new[] { PointAlong(mid, 1f - spawnFraction), Vector3.zero, PointAlong(mid, spawnFraction) }, s_azureAnchors, 1), azureCore, Color.red);
+            LaneRoute bottomEmber = CreateRoute(routes.transform, "Bottom Ember to Azure", WithInterior(new[] { PointAlong(bottom, 1f - spawnFraction), SouthEastCorner, PointAlong(bottom, spawnFraction) }, s_azureAnchors, 2), azureCore, Color.red);
 
             GameObject spawners = new GameObject("Wave Spawners");
             spawners.transform.SetParent(root.transform);
@@ -810,6 +905,29 @@ namespace CierzoArena.EditorTools
             CreateWaveSpawner(spawners.transform, "Ember Top Waves", topEmber, emberMelee, emberRanged);
             CreateWaveSpawner(spawners.transform, "Ember Mid Waves", midEmber, emberMelee, emberRanged);
             CreateWaveSpawner(spawners.transform, "Ember Bottom Waves", bottomEmber, emberMelee, emberRanged);
+        }
+
+        /// <summary>
+        /// M23: append the enemy base's interior progression to a lane's exterior
+        /// waypoints so creeps do not stop at the gateway. After the last exterior
+        /// point they walk gateway -> interior -> core-defense approach -> core
+        /// approach; the enemy core still drives the final leg and target acquisition,
+        /// and Core Guards are attacked en route once the base is breached. Falls back
+        /// to the exterior-only path if the base anchors are unavailable.
+        /// </summary>
+        private static Vector3[] WithInterior(Vector3[] exterior, FantasyVillageBaseBuilder.BaseAnchors anchors, int laneIndex)
+        {
+            if (anchors == null)
+            {
+                return exterior;
+            }
+
+            List<Vector3> points = new List<Vector3>(exterior);
+            if (anchors.Gateways[laneIndex] != null) points.Add(anchors.Gateways[laneIndex].position);
+            if (anchors.Interiors[laneIndex] != null) points.Add(anchors.Interiors[laneIndex].position);
+            if (anchors.CoreDefenseApproach != null) points.Add(anchors.CoreDefenseApproach.position);
+            if (anchors.CoreApproach != null) points.Add(anchors.CoreApproach.position);
+            return points.ToArray();
         }
 
         private static LaneRoute CreateRoute(Transform parent, string name, Vector3[] points, StructureEntity finalObjective, Color color)
@@ -1091,6 +1209,7 @@ namespace CierzoArena.EditorTools
             Renderer[] renderers = structureObject.GetComponentsInChildren<Renderer>();
             Collider[] colliders = structureObject.GetComponentsInChildren<Collider>();
             SerializedObject structureData = new SerializedObject(structure);
+            structureData.FindProperty("useExternalCorePresentation").boolValue = kind == StructureKind.Core;
             SerializedProperty rendererProperty = structureData.FindProperty("renderersToDisable");
             rendererProperty.arraySize = renderers.Length;
             for (int i = 0; i < renderers.Length; i++)
@@ -1104,6 +1223,11 @@ namespace CierzoArena.EditorTools
                 colliderProperty.GetArrayElementAtIndex(i).objectReferenceValue = colliders[i];
             }
             structureData.ApplyModifiedPropertiesWithoutUndo();
+
+            if (kind == StructureKind.Core)
+            {
+                structure.SetExternalCorePresentation(true);
+            }
 
             // Targeting lives on a child Selectable collider: the original structure
             // collider remains on Ground for the baked navigation footprint.
