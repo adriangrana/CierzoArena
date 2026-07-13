@@ -37,6 +37,84 @@ namespace CierzoArena.Tests.Editor
         }
 
         [Test]
+        public void EveryLaneDirectionUsesTheOpposingCoreAsItsExplicitFinalObjective()
+        {
+            GameObject azureCoreObject = CreateCore(TeamId.Azure, new Vector3(-10f, 0f, -10f));
+            GameObject emberCoreObject = CreateCore(TeamId.Ember, new Vector3(10f, 0f, 10f));
+            StructureEntity azureCore = azureCoreObject.GetComponent<StructureEntity>();
+            StructureEntity emberCore = emberCoreObject.GetComponent<StructureEntity>();
+
+            LaneRoute azureTop = CreateRoute(Vector3.zero, Vector3.right);
+            LaneRoute azureMid = CreateRoute(Vector3.zero, Vector3.forward);
+            LaneRoute azureBottom = CreateRoute(Vector3.zero, Vector3.left);
+            LaneRoute emberTop = CreateRoute(Vector3.one, Vector3.zero);
+            LaneRoute emberMid = CreateRoute(Vector3.one, Vector3.back);
+            LaneRoute emberBottom = CreateRoute(Vector3.one, Vector3.right);
+            SetPrivate(azureTop, "finalObjective", emberCore);
+            SetPrivate(azureMid, "finalObjective", emberCore);
+            SetPrivate(azureBottom, "finalObjective", emberCore);
+            SetPrivate(emberTop, "finalObjective", azureCore);
+            SetPrivate(emberMid, "finalObjective", azureCore);
+            SetPrivate(emberBottom, "finalObjective", azureCore);
+
+            Assert.That(azureTop.FinalObjective, Is.EqualTo(emberCore));
+            Assert.That(azureMid.FinalObjective, Is.EqualTo(emberCore));
+            Assert.That(azureBottom.FinalObjective, Is.EqualTo(emberCore));
+            Assert.That(emberTop.FinalObjective, Is.EqualTo(azureCore));
+            Assert.That(emberMid.FinalObjective, Is.EqualTo(azureCore));
+            Assert.That(emberBottom.FinalObjective, Is.EqualTo(azureCore));
+
+            Object.DestroyImmediate(azureTop.gameObject);
+            Object.DestroyImmediate(azureMid.gameObject);
+            Object.DestroyImmediate(azureBottom.gameObject);
+            Object.DestroyImmediate(emberTop.gameObject);
+            Object.DestroyImmediate(emberMid.gameObject);
+            Object.DestroyImmediate(emberBottom.gameObject);
+            Object.DestroyImmediate(azureCoreObject);
+            Object.DestroyImmediate(emberCoreObject);
+        }
+
+        [Test]
+        public void CompletedLaneUsesConfiguredEnemyCoreInsteadOfEnteringPermanentIdle()
+        {
+            GameObject creepObject = CreateCreep(TeamId.Azure, Vector3.zero);
+            GameObject coreObject = CreateCore(TeamId.Ember, new Vector3(8f, 0f, 0f));
+            LaneRoute route = CreateRoute();
+            StructureEntity core = coreObject.GetComponent<StructureEntity>();
+            SetPrivate(route, "finalObjective", core);
+
+            CreepController creep = creepObject.GetComponent<CreepController>();
+            creep.ConfigureRoute(route);
+
+            Assert.That(creep.IsAtFinalWaypoint, Is.True);
+            Assert.That(creep.FinalObjective, Is.EqualTo(core));
+            Assert.That(creep.IsCoreVulnerable, Is.True);
+            Assert.That(creep.GetNavigationDebugInfo().CurrentState, Is.EqualTo("CoreApproach"));
+
+            Object.DestroyImmediate(route.gameObject);
+            Object.DestroyImmediate(coreObject);
+            Object.DestroyImmediate(creepObject);
+        }
+
+        [Test]
+        public void HeroAndCreepUseTheSameCoreTargetabilityRule()
+        {
+            GameObject coreObject = CreateCore(TeamId.Ember, new Vector3(5f, 0f, 0f));
+            GameObject creepObject = CreateCreep(TeamId.Azure, Vector3.zero);
+            GameObject heroObject = CreateUnit(TeamId.Azure, Vector3.one, hero: true);
+            BasicAttack heroAttack = heroObject.AddComponent<BasicAttack>();
+            SetPrivate(heroAttack, "useUnitDefinition", false);
+            StructureEntity core = coreObject.GetComponent<StructureEntity>();
+
+            Assert.That(creepObject.GetComponent<BasicAttack>().CanAttack(core.Health), Is.True);
+            Assert.That(heroAttack.CanAttack(core.Health), Is.True);
+
+            Object.DestroyImmediate(heroObject);
+            Object.DestroyImmediate(creepObject);
+            Object.DestroyImmediate(coreObject);
+        }
+
+        [Test]
         public void WaveSpawnerHonoursInitialDelayAndNeverCatchesUpMultipleWavesInOneTick()
         {
             LaneRoute route = CreateRoute(Vector3.zero, Vector3.right);
@@ -103,6 +181,45 @@ namespace CierzoArena.Tests.Editor
             Object.DestroyImmediate(ally);
             Object.DestroyImmediate(near);
             Object.DestroyImmediate(far);
+        }
+
+        [Test]
+        public void IdleCreepSiegesAttackableTowerButTowerDamageCannotStealExistingAggro()
+        {
+            GameObject creepObject = CreateCreep(TeamId.Azure, Vector3.zero);
+            CreepController creep = creepObject.GetComponent<CreepController>();
+            GameObject towerObject = CreateTower(TeamId.Ember);
+            towerObject.transform.position = new Vector3(5f, 0f, 0f);
+            StructureEntity tower = towerObject.GetComponent<StructureEntity>();
+
+            Assert.That(creep.FindBestTarget(), Is.EqualTo(tower.Health), "A free lane creep must acquire a nearby vulnerable enemy tower.");
+            Assert.That(creep.SetDefensiveAggro(tower.Health, 2f), Is.False, "Tower damage must not replace a creep's current unit target.");
+
+            GameObject enemyCreep = CreateUnit(TeamId.Ember, new Vector3(2f, 0f, 0f), hero: false);
+            Physics.SyncTransforms();
+            Assert.That(creep.FindBestTarget(), Is.EqualTo(enemyCreep.GetComponent<Health>()), "A living enemy unit keeps priority over a tower.");
+
+            Object.DestroyImmediate(enemyCreep);
+            Object.DestroyImmediate(towerObject);
+            Object.DestroyImmediate(creepObject);
+        }
+
+        [Test]
+        public void IdleCreepTargetsAnUnlockedEnemyCoreAfterLaneDefendersAreGone()
+        {
+            GameObject creepObject = CreateCreep(TeamId.Azure, Vector3.zero);
+            CreepController creep = creepObject.GetComponent<CreepController>();
+            GameObject coreObject = CreateTower(TeamId.Ember);
+            coreObject.name = "Ember Core";
+            coreObject.transform.position = new Vector3(5f, 0f, 0f);
+            StructureEntity core = coreObject.GetComponent<StructureEntity>();
+            SetPrivate(core, "kind", StructureKind.Core);
+
+            Assert.That(core.CanReceiveDamageFrom(creepObject.GetComponent<TeamMember>()), Is.True);
+            Assert.That(creep.FindBestTarget(), Is.EqualTo(core.Health), "A wave with no mobile enemies or tower must attack the vulnerable enemy core.");
+
+            Object.DestroyImmediate(coreObject);
+            Object.DestroyImmediate(creepObject);
         }
 
         [Test]
@@ -197,6 +314,19 @@ namespace CierzoArena.Tests.Editor
             SetPrivate(attack, "range", 9f);
             InvokePrivate(controller, "Awake");
             return tower;
+        }
+
+        private static GameObject CreateCore(TeamId team, Vector3 position)
+        {
+            GameObject core = new GameObject("Core");
+            core.transform.position = position;
+            TeamMember member = core.AddComponent<TeamMember>();
+            SetPrivate(member, "team", team);
+            core.AddComponent<Health>();
+            StructureEntity structure = core.AddComponent<StructureEntity>();
+            SetPrivate(structure, "kind", StructureKind.Core);
+            SetPrivate(structure, "tier", StructureTier.Core);
+            return core;
         }
 
         private static GameObject CreateUnit(TeamId team, Vector3 position, bool hero)

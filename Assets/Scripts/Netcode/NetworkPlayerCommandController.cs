@@ -55,16 +55,17 @@ namespace CierzoArena.Netcode
                 return;
             }
 
-            if (Input.GetKeyDown(stopKey))
+            if (Input.GetKeyDown(stopKey) && !Input.GetKey(KeyCode.LeftAlt) && !Input.GetKey(KeyCode.RightAlt))
             {
                 unit.RequestStopRpc();
             }
-            if (Input.GetKeyDown(abilityOneKey)) BeginAbility(unit, 0);
-            if (Input.GetKeyDown(abilityTwoKey)) BeginAbility(unit, 1);
-            if (Input.GetKeyDown(abilityThreeKey)) BeginAbility(unit, 2);
+            bool inventoryModifier = Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt);
+            if (!inventoryModifier && Input.GetKeyDown(abilityOneKey)) BeginAbility(unit, 0);
+            if (!inventoryModifier && Input.GetKeyDown(abilityTwoKey)) BeginAbility(unit, 1);
+            if (!inventoryModifier && Input.GetKeyDown(abilityThreeKey)) BeginAbility(unit, 2);
             if (Input.GetKeyDown(ultimateKey)) BeginAbility(unit, 3);
             if (Input.GetKeyDown(KeyCode.Escape)) { pendingAbilitySlot = -1; pendingAttackMove = false; }
-            if (Input.GetKeyDown(attackMoveKey))
+            if (Input.GetKeyDown(attackMoveKey) && !inventoryModifier)
             {
                 pendingAbilitySlot = -1;
                 pendingAttackMove = true;

@@ -112,6 +112,7 @@ namespace CierzoArena.Units
             }
 
             GameObject instance = Instantiate(prefab, position, Quaternion.identity);
+            CreepGoblinPresentation.Ensure(instance);
             if (instance.TryGetComponent(out CreepController creep))
             {
                 creep.ConfigureRoute(route);

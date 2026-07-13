@@ -99,6 +99,24 @@ namespace CierzoArena.Tests.Editor
             Assert.That(inventory.GetComponent<HeroEconomy>().Gold, Is.EqualTo(goldBeforeRejectedPurchase));
         }
 
+        [Test]
+        public void ReorderingSlotsPreservesItemsAndDerivedStats()
+        {
+            ItemDefinition plating = CreateItem("bastion.plating", 10, 5, 120f, 0f);
+            ItemDefinition edge = CreateItem("gale.edge", 10, 5, 0f, 15f);
+            ItemCatalog catalog = CreateCatalog(plating, edge);
+            HeroInventory inventory = CreateHero("Azure", TeamId.Azure, 100);
+            ShopZone zone = CreateZone(TeamId.Azure, catalog, Vector3.zero);
+
+            Assert.That(inventory.TryBuy(plating, zone), Is.True);
+            Assert.That(inventory.TryBuy(edge, zone), Is.True);
+            Assert.That(inventory.TrySwap(0, 1), Is.True);
+            Assert.That(inventory.Slots[0], Is.SameAs(edge));
+            Assert.That(inventory.Slots[1], Is.SameAs(plating));
+            Assert.That(inventory.GetComponent<Health>().Max, Is.EqualTo(620f));
+            Assert.That(inventory.GetComponent<BasicAttack>().Damage, Is.EqualTo(65f));
+        }
+
         private ItemDefinition CreateItem(string id, int purchase, int sale, float health, float damage)
         {
             ItemDefinition item = ScriptableObject.CreateInstance<ItemDefinition>();

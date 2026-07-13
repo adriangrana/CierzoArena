@@ -1,7 +1,8 @@
 {
   "name": "CierzoArena.EditModeTests",
   "references": [
-    "CierzoArena.Runtime"
+    "CierzoArena.Runtime",
+    "CierzoArena.Editor"
   ],
   "optionalUnityReferences": [
     "TestAssemblies"

@@ -10,13 +10,17 @@ namespace CierzoArena.Units
     public sealed class VisionSource : MonoBehaviour
     {
         private static readonly List<VisionSource> sources = new();
+        private static int nextStableId;
         [SerializeField, Min(0f)] private float radius = 12f;
-        private TeamMember team; private Health health; private StructureEntity structure;
+        private TeamMember team; private Health health; private StructureEntity structure; private int stableId;
         public TeamId Team { get { Ensure(); return team != null ? team.Team : TeamId.Neutral; } }
         public float Radius => Mathf.Max(0f, radius);
+        /// <summary>Runtime-only id used by central visual consumers to track
+        /// movement without relying on Unity's obsolete instance-id API.</summary>
+        public int StableId => stableId != 0 ? stableId : stableId = ++nextStableId;
         public StructureEntity Structure { get { Ensure(); return structure; } }
         public bool IsActiveVision { get { Ensure(); return gameObject.activeInHierarchy && team != null && (health == null || health.IsAlive) && (structure == null || !structure.IsDestroyed); } }
-        private void Awake(){Ensure();Register();} private void OnEnable()=>Register(); private void OnDisable()=>sources.Remove(this);
+        private void Awake(){_ = StableId;Ensure();Register();} private void OnEnable()=>Register(); private void OnDisable()=>sources.Remove(this);
         public void EnsureRegistered(){Ensure();Register();}
         private void Ensure(){if(team==null)team=GetComponent<TeamMember>(); if(health==null)TryGetComponent(out health); if(structure==null)TryGetComponent(out structure);}
         private void Register(){if(!sources.Contains(this))sources.Add(this);}
@@ -29,6 +33,17 @@ namespace CierzoArena.Units
         {
             destination.Clear();
             for (int i = 0; i < sources.Count; i++) if (sources[i] != null) destination.Add(sources[i]);
+        }
+        /// <summary>Central fog controllers take one filtered source snapshot per
+        /// tick. Sources provide data only and never upload/render a fog mask.</summary>
+        public static void CopyActiveSourcesTo(TeamId observer, List<VisionSource> destination)
+        {
+            destination.Clear();
+            for (int i = 0; i < sources.Count; i++)
+            {
+                VisionSource source = sources[i];
+                if (source != null && source.Team == observer && source.IsActiveVision) destination.Add(source);
+            }
         }
     }
 }

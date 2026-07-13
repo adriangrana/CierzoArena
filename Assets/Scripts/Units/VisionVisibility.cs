@@ -48,10 +48,26 @@ namespace CierzoArena.Units
             team = GetComponent<TeamMember>();
             TryGetComponent(out health);
             structure = GetComponent<StructureEntity>();
+            RefreshPresentation();
+
+            knownStructureAlive = structure == null || !structure.IsDestroyed;
+        }
+
+        /// <summary>Refreshes visual caches after an authored model is added to a
+        /// runtime entity. Visibility rules stay unchanged.</summary>
+        public void RefreshPresentation()
+        {
+            // This method can be called by another component during its Awake
+            // (before VisionVisibility.Awake). Initialise domain references here as
+            // well, otherwise a newly added tower model is mistaken for an unseen
+            // mobile unit and gets disabled on the first visibility update.
+            team ??= GetComponent<TeamMember>();
+            if (health == null) TryGetComponent(out health);
+            if (structure == null) TryGetComponent(out structure);
             renderers = GetComponentsInChildren<Renderer>(true);
             colliders = GetComponentsInChildren<Collider>(true);
             healthBars = GetComponentsInChildren<WorldHealthBar>(true);
-            propertyBlock = new MaterialPropertyBlock();
+            propertyBlock ??= new MaterialPropertyBlock();
             sourceColors = new Color[renderers.Length];
             for (int i = 0; i < renderers.Length; i++)
             {
@@ -60,8 +76,7 @@ namespace CierzoArena.Units
                     ? renderer.sharedMaterial.color
                     : Color.white;
             }
-
-            knownStructureAlive = structure == null || !structure.IsDestroyed;
+            if (structure != null && !hasObservedState) knownStructureAlive = !structure.IsDestroyed;
         }
 
         private void Update()

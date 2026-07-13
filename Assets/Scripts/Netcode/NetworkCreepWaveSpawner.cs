@@ -81,6 +81,7 @@ namespace CierzoArena.Netcode
 
             NetworkObject instance = Instantiate(prefab, position, Quaternion.identity);
             ArenaVisualPass.Repair(instance.gameObject);
+            CreepGoblinPresentation.Ensure(instance.gameObject);
             instance.Spawn();
             if (instance.TryGetComponent(out CreepController creep))
             {

@@ -38,6 +38,7 @@ Prototipo en Unity 6 (`ProjectSettings/ProjectVersion.txt`: Unity 6000.5.3f1) co
 - **M18** — Arena principal multijugador: `MobaGreyboxArena` espera una elección explícita de modo local, Host o Client. En red, el servidor crea héroes, estructuras, oleadas, jungla y Guardián desde prefabs NGO; Azure y Ember se asignan por ownership. Cada jugador recibe cámara, HUD, inventario y habilidades de su héroe owner. El minimapa centra la cámara con clic izquierdo y ordena movimiento con clic derecho. Validado manualmente con Host Azure + Client Ember.
 - **M19** — Frontend y vertical slice visual: el arranque normal es `Assets/Scenes/MainMenu.unity`, con navegación Inicio/Héroes/Jugar/Ajustes y acceso configurado a Local, Host o Client. La entrada desde menú oculta el bootstrap técnico de arena; abrir `MobaGreyboxArena` directamente conserva ese modo de desarrollo. El HUD reorganiza habilidades, inventario y tienda (`B`); la arena usa materiales `Standard` y niebla `Unlit/Transparent`, compatibles con el pipeline Built-in del proyecto. La estructura y el flujo quedan fijados de forma provisional; una fase artística posterior añadirá identidad, ilustración original, iconografía, tipografía y animación.
 - **M20** — Plantilla de héroes: el catálogo contiene Stone Aegis, Rift Duelist, Skyline Marksman, Storm Warden, Cairn Warden y Tempest Arbiter. La pestaña Héroes guarda un `HeroId` estable para Local, Host o Client; Azure y Ember son únicamente equipos. Para añadir un héroe se crea una `HeroDefinition` con cuatro `AbilityDefinition`, estadísticas y rol, y se registra su prefab en NetworkPrefabs. En desarrollo se permiten héroes repetidos para probar Host/Client.
+- **M21** — Pipeline artístico ambiental: el proyecto sigue usando Built-in y materiales `Standard` compartidos. `EnvironmentArtPipeline` configura a 2K las texturas disponibles, crea `MAT_RockyTerrain_02`, `MAT_ConcreteWall_01` y `MAT_CierzoWater`, y el builder viste de forma reproducible Base Azure → mid → río → fosa del Guardián. El agua es sólo visual (`VisualWater`), no crea collider ni NavMesh; `RiverSurfaceVisual` anima UV sin instanciar materiales. Ejecuta `Cierzo Arena → Environment → Repair Imports and Materials` y después `Create MOBA Greybox Arena` para regenerar la slice. Las fuentes de materiales permanecen en `Resources` de forma conservadora para no perder GUIDs mientras se verifica su licencia; los materiales generados viven en `Assets/Art/Environment/Materials/`. Consulta `THIRD_PARTY_ASSETS.md` antes de redistribuir assets.
 
 La version real del proyecto esta en `ProjectSettings/ProjectVersion.txt`: Unity 6000.5.3f1.
 
@@ -78,6 +79,7 @@ La version real del proyecto esta en `ProjectSettings/ProjectVersion.txt`: Unity
 - Clic izquierdo: seleccionar unidad.
 - Clic derecho en suelo: mover.
 - Clic derecho en enemigo: perseguir y atacar.
+- `A` + clic izquierdo: atacar objetivo o avanzar atacando enemigos hacia el punto marcado.
 - S: detener movimiento o ataque.
 
 ### Cámara técnica (M3A)
@@ -89,3 +91,10 @@ La version real del proyecto esta en `ProjectSettings/ProjectVersion.txt`: Unity
 ## Estado del milestone
 
 Los Milestones 1 a 17 están implementados. M10 separa experiencia por proximidad y oro por último golpe; M11 permite gastarlo en objetos; M12–M13 añaden habilidades y estados; M14 añade visión por equipo y niebla; M15 añade jungla neutral, M16 un objetivo mayor y M17 el marcador autoritativo. Para regenerar las escenas tras cambios de builders, usa los menús `Cierzo Arena > Create MOBA Greybox Arena` y `Cierzo Arena > Create Multiplayer Spike Scene`.
+# HUD competitivo (M22)
+
+`GameplayHUD` se crea de forma determinista al generar `MobaGreyboxArena`. Su controlador `CompetitiveGameplayHud` se enlaza exclusivamente al héroe de `LocalHeroProvider`; no sincroniza GameObjects UI ni busca héroes por nombre. La barra inferior concentra retrato, nivel/XP, vida/maná, Q/W/E/R, inventario, oro y tienda. `B` abre o cierra la tienda; el minimapa conserva clic izquierdo para cámara y clic derecho para órdenes.
+
+Mantén `Tab` para abrir el marcador ampliado. Es una vista local y no envía RPC: consume las estadísticas públicas ya replicadas, muestra hasta cinco filas estables por Azure y Ember, y omite oro, inventario y cooldowns enemigos.
+
+El Canvas usa 1920×1080 como resolución de referencia y escala para 720p, 1080p, 1440p, 4K y ultrawide. Para probar: genera la arena, inicia Local o Host/Client, confirma que el HUD toma únicamente el héroe owner y que los paneles técnicos anteriores no aparecen.

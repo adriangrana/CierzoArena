@@ -13,6 +13,7 @@ namespace CierzoArena.Netcode
         public bool IsReady => IsSpawned && IsOwner;
         public void RequestBuy(int itemIdHash) => RequestBuyRpc(itemIdHash);
         public void RequestSell(int slot) => RequestSellRpc(slot);
+        public void RequestSwap(int sourceSlot, int destinationSlot) => RequestSwapRpc(sourceSlot, destinationSlot);
         private void Awake()
         {
             inventory = GetComponent<HeroInventory>();
@@ -28,6 +29,7 @@ namespace CierzoArena.Netcode
         public override void OnNetworkDespawn() { if(IsServer) inventory.Changed -= Publish; else itemIds.OnListChanged -= OnItemsChanged; }
         [Rpc(SendTo.Server)] public void RequestBuyRpc(int itemIdHash, RpcParams rpcParams=default) { if(rpcParams.Receive.SenderClientId==OwnerClientId) inventory.TryBuyByHash(itemIdHash, FindZone()); }
         [Rpc(SendTo.Server)] public void RequestSellRpc(int slot, RpcParams rpcParams=default) { if(rpcParams.Receive.SenderClientId==OwnerClientId) inventory.TrySell(slot, FindZone()); }
+        [Rpc(SendTo.Server)] public void RequestSwapRpc(int sourceSlot, int destinationSlot, RpcParams rpcParams=default) { if(rpcParams.Receive.SenderClientId==OwnerClientId) inventory.TrySwap(sourceSlot, destinationSlot); }
         private ShopZone FindZone()
         {
             return TryGetComponent(out CierzoArena.Core.TeamMember team)

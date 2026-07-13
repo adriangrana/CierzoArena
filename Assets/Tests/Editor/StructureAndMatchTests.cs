@@ -184,6 +184,51 @@ namespace CierzoArena.Tests.Editor
             Object.DestroyImmediate(progressionObject);
         }
 
+        [Test]
+        public void CoreUnlocksWhenEveryTowerInOneLaneIsDestroyed()
+        {
+            GameObject progressionObject = new GameObject("Structure Progression");
+            StructureProgressionController progression = progressionObject.AddComponent<StructureProgressionController>();
+            InvokePrivate(progression, "Awake");
+            GameObject attacker = CreateUnit("Azure", TeamId.Azure, Vector3.zero);
+            TeamMember attackerTeam = attacker.GetComponent<TeamMember>();
+
+            StructureEntity topOuter = CreateStructure("Top Outer", TeamId.Ember, StructureKind.Tower).GetComponent<StructureEntity>();
+            StructureEntity topInner = CreateStructure("Top Inner", TeamId.Ember, StructureKind.Tower).GetComponent<StructureEntity>();
+            StructureEntity topGate = CreateStructure("Top Gate", TeamId.Ember, StructureKind.Tower).GetComponent<StructureEntity>();
+            StructureEntity midOuter = CreateStructure("Mid Outer", TeamId.Ember, StructureKind.Tower).GetComponent<StructureEntity>();
+            StructureEntity core = CreateStructure("Ember Core", TeamId.Ember, StructureKind.Core).GetComponent<StructureEntity>();
+            SetPrivate(topOuter, "lane", StructureLane.Top);
+            SetPrivate(topInner, "lane", StructureLane.Top);
+            SetPrivate(topInner, "tier", StructureTier.Inner);
+            SetPrivate(topGate, "lane", StructureLane.Top);
+            SetPrivate(topGate, "tier", StructureTier.Gate);
+            SetPrivate(midOuter, "lane", StructureLane.Mid);
+            SetPrivate(core, "tier", StructureTier.Core);
+
+            progression.Register(topOuter);
+            progression.Register(topInner);
+            progression.Register(topGate);
+            progression.Register(midOuter);
+            progression.Register(core);
+
+            Assert.That(core.CanReceiveDamageFrom(attackerTeam), Is.False, "An intact lane must keep the core protected.");
+            topOuter.TryApplyDamage(attackerTeam, topOuter.Health.Max);
+            topInner.TryApplyDamage(attackerTeam, topInner.Health.Max);
+            topGate.TryApplyDamage(attackerTeam, topGate.Health.Max);
+
+            Assert.That(midOuter.IsAlive, Is.True, "A different lane must not need to be destroyed.");
+            Assert.That(core.CanReceiveDamageFrom(attackerTeam), Is.True, "Clearing all towers on one lane must unlock the core.");
+
+            Object.DestroyImmediate(topOuter.gameObject);
+            Object.DestroyImmediate(topInner.gameObject);
+            Object.DestroyImmediate(topGate.gameObject);
+            Object.DestroyImmediate(midOuter.gameObject);
+            Object.DestroyImmediate(core.gameObject);
+            Object.DestroyImmediate(attacker);
+            Object.DestroyImmediate(progressionObject);
+        }
+
         private static GameObject CreateStructure(string name, TeamId team, StructureKind kind)
         {
             GameObject item = new GameObject(name);

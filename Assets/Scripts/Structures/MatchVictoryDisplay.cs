@@ -1,4 +1,5 @@
 using UnityEngine;
+using CierzoArena.Frontend;
 
 namespace CierzoArena.Structures
 {
@@ -26,6 +27,10 @@ namespace CierzoArena.Structures
 
         private void OnGUI()
         {
+            if (CompetitiveGameplayHud.Active != null)
+            {
+                return;
+            }
             if (string.IsNullOrEmpty(message))
             {
                 return;

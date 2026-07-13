@@ -8,7 +8,7 @@ namespace CierzoArena.Structures
     [RequireComponent(typeof(StructureEntity))]
     public sealed class StructureNavigationBlocker : MonoBehaviour
     {
-        [SerializeField, Min(.1f)] private float radius = 1.6f;
+        [SerializeField, Min(.1f)] private float radius = .55f;
         [SerializeField, Min(.1f)] private float height = 7f;
 
         private StructureEntity structure;
@@ -46,6 +46,11 @@ namespace CierzoArena.Structures
                 capsule.radius = radius;
                 capsule.height = height;
                 blockerCollider = capsule;
+            }
+            else if (blockerCollider is CapsuleCollider capsule)
+            {
+                capsule.radius = radius;
+                capsule.height = height;
             }
 
             obstacle = blocker.GetComponent<NavMeshObstacle>();

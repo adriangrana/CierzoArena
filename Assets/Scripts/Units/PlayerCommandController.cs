@@ -52,7 +52,7 @@ namespace CierzoArena.Units
                 Select(null);
             }
 
-            if (selectedUnit != null && Input.GetKeyDown(stopKey))
+            if (selectedUnit != null && Input.GetKeyDown(stopKey) && !Input.GetKey(KeyCode.LeftAlt) && !Input.GetKey(KeyCode.RightAlt))
             {
                 UnitOrderController selectedOrders = selectedUnit.GetComponent<UnitOrderController>();
                 if (selectedOrders != null)
@@ -66,12 +66,13 @@ namespace CierzoArena.Units
                 return;
             }
 
-            if (Input.GetKeyDown(abilityOneKey)) BeginAbility(0);
-            if (Input.GetKeyDown(abilityTwoKey)) BeginAbility(1);
-            if (Input.GetKeyDown(abilityThreeKey)) BeginAbility(2);
+            bool inventoryModifier = Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt);
+            if (!inventoryModifier && Input.GetKeyDown(abilityOneKey)) BeginAbility(0);
+            if (!inventoryModifier && Input.GetKeyDown(abilityTwoKey)) BeginAbility(1);
+            if (!inventoryModifier && Input.GetKeyDown(abilityThreeKey)) BeginAbility(2);
             if (Input.GetKeyDown(ultimateKey)) BeginAbility(3);
             if (Input.GetKeyDown(KeyCode.Escape)) { CancelAbility(); pendingAttackMove=false; }
-            if (Input.GetKeyDown(attackMoveKey) && selectedUnit != null)
+            if (Input.GetKeyDown(attackMoveKey) && selectedUnit != null && !inventoryModifier)
             {
                 CancelAbility();
                 pendingAttackMove = true;

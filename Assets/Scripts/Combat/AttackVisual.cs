@@ -30,6 +30,18 @@ namespace CierzoArena.Combat
             }
         }
 
+        /// <summary>Presentation-only replacement used when a gameplay primitive is
+        /// upgraded to an authored model at runtime.</summary>
+        public void SetTargetRenderer(Renderer renderer)
+        {
+            targetRenderer = renderer;
+            if (targetRenderer != null && targetRenderer.sharedMaterial != null)
+            {
+                baseColor = targetRenderer.sharedMaterial.color;
+            }
+            previousState = AttackState.Idle;
+        }
+
         private void Update()
         {
             if (attack == null || targetRenderer == null || attack.State == previousState)

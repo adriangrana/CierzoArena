@@ -1,9 +1,9 @@
 ﻿<Solution>
-  <Project Path="CierzoArena.PlayModeTests.csproj" />
   <Project Path="CierzoArena.NetcodeTests.csproj" />
-  <Project Path="CierzoArena.Netcode.csproj" />
+  <Project Path="CierzoArena.EditModeTests.csproj" />
   <Project Path="CierzoArena.Runtime.csproj" />
   <Project Path="CierzoArena.Editor.csproj" />
-  <Project Path="CierzoArena.EditModeTests.csproj" />
+  <Project Path="CierzoArena.PlayModeTests.csproj" />
+  <Project Path="CierzoArena.Netcode.csproj" />
   <Project Path="CierzoArena.Netcode.Editor.csproj" />
 </Solution>

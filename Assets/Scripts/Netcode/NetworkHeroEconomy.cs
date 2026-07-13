@@ -8,7 +8,10 @@ namespace CierzoArena.Netcode
     [RequireComponent(typeof(HeroEconomy))]
     public sealed class NetworkHeroEconomy : NetworkBehaviour
     {
-        private readonly NetworkVariable<int> replicatedGold = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        // Individual hero economy is private to its owner. Team scoreboard gold is
+        // replicated separately by NetworkMatchStatisticsController to same-team
+        // clients only, rather than exposing every hero's balance to every client.
+        private readonly NetworkVariable<int> replicatedGold = new(0, NetworkVariableReadPermission.Owner, NetworkVariableWritePermission.Server);
         private HeroEconomy economy;
 
         private void Awake()
@@ -25,7 +28,7 @@ namespace CierzoArena.Netcode
                 economy.Changed += OnServerGoldChanged;
                 replicatedGold.Value = economy.Gold;
             }
-            else
+            else if (IsOwner)
             {
                 replicatedGold.OnValueChanged += OnReplicatedGoldChanged;
                 economy.ApplyAuthoritativeState(replicatedGold.Value);
@@ -35,7 +38,7 @@ namespace CierzoArena.Netcode
         public override void OnNetworkDespawn()
         {
             if (IsServer) economy.Changed -= OnServerGoldChanged;
-            else replicatedGold.OnValueChanged -= OnReplicatedGoldChanged;
+            else if(IsOwner) replicatedGold.OnValueChanged -= OnReplicatedGoldChanged;
         }
 
         private void OnServerGoldChanged(HeroEconomy _, int gold) => replicatedGold.Value = gold;

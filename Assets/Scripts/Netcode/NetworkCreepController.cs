@@ -27,6 +27,7 @@ namespace CierzoArena.Netcode
 
         public override void OnNetworkSpawn()
         {
+            CreepGoblinPresentation.Ensure(gameObject);
             if (IsServer)
             {
                 replicatedHealth.Value = health.Current;

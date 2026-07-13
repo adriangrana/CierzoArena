@@ -13,6 +13,7 @@ namespace CierzoArena.Units
         bool IsReady { get; }
         void RequestBuy(int itemIdHash);
         void RequestSell(int slot);
+        void RequestSwap(int sourceSlot, int destinationSlot);
     }
 
     [RequireComponent(typeof(HeroUnit))]
@@ -88,6 +89,23 @@ namespace CierzoArena.Units
             EnsureInitialized();
             if (!CanUseShop(zone) || slot < 0 || slot >= slots.Count || slots[slot] == null) return false;
             ItemDefinition item = slots[slot]; slots[slot] = null; economy.TryAddGold(item.SalePrice); Recalculate(); Changed?.Invoke(this); return true;
+        }
+        /// <summary>Reorders two inventory slots. This only changes presentation and
+        /// future hotkey placement; owned stat totals remain unchanged after the
+        /// recalculation. Network clients request the same operation through their
+        /// authoritative inventory bridge.</summary>
+        public bool TrySwap(int sourceSlot, int destinationSlot)
+        {
+            EnsureInitialized();
+            if (!authorityEnabled || sourceSlot < 0 || destinationSlot < 0 || sourceSlot >= slots.Count || destinationSlot >= slots.Count || sourceSlot == destinationSlot)
+            {
+                return false;
+            }
+
+            (slots[sourceSlot], slots[destinationSlot]) = (slots[destinationSlot], slots[sourceSlot]);
+            Recalculate();
+            Changed?.Invoke(this);
+            return true;
         }
         private bool HasSpace() => FirstEmpty() >= 0;
         private int FirstEmpty() { for(int i=0;i<slots.Count;i++) if(slots[i]==null) return i; return -1; }
