@@ -557,6 +557,25 @@ Resultado: `CierzoArena dispone de una primera plantilla de héroes seleccionabl
 
 ---
 
+### Milestone 21 — Pipeline artístico y vertical slice ambiental
+
+Status: 🔵 Implementado / pendiente de validación final en Unity
+
+- [x] Auditoría: Built-in Render Pipeline, sin Render Pipeline Asset configurado.
+- [x] Pipeline reproducible de importación 2K para diffuse, normal y roughness lineal.
+- [x] Materiales compartidos `MAT_RockyTerrain_02`, `MAT_ConcreteWall_01` y `MAT_CierzoWater` con shader `Standard` compatible.
+- [x] Agua visual animada, sin collider y separada del suelo navegable.
+- [x] Jerarquía `EnvironmentRoot/Gameplay/Visual`, sockets de decoración futura y vertical slice Azure → mid → río → Guardián.
+- [x] Iluminación, sombras, niebla ambiental moderada y reflection probe de la zona de río.
+- [x] Validaciones Editor de shader, materiales, texturas, sRGB, normal maps y presupuesto 2K.
+- [x] Documentación de procedencia y estado de licencia en `THIRD_PARTY_ASSETS.md`.
+
+Limitación: no se encontró licencia textual para ConcreteWall ni RockyTerrain en los archivos suministrados; su redistribución permanece pendiente de verificación. La vegetación y los modelos definitivos siguen fuera de alcance.
+
+Resultado: `CierzoArena dispone de un pipeline ambiental Built-in reutilizable y una primera ruta Base Azure–río–Guardián vestida sin alterar navegación, combate ni Netcode.`
+
+---
+
 ## FASE IX — Visión y estrategia
 
 ### Milestone 21 — Fog of War
@@ -1029,3 +1048,14 @@ El "último" milestone realmente nunca termina.
 - [ ] Eventos
 - [ ] Moderación
 - [ ] Telemetría
+# Milestone 22 — HUD competitivo y presentación de partida
+
+Estado: Implementado, pendiente de validación visual final en Unity.
+
+- marcador superior Azure / reloj / Ember;
+- barra inferior unificada para retrato, nivel, XP, vida, maná, estadísticas, habilidades, inventario y oro;
+- tienda con tecla `B`, tooltips y notificaciones locales;
+- minimapa con marco, símbolos diferenciados y viewport de cámara;
+- binding exclusivo mediante `LocalHeroProvider`, válido en local, host y cliente;
+- Canvas Scaler con referencia 1920×1080 y capas de HUD reproducibles por el builder.
+- marcador ampliado con `Tab`: dos secciones de hasta cinco jugadores, retrato, nivel, K/D/A, LH y estado público.

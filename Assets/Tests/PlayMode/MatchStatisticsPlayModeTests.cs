@@ -15,7 +15,7 @@ namespace CierzoArena.Tests.PlayMode
     {
         private readonly List<GameObject> created=new();
         [UnityTest]
-        public IEnumerator KillSurvivesRespawnAndScoreboardVisibilityRuleKeepsFinalVisible()
+        public IEnumerator KillSurvivesRespawnAndScoreboardVisibilityRuleClosesWhenTabIsReleased()
         {
             GameObject matchObject=Track(new GameObject("Match"));matchObject.AddComponent<MatchStateController>();MatchStatisticsController stats=matchObject.AddComponent<MatchStatisticsController>();matchObject.AddComponent<MatchScoreboardController>();
             HeroMatchStatistics azure=CreateHero("Azure",TeamId.Azure,0),ember=CreateHero("Ember",TeamId.Ember,0);
@@ -26,7 +26,7 @@ namespace CierzoArena.Tests.PlayMode
             Assert.That(Snapshot(stats,azure.HeroId).Kills,Is.EqualTo(1));Assert.That(Snapshot(stats,ember.HeroId).Deaths,Is.EqualTo(1));
             life.Simulate(.02f);life.Simulate(.02f);
             Assert.That(Snapshot(stats,ember.HeroId).Deaths,Is.EqualTo(1));
-            Assert.That(MatchScoreboardController.ShouldShowScoreboard(false,false),Is.False);Assert.That(MatchScoreboardController.ShouldShowScoreboard(false,true),Is.True);Assert.That(MatchScoreboardController.ShouldShowScoreboard(true,false),Is.True);
+            Assert.That(MatchScoreboardController.ShouldShowScoreboard(false,false),Is.False);Assert.That(MatchScoreboardController.ShouldShowScoreboard(false,true),Is.True);Assert.That(MatchScoreboardController.ShouldShowScoreboard(true,false),Is.False);
             Cleanup();
         }
         [TearDown] public void TearDown()=>Cleanup();

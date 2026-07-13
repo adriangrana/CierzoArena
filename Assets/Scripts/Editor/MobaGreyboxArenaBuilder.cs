@@ -4,6 +4,7 @@ using System.Linq;
 using CierzoArena.CameraSystem;
 using CierzoArena.Combat;
 using CierzoArena.Core;
+using CierzoArena.Frontend;
 using CierzoArena.Navigation;
 using CierzoArena.Netcode;
 using CierzoArena.Structures;
@@ -12,6 +13,8 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.AI;
+using UnityEngine.EventSystems;
+using UnityEngine.UI;
 using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
 using UnityEngine.SceneManagement;
@@ -75,20 +78,25 @@ namespace CierzoArena.EditorTools
             EnsureLayerName(SelectableLayer, "Selectable");
             EnsureLayerName(AttackableLayer, "Attackable");
 
-            Material groundMaterial = CreateMaterial("Assets/Materials/Prototype_Ground.mat", new Color(0.16f, 0.25f, 0.24f));
-            Material routeMaterial = CreateMaterial("Assets/Materials/Prototype_Route.mat", new Color(0.37f, 0.31f, 0.22f));
-            Material routeMidMaterial = CreateMaterial("Assets/Materials/Prototype_RouteMid.mat", new Color(0.56f, 0.46f, 0.28f));
-            Material riverMaterial = CreateMaterial("Assets/Materials/Prototype_River.mat", new Color(0.025f, 0.16f, 0.31f));
-            Material bridgeMaterial = CreateMaterial("Assets/Materials/Prototype_Bridge.mat", new Color(0.32f, 0.37f, 0.43f));
-            Material obstacleMaterial = CreateMaterial("Assets/Materials/Prototype_Obstacle.mat", new Color(0.10f, 0.14f, 0.18f));
-            Material neutralMaterial = CreateMaterial("Assets/Materials/Prototype_Neutral.mat", new Color(0.46f, 0.33f, 0.56f));
-            Material boundaryMaterial = CreateMaterial("Assets/Materials/Prototype_Boundary.mat", new Color(0.09f, 0.09f, 0.11f));
-            Material azureBaseMaterial = CreateMaterial("Assets/Materials/Prototype_AzureBase.mat", new Color(0.06f, 0.22f, 0.48f));
-            Material emberBaseMaterial = CreateMaterial("Assets/Materials/Prototype_EmberBase.mat", new Color(0.46f, 0.11f, 0.07f));
+            EnvironmentArtPipeline.ArtSet environment = EnvironmentArtPipeline.EnsureAssets();
+
+            // Shared environment assets are now the source of truth for every
+            // architectural/terrain surface. Team identity lives in gameplay UI and
+            // small non-surface accents, never in flat replacement floor colours.
+            Material groundMaterial = environment.Rocky;
+            Material routeMaterial = environment.Concrete;
+            Material routeMidMaterial = environment.Concrete;
+            Material riverMaterial = environment.Water;
+            Material bridgeMaterial = environment.Concrete;
+            Material obstacleMaterial = environment.Rocky;
+            Material neutralMaterial = environment.Rocky;
+            Material boundaryMaterial = environment.Rocky;
+            Material azureBaseMaterial = environment.Concrete;
+            Material emberBaseMaterial = environment.Concrete;
             Material azureMaterial = CreateMaterial("Assets/Materials/Prototype_Azure.mat", new Color(0.20f, 0.55f, 1.0f));
             Material emberMaterial = CreateMaterial("Assets/Materials/Prototype_Ember.mat", new Color(0.96f, 0.26f, 0.18f));
             Material ringMaterial = CreateMaterial("Assets/Materials/Prototype_Selection.mat", new Color(0.95f, 0.86f, 0.24f));
-            Material markerMaterial = CreateMaterial("Assets/Materials/Prototype_Marker.mat", new Color(0.95f, 0.86f, 0.24f));
+            Material markerMaterial = environment.Concrete;
             Material healthBackgroundMaterial = CreateMaterial("Assets/Materials/Prototype_HealthBackground.mat", new Color(0.08f, 0.08f, 0.08f));
             Material healthFillMaterial = CreateMaterial("Assets/Materials/Prototype_HealthFill.mat", new Color(0.2f, 0.85f, 0.3f));
 
@@ -125,11 +133,13 @@ namespace CierzoArena.EditorTools
             BuildLaneCreeps(azureMaterial, emberMaterial, healthBackgroundMaterial, healthFillMaterial);
             BuildNeutralCamps(neutralMaterial, healthBackgroundMaterial, healthFillMaterial);
             BuildBossPit(obstacleMaterial, riverMaterial);
+            BuildEnvironmentalSlice(environment.Rocky, environment.Concrete, environment.Water);
             BuildMajorObjective(neutralMaterial, healthBackgroundMaterial, healthFillMaterial);
 
             CreateNavMeshBootstrap();
             CreateLighting();
             CreateMobaCamera(azure.transform);
+            CreateCompetitiveHud();
             CreateCommandController();
             CreateNetworkArenaBootstrap(matchController, azure, ember);
 
@@ -150,7 +160,10 @@ namespace CierzoArena.EditorTools
 
         private static void BuildGroundAndRiver(Material groundMaterial, Material riverMaterial)
         {
-            GameObject terrain = new GameObject("Terrain");
+            GameObject environment = new GameObject("EnvironmentRoot");
+            GameObject gameplay = new GameObject("Gameplay"); gameplay.transform.SetParent(environment.transform);
+            GameObject visual = new GameObject("Visual"); visual.transform.SetParent(environment.transform);
+            GameObject terrain = new GameObject("GameplayGround"); terrain.transform.SetParent(gameplay.transform);
 
             // One continuous walkable ground slab covering the whole square arena, so
             // the NavMesh is a single connected surface (no gap anywhere). It tucks
@@ -163,14 +176,23 @@ namespace CierzoArena.EditorTools
             // collider, so it never affects the NavMesh: units walk straight over it.
             // The darker material and the boss pit give it its distinct, shadowed read.
             GameObject river = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            river.name = "River (visual)";
+            river.name = "VisualWater";
             river.layer = 0;
-            river.transform.SetParent(terrain.transform);
-            river.transform.position = new Vector3(0f, 0.05f, 0f);
+            river.transform.SetParent(visual.transform);
+            // Keep the visual current slightly below every bridge deck. This is
+            // deliberately separate from the walkable ground: no collider or
+            // navigation data is added by the water surface.
+            river.transform.position = new Vector3(0f, 0.0125f, 0f);
             river.transform.rotation = Quaternion.Euler(0f, 45f, 0f);
-            river.transform.localScale = new Vector3(210f, 0.1f, 18f);
+            river.transform.localScale = new Vector3(210f, 0.025f, 18f);
             river.GetComponent<Renderer>().sharedMaterial = riverMaterial;
             Object.DestroyImmediate(river.GetComponent<Collider>());
+            river.AddComponent<RiverSurfaceVisual>();
+
+            GameObject decoration = new GameObject("EnvironmentDecorationRoot"); decoration.transform.SetParent(visual.transform);
+            GameObject vegetation = new GameObject("VegetationSockets (future assets)"); vegetation.transform.SetParent(decoration.transform);
+            GameObject rocks = new GameObject("RockSockets"); rocks.transform.SetParent(decoration.transform);
+            GameObject jungle = new GameObject("JungleDecorationZones"); jungle.transform.SetParent(decoration.transform);
         }
 
         private static void BuildBridges(Material bridgeMaterial)
@@ -361,6 +383,28 @@ namespace CierzoArena.EditorTools
                 CreateSpawnPoint(spawns.transform, $"Azure {lane} Spawn", PointAlong(path, spawnFraction), azureMaterial, capMaterial);
                 CreateSpawnPoint(spawns.transform, $"Ember {lane} Spawn", PointAlong(path, 1f - spawnFraction), emberMaterial, capMaterial);
             }
+
+            // M23 Core Guard towers: the last defensive line. Two per base, placed in
+            // front of the core (toward map centre) and spread left/right. They carry
+            // Lane.None + Tier.CoreGuard, so they are excluded from the lane-breach
+            // count and only become attackable once any lane has been breached.
+            BuildCoreGuards(towers.transform, "Azure", AzureBaseCenter, TeamId.Azure, azureMaterial, capMaterial, healthBackgroundMaterial, healthFillMaterial);
+            BuildCoreGuards(towers.transform, "Ember", EmberBaseCenter, TeamId.Ember, emberMaterial, capMaterial, healthBackgroundMaterial, healthFillMaterial);
+        }
+
+        private static void BuildCoreGuards(Transform parent, string team, Vector3 baseCenter, TeamId teamId, Material teamMaterial, Material capMaterial, Material healthBackgroundMaterial, Material healthFillMaterial)
+        {
+            // Forward points from the base toward the map centre (the origin); right is
+            // the in-plane perpendicular, so the layout mirrors perfectly Azure/Ember.
+            Vector3 forward = new Vector3(-baseCenter.x, 0f, -baseCenter.z).normalized;
+            Vector3 right = new Vector3(forward.z, 0f, -forward.x);
+            const float guardForward = 15f;
+            const float guardSpread = 11f;
+            Vector3 leftPos = baseCenter + forward * guardForward - right * guardSpread;
+            Vector3 rightPos = baseCenter + forward * guardForward + right * guardSpread;
+            leftPos.y = 0f; rightPos.y = 0f;
+            CreateTowerMarker(parent, $"{team} Core Guard Left", leftPos, teamId, StructureLane.None, StructureTier.CoreGuard, teamMaterial, capMaterial, healthBackgroundMaterial, healthFillMaterial);
+            CreateTowerMarker(parent, $"{team} Core Guard Right", rightPos, teamId, StructureLane.None, StructureTier.CoreGuard, teamMaterial, capMaterial, healthBackgroundMaterial, healthFillMaterial);
         }
 
         // Returns the point at the given fraction (0..1) of a polyline's total length.
@@ -518,7 +562,7 @@ namespace CierzoArena.EditorTools
             blocker.transform.SetParent(tower);
             blocker.transform.localPosition = new Vector3(0f, 3.5f, 0f);
             CapsuleCollider collider = blocker.AddComponent<CapsuleCollider>();
-            collider.radius = 1.45f;
+            collider.radius = .55f;
             collider.height = 7f;
 
             // NavMeshAgent does not collide physically with a CapsuleCollider. A
@@ -600,11 +644,7 @@ namespace CierzoArena.EditorTools
             unit.AddComponent<StatusEffectFeedback>();
             HeroAbilities heroAbilities = unit.AddComponent<HeroAbilities>();
             SetObjectArray(heroAbilities, "abilities", abilityKit);
-            unit.AddComponent<HeroProgressionFeedback>();
-            unit.AddComponent<HeroShopFeedback>();
-            unit.AddComponent<HeroAbilitiesFeedback>();
             unit.AddComponent<HeroLifeCycle>();
-            unit.AddComponent<HeroRespawnFeedback>();
 
             GameObject ring = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             ring.name = "Selection Ring";
@@ -700,6 +740,38 @@ namespace CierzoArena.EditorTools
             CreateObstacle(pit.transform, "Boss Pit Wall SE", new Vector3(se.x, 2.5f, se.z), new Vector3(3f, 5f, 10f), wallMaterial, 45f);
         }
 
+        // M21 only dresses the Azure-mid-river-Guardian route. Every object here is
+        // visual-only: gameplay ground, NavMesh and existing obstacle geometry stay
+        // untouched below it.
+        private static void BuildEnvironmentalSlice(Material rockyMaterial, Material concreteMaterial, Material waterMaterial)
+        {
+            Transform environment = GameObject.Find("EnvironmentRoot")?.transform;
+            Transform visual = environment != null ? environment.Find("Visual") : null;
+            if (visual == null) return;
+            GameObject slice = new GameObject("Azure River Guardian Vertical Slice"); slice.transform.SetParent(visual);
+            CreateVisualSlab(slice.transform, "Azure Mid Departure Stone", new Vector3(-45f,.035f,-45f), new Vector3(30f,.07f,9.5f), 45f, concreteMaterial);
+            CreateVisualSlab(slice.transform, "Mid River Approach Stone", new Vector3(-11f,.04f,-11f), new Vector3(30f,.08f,8.5f), 45f, concreteMaterial);
+            CreateVisualSlab(slice.transform, "Guardian Pit Ritual Floor", new Vector3(BossPitCenter.x,.08f,BossPitCenter.z), new Vector3(13.6f,.08f,13.6f), 45f, concreteMaterial);
+
+            // Riverbank dressing remains intentionally reserved for dedicated
+            // shoreline assets. The former long rocky slabs crossed the bridge
+            // deck and read as an accidental green gameplay barrier.
+            CreateVisualSlab(slice.transform, "Guardian Pit Inner Water", new Vector3(BossPitCenter.x,.125f,BossPitCenter.z), new Vector3(8.6f,.025f,8.6f), 45f, waterMaterial);
+            CreateVisualBeacon(slice.transform, "Azure River Beacon", new Vector3(-31f,.34f,-31f), concreteMaterial, new Color(.2f,.72f,1f));
+            CreateVisualBeacon(slice.transform, "Guardian Cierzo Beacon", new Vector3(BossPitCenter.x,.34f,BossPitCenter.z), rockyMaterial, new Color(.48f,.35f,.95f));
+        }
+
+        private static void CreateVisualSlab(Transform parent, string name, Vector3 position, Vector3 scale, float yaw, Material material)
+        {
+            GameObject slab = GameObject.CreatePrimitive(PrimitiveType.Cube); slab.name = name; slab.layer = 0; slab.transform.SetParent(parent); slab.transform.position = position; slab.transform.rotation = Quaternion.Euler(0f,yaw,0f); slab.transform.localScale = scale; slab.GetComponent<Renderer>().sharedMaterial = material; Object.DestroyImmediate(slab.GetComponent<Collider>());
+        }
+
+        private static void CreateVisualBeacon(Transform parent, string name, Vector3 position, Material material, Color accent)
+        {
+            GameObject beacon = GameObject.CreatePrimitive(PrimitiveType.Cylinder); beacon.name=name; beacon.layer=0; beacon.transform.SetParent(parent); beacon.transform.position=position; beacon.transform.localScale=new Vector3(1.15f,.35f,1.15f); beacon.GetComponent<Renderer>().sharedMaterial=material; Object.DestroyImmediate(beacon.GetComponent<Collider>());
+            Light light = beacon.AddComponent<Light>(); light.type=LightType.Point; light.color=accent; light.intensity=.35f; light.range=6f; light.shadows=LightShadows.None;
+        }
+
         private static void BuildMajorObjective(Material material,Material healthBackgroundMaterial,Material healthFillMaterial)
         {
             GameObject boss=GameObject.CreatePrimitive(PrimitiveType.Cylinder);boss.name="Cierzo Guardian";boss.layer=AttackableLayer;boss.transform.position=BossPitCenter;boss.transform.localScale=Vector3.one*1.6f;boss.GetComponent<Renderer>().sharedMaterial=material;TeamMember member=boss.AddComponent<TeamMember>();SetEnum(member,"team",(int)TeamId.Neutral);Health health=boss.AddComponent<Health>();SetFloat(health,"maxHealth",2800f);boss.AddComponent<StatusEffectController>();boss.AddComponent<BossAnnouncementFeedback>();boss.AddComponent<VisionVisibility>();CreateHealthBar(boss.transform,health,healthBackgroundMaterial,healthFillMaterial,3.2f,2.5f);boss.AddComponent<ClickMover>();BasicAttack attack=boss.AddComponent<BasicAttack>();ConfigureAttack(attack,AttackDelivery.Melee,2.5f,70f,1.35f,.35f,.35f);AttackVisual visual=boss.AddComponent<AttackVisual>();SetObjectReference(visual,"targetRenderer",boss.GetComponent<Renderer>());GameObject telegraph=GameObject.CreatePrimitive(PrimitiveType.Cylinder);telegraph.name="Guardian Strike Telegraph";telegraph.transform.SetParent(boss.transform);telegraph.transform.localPosition=new Vector3(0f,-.95f,0f);telegraph.transform.localScale=new Vector3(5f,.02f,5f);telegraph.GetComponent<Renderer>().sharedMaterial=CreateMaterial("Assets/Materials/Prototype_BossTelegraph.mat",new Color(.95f,.25f,.08f,.45f));Object.DestroyImmediate(telegraph.GetComponent<Collider>());telegraph.GetComponent<Renderer>().enabled=false;NeutralBossController controller=boss.AddComponent<NeutralBossController>();controller.Configure(boss.transform.position,14f,22f,1.5f,180f);SerializedObject data=new SerializedObject(controller);data.FindProperty("telegraphRenderer").objectReferenceValue=telegraph.GetComponent<Renderer>();SerializedProperty renders=data.FindProperty("presentationRenderers");renders.arraySize=1;renders.GetArrayElementAtIndex(0).objectReferenceValue=boss.GetComponent<Renderer>();SerializedProperty colliders=data.FindProperty("presentationColliders");colliders.arraySize=1;colliders.GetArrayElementAtIndex(0).objectReferenceValue=boss.GetComponent<Collider>();data.ApplyModifiedPropertiesWithoutUndo();
@@ -717,16 +789,18 @@ namespace CierzoArena.EditorTools
             GameObject root = new GameObject("Lane Creeps");
             GameObject routes = new GameObject("Lane Routes");
             routes.transform.SetParent(root.transform);
+            StructureEntity azureCore = FindCoreForTeam(TeamId.Azure);
+            StructureEntity emberCore = FindCoreForTeam(TeamId.Ember);
             Vector3[] top = { AzureBaseCenter, NorthWestCorner, EmberBaseCenter };
             Vector3[] mid = { AzureBaseCenter, EmberBaseCenter };
             Vector3[] bottom = { AzureBaseCenter, SouthEastCorner, EmberBaseCenter };
             const float spawnFraction = 0.09f;
-            LaneRoute topAzure = CreateRoute(routes.transform, "Top Azure to Ember", new[] { PointAlong(top, spawnFraction), NorthWestCorner, PointAlong(top, 1f - spawnFraction) }, Color.cyan);
-            LaneRoute midAzure = CreateRoute(routes.transform, "Mid Azure to Ember", new[] { PointAlong(mid, spawnFraction), Vector3.zero, PointAlong(mid, 1f - spawnFraction) }, Color.cyan);
-            LaneRoute bottomAzure = CreateRoute(routes.transform, "Bottom Azure to Ember", new[] { PointAlong(bottom, spawnFraction), SouthEastCorner, PointAlong(bottom, 1f - spawnFraction) }, Color.cyan);
-            LaneRoute topEmber = CreateRoute(routes.transform, "Top Ember to Azure", new[] { PointAlong(top, 1f - spawnFraction), NorthWestCorner, PointAlong(top, spawnFraction) }, Color.red);
-            LaneRoute midEmber = CreateRoute(routes.transform, "Mid Ember to Azure", new[] { PointAlong(mid, 1f - spawnFraction), Vector3.zero, PointAlong(mid, spawnFraction) }, Color.red);
-            LaneRoute bottomEmber = CreateRoute(routes.transform, "Bottom Ember to Azure", new[] { PointAlong(bottom, 1f - spawnFraction), SouthEastCorner, PointAlong(bottom, spawnFraction) }, Color.red);
+            LaneRoute topAzure = CreateRoute(routes.transform, "Top Azure to Ember", new[] { PointAlong(top, spawnFraction), NorthWestCorner, PointAlong(top, 1f - spawnFraction) }, emberCore, Color.cyan);
+            LaneRoute midAzure = CreateRoute(routes.transform, "Mid Azure to Ember", new[] { PointAlong(mid, spawnFraction), Vector3.zero, PointAlong(mid, 1f - spawnFraction) }, emberCore, Color.cyan);
+            LaneRoute bottomAzure = CreateRoute(routes.transform, "Bottom Azure to Ember", new[] { PointAlong(bottom, spawnFraction), SouthEastCorner, PointAlong(bottom, 1f - spawnFraction) }, emberCore, Color.cyan);
+            LaneRoute topEmber = CreateRoute(routes.transform, "Top Ember to Azure", new[] { PointAlong(top, 1f - spawnFraction), NorthWestCorner, PointAlong(top, spawnFraction) }, azureCore, Color.red);
+            LaneRoute midEmber = CreateRoute(routes.transform, "Mid Ember to Azure", new[] { PointAlong(mid, 1f - spawnFraction), Vector3.zero, PointAlong(mid, spawnFraction) }, azureCore, Color.red);
+            LaneRoute bottomEmber = CreateRoute(routes.transform, "Bottom Ember to Azure", new[] { PointAlong(bottom, 1f - spawnFraction), SouthEastCorner, PointAlong(bottom, spawnFraction) }, azureCore, Color.red);
 
             GameObject spawners = new GameObject("Wave Spawners");
             spawners.transform.SetParent(root.transform);
@@ -738,7 +812,7 @@ namespace CierzoArena.EditorTools
             CreateWaveSpawner(spawners.transform, "Ember Bottom Waves", bottomEmber, emberMelee, emberRanged);
         }
 
-        private static LaneRoute CreateRoute(Transform parent, string name, Vector3[] points, Color color)
+        private static LaneRoute CreateRoute(Transform parent, string name, Vector3[] points, StructureEntity finalObjective, Color color)
         {
             GameObject routeObject = new GameObject(name);
             routeObject.transform.SetParent(parent);
@@ -754,9 +828,24 @@ namespace CierzoArena.EditorTools
 
             SetObjectArray(route, "waypoints", waypoints);
             SerializedObject serialized = new SerializedObject(route);
+            serialized.FindProperty("finalObjective").objectReferenceValue = finalObjective;
             serialized.FindProperty("gizmoColor").colorValue = color;
             serialized.ApplyModifiedPropertiesWithoutUndo();
             return route;
+        }
+
+        private static StructureEntity FindCoreForTeam(TeamId team)
+        {
+            StructureEntity[] structures = Object.FindObjectsByType<StructureEntity>();
+            for (int i = 0; i < structures.Length; i++)
+            {
+                if (structures[i] != null && structures[i].Kind == StructureKind.Core && structures[i].Team == team)
+                {
+                    return structures[i];
+                }
+            }
+
+            throw new System.InvalidOperationException($"No core was built for team {team} before lane routes were configured.");
         }
 
         private static void CreateWaveSpawner(Transform parent, string name, LaneRoute route, GameObject melee, GameObject ranged)
@@ -1039,7 +1128,7 @@ namespace CierzoArena.EditorTools
             {
                 target.transform.localPosition = new Vector3(0f, healthBarHeight * 0.45f, 0f);
                 SphereCollider targetCollider = target.AddComponent<SphereCollider>();
-                targetCollider.radius = 2.2f;
+                targetCollider.radius = .8f;
             }
 
             // Include the newly created selectable child in the destruction set too.
@@ -1061,11 +1150,31 @@ namespace CierzoArena.EditorTools
             GameObject lightObject = new GameObject("Sun Key Light");
             Light light = lightObject.AddComponent<Light>();
             light.type = LightType.Directional;
-            light.intensity = 1.2f;
-            lightObject.transform.rotation = Quaternion.Euler(50f, -30f, 0f);
+            light.color = new Color(.78f,.87f,1f);
+            light.intensity = 1.0f;
+            light.shadows = LightShadows.Soft;
+            light.shadowStrength = .46f;
+            light.shadowBias = .12f;
+            light.shadowNormalBias = .45f;
+            light.shadowAngle = 3.5f;
+            lightObject.transform.rotation = Quaternion.Euler(65f, -30f, 0f);
+
+            // Isometric readability benefits from short, soft contact shadows
+            // rather than dark directional silhouettes across the lane.
+            QualitySettings.shadows = ShadowQuality.All;
+            QualitySettings.shadowResolution = ShadowResolution.High;
+            QualitySettings.shadowDistance = 65f;
+            QualitySettings.shadowProjection = ShadowProjection.StableFit;
 
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
-            RenderSettings.ambientLight = new Color(0.45f, 0.48f, 0.52f);
+            RenderSettings.ambientLight = new Color(.34f,.39f,.46f);
+            RenderSettings.fog = true;
+            RenderSettings.fogColor = new Color(.16f,.23f,.29f);
+            RenderSettings.fogMode = FogMode.ExponentialSquared;
+            RenderSettings.fogDensity = .003f;
+
+            GameObject probeObject = new GameObject("M21 River Reflection Probe"); probeObject.transform.position = new Vector3(-12f,8f,12f);
+            ReflectionProbe probe = probeObject.AddComponent<ReflectionProbe>(); probe.mode=UnityEngine.Rendering.ReflectionProbeMode.Baked; probe.size=new Vector3(70f,20f,70f); probe.intensity=.45f;
         }
 
         // ----- MOBA camera (M4.4) --------------------------------------------
@@ -1146,6 +1255,53 @@ namespace CierzoArena.EditorTools
             controllerObject.FindProperty("heroProvider").objectReferenceValue = provider;
             controllerObject.FindProperty("followPlaneOffset").vector2Value = followOffset;
             controllerObject.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static void CreateCompetitiveHud()
+        {
+            // The command bar itself is drawn by one local presentation component.
+            // Canvas provides deterministic scaling, hierarchy and future prefab
+            // anchors without syncing any UI objects through Netcode.
+            GameObject hud = new GameObject("GameplayHUD");
+            Canvas canvas = hud.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 50;
+            CanvasScaler scaler = hud.AddComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920f, 1080f);
+            scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+            scaler.matchWidthOrHeight = .5f;
+            hud.AddComponent<GraphicRaycaster>();
+            hud.AddComponent<CompetitiveGameplayHud>();
+            hud.AddComponent<ScoreboardInputController>();
+
+            CreateHudLayer(hud.transform, "TopScoreboard");
+            Transform expanded=CreateHudLayer(hud.transform, "ExpandedScoreboard");
+            CreateHudLayer(expanded, "Header");CreateHudLayer(expanded, "AzureTeamSection");CreateHudLayer(expanded, "EmberTeamSection");CreateHudLayer(expanded, "Footer");
+            CreateHudLayer(hud.transform, "HeroCommandBar");
+            CreateHudLayer(hud.transform, "TooltipLayer");
+            CreateHudLayer(hud.transform, "NotificationLayer");
+            CreateHudLayer(hud.transform, "DeathAndRespawnLayer");
+            CreateHudLayer(hud.transform, "MatchEndLayer");
+
+            if (Object.FindAnyObjectByType<EventSystem>() == null)
+            {
+                GameObject eventSystem = new GameObject("EventSystem");
+                eventSystem.AddComponent<EventSystem>();
+                eventSystem.AddComponent<StandaloneInputModule>();
+            }
+        }
+
+        private static Transform CreateHudLayer(Transform parent, string name)
+        {
+            GameObject layer = new GameObject(name, typeof(RectTransform));
+            layer.transform.SetParent(parent, false);
+            RectTransform rect = layer.GetComponent<RectTransform>();
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+            return layer.transform;
         }
 
         private static void CreateCommandController()

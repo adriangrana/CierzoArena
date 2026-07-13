@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Collections.Generic;
 using CierzoArena.Core;
 using CierzoArena.Combat;
 using CierzoArena.CameraSystem;
@@ -80,6 +81,28 @@ namespace CierzoArena.Tests.Editor
         public void TerrainRemainsKnownWhileFogOnlyDarkensIt()
         {
             GameObject overlayObject=new GameObject("Fog");FogOfWarOverlay overlay=overlayObject.AddComponent<FogOfWarOverlay>();Assert.That(overlay.IsTerrainVisible(new Vector3(100,0,100)),Is.True);Object.DestroyImmediate(overlayObject);
+        }
+        [Test]
+        public void FogPresentationUsesBilinearHighResolutionMaskAndSoftEdge()
+        {
+            GameObject overlayObject=new GameObject("Fog");FogOfWarOverlay overlay=overlayObject.AddComponent<FogOfWarOverlay>();
+            Assert.That(overlay.VisionMaskFilterMode,Is.EqualTo(FilterMode.Bilinear));
+            Assert.That(overlay.VisionMaskResolution,Is.GreaterThanOrEqualTo(64));
+            Assert.That(overlay.FogEdgeSoftness,Is.InRange(2f,5f));
+            Assert.That(overlay.BuffersArePersistent,Is.True);
+            Object.DestroyImmediate(overlayObject);
+        }
+        [Test]
+        public void VisionSourcesRemainDataOnlyAndCentralSnapshotCombinesTeamSources()
+        {
+            GameObject first=Create("First",TeamId.Azure,Vector3.zero,4f);
+            GameObject second=Create("Second",TeamId.Azure,new Vector3(8,0,0),4f);
+            GameObject enemy=Create("Enemy",TeamId.Ember,new Vector3(16,0,0),4f);
+            var snapshot=new List<VisionSource>();VisionSource.CopyActiveSourcesTo(TeamId.Azure,snapshot);
+            Assert.That(snapshot,Has.Count.EqualTo(2));
+            FieldInfo[] fields=typeof(VisionSource).GetFields(BindingFlags.Instance|BindingFlags.NonPublic|BindingFlags.Public);
+            for(int i=0;i<fields.Length;i++)Assert.That(typeof(Texture).IsAssignableFrom(fields[i].FieldType)||typeof(Material).IsAssignableFrom(fields[i].FieldType)||typeof(Mesh).IsAssignableFrom(fields[i].FieldType),Is.False,$"VisionSource must not own render data: {fields[i].Name}");
+            Object.DestroyImmediate(first);Object.DestroyImmediate(second);Object.DestroyImmediate(enemy);
         }
         [Test]
         public void MinimapPointMapsToTheCorrespondingWorldGroundPosition()

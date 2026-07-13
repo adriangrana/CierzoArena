@@ -99,11 +99,26 @@ namespace CierzoArena.Netcode
         }
         private void OnDestroy()
         {
+            ShutdownTransportIfListening();
             if(manager==null)return;
             manager.OnServerStarted-=OnServerStarted;manager.OnServerStopped-=OnServerStopped;
             manager.OnClientConnectedCallback-=OnClientConnected;manager.OnClientDisconnectCallback-=OnClientDisconnected;
             if(manager.ConnectionApprovalCallback==ApproveConnection)manager.ConnectionApprovalCallback=null;
             if(Active==this)Active=null;
+        }
+        private void OnApplicationQuit()=>ShutdownTransportIfListening();
+
+        /// <summary>
+        /// A NetworkManager can be marked DontDestroyOnLoad while this scene
+        /// bootstrap is destroyed by Unity's Play Mode teardown. Explicitly close
+        /// its transport first so the next Play session can bind its UDP port.
+        /// </summary>
+        private void ShutdownTransportIfListening()
+        {
+            if(manager==null)manager=NetworkManager.Singleton;
+            // Shutdown is intentionally safe to call even after a failed start:
+            // UnityTransport may still own its socket while IsListening is false.
+            if(manager!=null)manager.Shutdown();
         }
 
         public void StartHost()
@@ -119,6 +134,13 @@ namespace CierzoArena.Netcode
             localAssignedTeam=TeamId.Neutral;
             bool started=manager.StartHost();
             Debug.Log($"[M18 Spawn] StartHost result={started} IsServer={manager.IsServer} IsHost={manager.IsHost} LocalClientId={manager.LocalClientId}",this);
+            if(!started)
+            {
+                ShutdownTransportIfListening();
+                networkMode=false;
+                State=ArenaStartupState.Failed;
+                return;
+            }
             // NGO connects the host immediately. Cover both callback orderings: when
             // OnServerStarted ran synchronously it is already idempotently spawned;
             // otherwise this is a harmless no-op until that callback runs.
@@ -231,7 +253,12 @@ namespace CierzoArena.Netcode
             ActivateServerGameplaySources();
             State=ArenaStartupState.RunningNetwork;
         }
-        private void OnServerStopped(bool _){heroes.Clear();infrastructure.Clear();clientTeams.Clear();clientHeroIds.Clear();}
+        private void OnServerStopped(bool _)
+        {
+            heroes.Clear();infrastructure.Clear();clientTeams.Clear();clientHeroIds.Clear();
+            networkMode=false;
+            if(State!=ArenaStartupState.Failed)State=ArenaStartupState.WaitingForMode;
+        }
         private void OnClientConnected(ulong clientId)
         {
             if(manager==null)return;

@@ -23,6 +23,10 @@ namespace CierzoArena.Core
         private readonly Dictionary<Health, Dictionary<int, Contribution>> contributions = new();
         private readonly HashSet<Health> deathObserved = new();
         private readonly Dictionary<int, MatchStatisticsSnapshot> replicatedSnapshots = new();
+        // Team-scoped gold arrives separately from the public scoreboard snapshot.
+        // It is intentionally not merged into replicatedSnapshots, which prevents a
+        // remote client from treating enemy current gold as public match data.
+        private readonly Dictionary<int, int> replicatedVisibleGold = new();
         private readonly List<Health> staleDeaths = new();
         private readonly List<int> staleContributorIds = new();
         [SerializeField, Min(1f)] private float assistWindowSeconds = 10f;
@@ -152,6 +156,18 @@ namespace CierzoArena.Core
             }
             duration=Mathf.Max(0f,replicatedDuration);frozen=final;Changed();
         }
+        /// <summary>Applies the server-filtered gold snapshot for the local team only.</summary>
+        public void ApplyReplicatedTeamGold(IReadOnlyList<int> heroIds, IReadOnlyList<int> goldValues)
+        {
+            EnsureInitialized();
+            if(authorityEnabled)return;
+            replicatedVisibleGold.Clear();
+            int count=Mathf.Min(heroIds!=null?heroIds.Count:0,goldValues!=null?goldValues.Count:0);
+            for(int i=0;i<count;i++)replicatedVisibleGold[heroIds[i]]=Mathf.Max(0,goldValues[i]);
+            Changed();
+        }
+        /// <summary>Returns gold only when the server has explicitly exposed it to this client.</summary>
+        public bool TryGetReplicatedVisibleGold(int heroId,out int gold)=>replicatedVisibleGold.TryGetValue(heroId,out gold);
         public void ReceiveReplicatedAnnouncement(string message)
         {
             if(!string.IsNullOrWhiteSpace(message))AnnouncementRaised?.Invoke(message);
@@ -281,7 +297,11 @@ namespace CierzoArena.Core
                 for(int i=0;i<staleContributorIds.Count;i++)victim.Value.Remove(staleContributorIds[i]);
             }
         }
-        private void Changed(){if(authorityEnabled)StatisticsChanged?.Invoke();}
+        // A replicated client has no authority to publish, but its local views still
+        // need a reactive notification when the server snapshot or team-only gold
+        // changes. NetworkMatchStatisticsController subscribes only on the server,
+        // so notifying observers on both sides cannot create a client write path.
+        private void Changed()=>StatisticsChanged?.Invoke();
         private void RaiseAnnouncement(string message){AnnouncementRaised?.Invoke(message);}
         private static int CompareHeroes(HeroMatchStatistics a,HeroMatchStatistics b)=>a.Team!=b.Team?((int)a.Team).CompareTo((int)b.Team):a.HeroId.CompareTo(b.HeroId);
         private static int CompareSnapshots(MatchStatisticsSnapshot a,MatchStatisticsSnapshot b)=>a.Team!=b.Team?((int)a.Team).CompareTo((int)b.Team):a.HeroId.CompareTo(b.HeroId);

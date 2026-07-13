@@ -33,8 +33,7 @@ namespace CierzoArena.Netcode
             if (IsServer)
             {
                 mana.SetAuthorityEnabled(true); abilities.SetAuthorityEnabled(true);
-                while (levels.Count < 4) levels.Add(0);
-                while (cooldowns.Count < 4) cooldowns.Add(0f);
+                EnsureReplicationBuffers();
                 mana.Changed += OnChanged; abilities.Changed += OnAbilitiesChanged; abilities.ProjectileReleased += OnProjectileReleased;
                 Publish();
             }
@@ -65,8 +64,19 @@ namespace CierzoArena.Netcode
         private void OnAbilitiesChanged(HeroAbilities _) => Publish();
         private void Publish()
         {
+            // NGO can invoke a replicated callback while a host is still
+            // constructing its NetworkLists. Never write an index until both
+            // buffers have been established for the four ability slots.
+            EnsureReplicationBuffers();
+            if (levels.Count < 4 || cooldowns.Count < 4) return;
             manaCurrent.Value = mana.CurrentMana; manaMaximum.Value = mana.MaximumMana; skillPoints.Value = abilities.SkillPoints;
             for (int i = 0; i < 4; i++) { levels[i] = abilities.GetLevel(i); cooldowns[i] = abilities.GetCooldown(i); }
+        }
+        private void EnsureReplicationBuffers()
+        {
+            if (!IsServer) return;
+            while (levels.Count < 4) levels.Add(0);
+            while (cooldowns.Count < 4) cooldowns.Add(0f);
         }
         private void Apply()
         {

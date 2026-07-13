@@ -600,6 +600,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: CierzoArena.Runtime::CierzoArena.Units.HeroMatchIdentity
   matchSlot: 0
   displayName: Ember Skirmisher
+  heroDefinitionId: 
 --- !u!114 &5969650336328642903
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -770,6 +771,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 03ac01c66663ff54aba1727e1c9aebcb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: CierzoArena.Runtime::CierzoArena.Units.UnitOrderController
+  attackMoveAcquireRange: 8
+  attackMoveArrivalDistance: 0.2
 --- !u!114 &6238230945386332325
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -789,6 +792,7 @@ MonoBehaviour:
   maximumHealthPerLevel: 80
   damagePerLevel: 8
   movementSpeedPerLevel: 0.2
+  maximumManaPerLevel: 20
   authorityEnabled: 1
 --- !u!114 &3542434448936230324
 MonoBehaviour:

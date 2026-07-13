@@ -3,6 +3,7 @@ using CierzoArena.Combat;
 using CierzoArena.Core;
 using CierzoArena.Units;
 using UnityEngine;
+using UnityEngine.AI;
 
 namespace CierzoArena.Structures
 {
@@ -26,6 +27,9 @@ namespace CierzoArena.Structures
         private Collider[] approachColliders;
         private bool destroyed;
         private bool initialized;
+        private GameObject towerMageVisual;
+        private static GameObject towerMagePrefab;
+        private static bool towerMagePrefabAttempted;
 
         public StructureKind Kind => kind;
         public StructureLane Lane => lane;
@@ -71,6 +75,7 @@ namespace CierzoArena.Structures
         private void Awake()
         {
             EnsureInitialized();
+            CreateTowerMagePresentation();
         }
 
         private void EnsureInitialized()
@@ -82,6 +87,7 @@ namespace CierzoArena.Structures
 
             health = GetComponent<Health>();
             teamMember = GetComponent<TeamMember>();
+            NormalizeTowerFootprint();
             approachColliders = GetComponentsInChildren<Collider>();
             if (health != null)
             {
@@ -90,6 +96,95 @@ namespace CierzoArena.Structures
             }
 
             initialized = true;
+        }
+
+        /// <summary>Keeps the navigation and click footprint aligned with the
+        /// visible tower cap. Earlier greybox towers carried a broad invisible
+        /// selectable/nav annulus, causing clicks near their visual edge to turn
+        /// into invalid attack orders and agents to route too far away.</summary>
+        private void NormalizeTowerFootprint()
+        {
+            if (kind != StructureKind.Tower) return;
+            Transform blocker = transform.Find("Navigation Blocker");
+            if (blocker != null)
+            {
+                if (blocker.TryGetComponent(out CapsuleCollider collider)) collider.radius = .55f;
+                if (blocker.TryGetComponent(out NavMeshObstacle obstacle)) obstacle.radius = .55f;
+            }
+
+            Transform target = transform.Find("Structure Target Collider");
+            if (target != null && target.TryGetComponent(out SphereCollider targetCollider)) targetCollider.radius = .8f;
+        }
+
+        /// <summary>Visual-only replacement for the greybox tower. Kept inside the
+        /// already-authored structure component so it is available in every scene
+        /// assembly refresh; health, collision, navigation and authority remain on
+        /// this root object.</summary>
+        private void CreateTowerMagePresentation()
+        {
+            if (kind != StructureKind.Tower || towerMageVisual != null) return;
+            towerMagePrefab ??= LoadTowerMagePrefab();
+            if (towerMagePrefab == null) return;
+
+            foreach (Renderer renderer in GetComponentsInChildren<Renderer>(true))
+            {
+                if (renderer == null || renderer.GetComponentInParent<WorldHealthBar>() != null) continue;
+                renderer.enabled = false;
+                Destroy(renderer);
+            }
+
+            towerMageVisual = Instantiate(towerMagePrefab, transform);
+            towerMageVisual.name = "Mage Tower Visual";
+            towerMageVisual.transform.localPosition = Vector3.zero;
+            towerMageVisual.transform.localRotation = Quaternion.identity;
+            towerMageVisual.transform.localScale = Vector3.one;
+            FitTowerVisual(towerMageVisual);
+
+            Renderer primary = towerMageVisual.GetComponentInChildren<Renderer>(true);
+            if (TryGetComponent(out AttackVisual attackVisual)) attackVisual.SetTargetRenderer(primary);
+            if (TryGetComponent(out VisionVisibility visibility)) visibility.RefreshPresentation();
+        }
+
+        private static GameObject LoadTowerMagePrefab()
+        {
+            if (towerMagePrefabAttempted) return null;
+            towerMagePrefabAttempted = true;
+            return Resources.Load<GameObject>("Art/Structures/MageTower/Tower Mage");
+        }
+
+        private void FitTowerVisual(GameObject visual)
+        {
+            Renderer[] renderers = visual.GetComponentsInChildren<Renderer>(true);
+            if (renderers.Length == 0) return;
+            Bounds bounds = renderers[0].bounds;
+            for (int i = 1; i < renderers.Length; i++) bounds.Encapsulate(renderers[i].bounds);
+            if (bounds.size.y > .001f) visual.transform.localScale *= 8.6f / bounds.size.y;
+            bounds = renderers[0].bounds;
+            for (int i = 1; i < renderers.Length; i++) bounds.Encapsulate(renderers[i].bounds);
+            // Network tower prefabs retain the old greybox root scale (Y = 4).
+            // Their capsule consequently extends below the ground plane, so using
+            // Collider.bounds.min here buried the new mesh by several world units.
+            // The authored tower root is its gameplay ground anchor in both local
+            // and network modes; place the mesh base on that anchor instead.
+            float baseY = transform.position.y;
+            visual.transform.position += Vector3.up * (baseY - bounds.min.y);
+
+            // The old marker placed its health bar at the top of a short cylinder.
+            // The replacement asset is substantially taller, so anchor the existing
+            // world bar above the actual tower tip rather than at its obsolete local
+            // height. This is presentation-only and keeps the bar owned by the
+            // structure for fog and destruction handling.
+            bounds = renderers[0].bounds;
+            for (int i = 1; i < renderers.Length; i++) bounds.Encapsulate(renderers[i].bounds);
+            WorldHealthBar bar = GetComponentInChildren<WorldHealthBar>(true);
+            if (bar != null)
+            {
+                Vector3 position = bar.transform.position;
+                position.x = bounds.center.x;
+                position.y = bounds.max.y + .28f;
+                position.z = bounds.center.z;
+                bar.transform.position = position;
+            }
         }
 
         private void Start()
@@ -158,6 +253,7 @@ namespace CierzoArena.Structures
 
             destroyed = true;
             DisablePresentationAndCollision();
+            if (towerMageVisual != null) towerMageVisual.SetActive(false);
             Destroyed?.Invoke(this);
 
             if (kind == StructureKind.Core)

@@ -13,15 +13,18 @@ namespace CierzoArena.Netcode
     {
         private struct NetworkHeroStatistics : INetworkSerializable, IEquatable<NetworkHeroStatistics>
         {
-            public int HeroId,Level,Kills,Deaths,Assists,LastHits,NeutralLastHits,CurrentGold,GoldEarned,ExperienceEarned,BossParticipations,MajorObjectiveSecures,KillStreak,RespawnSeconds;
+            // Current gold and earned gold are deliberately absent. Public match
+            // rows are visible to both teams, while gold is sent separately to the
+            // local player's team via a server-targeted RPC below.
+            public int HeroId,Level,Kills,Deaths,Assists,LastHits,NeutralLastHits,ExperienceEarned,BossParticipations,MajorObjectiveSecures,KillStreak,RespawnSeconds;
             public byte Team,LifeState;
             public long HeroDamageDealt,HeroDamageReceived,StructureDamage;
             public NetworkHeroStatistics(MatchStatisticsSnapshot value)
-            {HeroId=value.HeroId;Level=value.Level;Kills=value.Kills;Deaths=value.Deaths;Assists=value.Assists;LastHits=value.LastHits;NeutralLastHits=value.NeutralLastHits;CurrentGold=value.CurrentGold;GoldEarned=value.GoldEarned;ExperienceEarned=value.ExperienceEarned;BossParticipations=value.BossParticipations;MajorObjectiveSecures=value.MajorObjectiveSecures;KillStreak=value.KillStreak;RespawnSeconds=value.RespawnSeconds;Team=(byte)value.Team;LifeState=(byte)value.LifeState;HeroDamageDealt=value.HeroDamageDealt;HeroDamageReceived=value.HeroDamageReceived;StructureDamage=value.StructureDamage;}
-            public MatchStatisticsSnapshot ToRuntime()=>new MatchStatisticsSnapshot(HeroId,(TeamId)Team,$"{(TeamId)Team} {HeroId%1000+1}",Level,Kills,Deaths,Assists,LastHits,NeutralLastHits,CurrentGold,GoldEarned,ExperienceEarned,HeroDamageDealt,HeroDamageReceived,StructureDamage,BossParticipations,MajorObjectiveSecures,KillStreak,(HeroLifeState)LifeState,RespawnSeconds);
+            {HeroId=value.HeroId;Level=value.Level;Kills=value.Kills;Deaths=value.Deaths;Assists=value.Assists;LastHits=value.LastHits;NeutralLastHits=value.NeutralLastHits;ExperienceEarned=value.ExperienceEarned;BossParticipations=value.BossParticipations;MajorObjectiveSecures=value.MajorObjectiveSecures;KillStreak=value.KillStreak;RespawnSeconds=value.RespawnSeconds;Team=(byte)value.Team;LifeState=(byte)value.LifeState;HeroDamageDealt=value.HeroDamageDealt;HeroDamageReceived=value.HeroDamageReceived;StructureDamage=value.StructureDamage;}
+            public MatchStatisticsSnapshot ToRuntime()=>new MatchStatisticsSnapshot(HeroId,(TeamId)Team,$"{(TeamId)Team} {HeroId%1000+1}",Level,Kills,Deaths,Assists,LastHits,NeutralLastHits,0,0,ExperienceEarned,HeroDamageDealt,HeroDamageReceived,StructureDamage,BossParticipations,MajorObjectiveSecures,KillStreak,(HeroLifeState)LifeState,RespawnSeconds);
             public void NetworkSerialize<T>(BufferSerializer<T> serializer) where T:IReaderWriter
-            {serializer.SerializeValue(ref HeroId);serializer.SerializeValue(ref Level);serializer.SerializeValue(ref Kills);serializer.SerializeValue(ref Deaths);serializer.SerializeValue(ref Assists);serializer.SerializeValue(ref LastHits);serializer.SerializeValue(ref NeutralLastHits);serializer.SerializeValue(ref CurrentGold);serializer.SerializeValue(ref GoldEarned);serializer.SerializeValue(ref ExperienceEarned);serializer.SerializeValue(ref BossParticipations);serializer.SerializeValue(ref MajorObjectiveSecures);serializer.SerializeValue(ref KillStreak);serializer.SerializeValue(ref RespawnSeconds);serializer.SerializeValue(ref Team);serializer.SerializeValue(ref LifeState);serializer.SerializeValue(ref HeroDamageDealt);serializer.SerializeValue(ref HeroDamageReceived);serializer.SerializeValue(ref StructureDamage);}
-            public bool Equals(NetworkHeroStatistics other)=>HeroId==other.HeroId&&Kills==other.Kills&&Deaths==other.Deaths&&Assists==other.Assists&&LastHits==other.LastHits&&CurrentGold==other.CurrentGold&&GoldEarned==other.GoldEarned&&ExperienceEarned==other.ExperienceEarned&&HeroDamageDealt==other.HeroDamageDealt&&HeroDamageReceived==other.HeroDamageReceived&&StructureDamage==other.StructureDamage&&BossParticipations==other.BossParticipations&&MajorObjectiveSecures==other.MajorObjectiveSecures&&LifeState==other.LifeState&&RespawnSeconds==other.RespawnSeconds;
+            {serializer.SerializeValue(ref HeroId);serializer.SerializeValue(ref Level);serializer.SerializeValue(ref Kills);serializer.SerializeValue(ref Deaths);serializer.SerializeValue(ref Assists);serializer.SerializeValue(ref LastHits);serializer.SerializeValue(ref NeutralLastHits);serializer.SerializeValue(ref ExperienceEarned);serializer.SerializeValue(ref BossParticipations);serializer.SerializeValue(ref MajorObjectiveSecures);serializer.SerializeValue(ref KillStreak);serializer.SerializeValue(ref RespawnSeconds);serializer.SerializeValue(ref Team);serializer.SerializeValue(ref LifeState);serializer.SerializeValue(ref HeroDamageDealt);serializer.SerializeValue(ref HeroDamageReceived);serializer.SerializeValue(ref StructureDamage);}
+            public bool Equals(NetworkHeroStatistics other)=>HeroId==other.HeroId&&Level==other.Level&&Kills==other.Kills&&Deaths==other.Deaths&&Assists==other.Assists&&LastHits==other.LastHits&&NeutralLastHits==other.NeutralLastHits&&ExperienceEarned==other.ExperienceEarned&&HeroDamageDealt==other.HeroDamageDealt&&HeroDamageReceived==other.HeroDamageReceived&&StructureDamage==other.StructureDamage&&BossParticipations==other.BossParticipations&&MajorObjectiveSecures==other.MajorObjectiveSecures&&KillStreak==other.KillStreak&&LifeState==other.LifeState&&RespawnSeconds==other.RespawnSeconds;
         }
         private readonly NetworkList<NetworkHeroStatistics> replicatedRows=new(null,NetworkVariableReadPermission.Everyone,NetworkVariableWritePermission.Server);
         private readonly NetworkVariable<int> replicatedDuration=new(0,NetworkVariableReadPermission.Everyone,NetworkVariableWritePermission.Server);
@@ -74,6 +77,7 @@ namespace CierzoArena.Netcode
             dirty=false;nextPublish=Time.unscaledTime+.1f;statistics.CopySnapshotsTo(snapshots);
             replicatedRows.Clear();for(int i=0;i<snapshots.Count;i++)replicatedRows.Add(new NetworkHeroStatistics(snapshots[i]));
             replicatedDuration.Value=statistics.DurationSeconds;replicatedFinal.Value=statistics.IsFrozen;
+            PublishTeamGold(snapshots);
         }
         private void PublishAnnouncement(string message)
         {
@@ -87,6 +91,46 @@ namespace CierzoArena.Netcode
         private void ApplyRemote()
         {
             if(IsServer)return;received.Clear();for(int i=0;i<replicatedRows.Count;i++)received.Add(replicatedRows[i].ToRuntime());statistics.ApplyReplicatedSnapshots(received,replicatedDuration.Value,replicatedFinal.Value);
+        }
+
+        /// <summary>
+        /// Sends only same-team gold to each client. The broad NetworkList carries
+        /// public combat score data but never an enemy economy value.
+        /// </summary>
+        private void PublishTeamGold(List<MatchStatisticsSnapshot> values)
+        {
+            if(!IsServer||NetworkManager==null)return;
+            foreach(ulong clientId in NetworkManager.ConnectedClientsIds)
+            {
+                if(!TryGetClientTeam(clientId,out TeamId team))continue;
+                List<int> heroIds=new();List<int> goldValues=new();
+                for(int i=0;i<values.Count;i++)
+                {
+                    MatchStatisticsSnapshot value=values[i];
+                    if(value.Team!=team)continue;
+                    heroIds.Add(value.HeroId);goldValues.Add(value.CurrentGold);
+                }
+                ReceiveTeamGoldRpc(heroIds.ToArray(),goldValues.ToArray(),RpcTarget.Single(clientId,RpcTargetUse.Temp));
+            }
+        }
+        private static bool TryGetClientTeam(ulong clientId,out TeamId team)
+        {
+            NetworkUnitController[] units=FindObjectsByType<NetworkUnitController>();
+            for(int i=0;i<units.Length;i++)
+            {
+                NetworkUnitController unit=units[i];
+                if(unit==null||!unit.IsSpawned||unit.OwnerClientId!=clientId||!unit.TryGetComponent(out TeamMember member))continue;
+                team=member.Team;
+                return team==TeamId.Azure||team==TeamId.Ember;
+            }
+            team=TeamId.Neutral;
+            return false;
+        }
+        [Rpc(SendTo.SpecifiedInParams)]
+        private void ReceiveTeamGoldRpc(int[] heroIds,int[] goldValues,RpcParams rpcParams=default)
+        {
+            if(IsServer)return;
+            statistics.ApplyReplicatedTeamGold(heroIds,goldValues);
         }
         private static byte GetAnnouncementKind(string message)
         {

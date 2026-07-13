@@ -35,11 +35,15 @@ namespace CierzoArena.Netcode.Tests
         {
             MethodInfo buy = typeof(NetworkHeroInventory).GetMethod("RequestBuyRpc");
             MethodInfo sell = typeof(NetworkHeroInventory).GetMethod("RequestSellRpc");
+            MethodInfo swap = typeof(NetworkHeroInventory).GetMethod("RequestSwapRpc");
 
             Assert.That(buy.GetParameters()[0].ParameterType, Is.EqualTo(typeof(int)));
             Assert.That(sell.GetParameters()[0].ParameterType, Is.EqualTo(typeof(int)));
             Assert.That(buy.GetParameters().Length, Is.EqualTo(2));
             Assert.That(sell.GetParameters().Length, Is.EqualTo(2));
+            Assert.That(swap.GetParameters()[0].ParameterType, Is.EqualTo(typeof(int)));
+            Assert.That(swap.GetParameters()[1].ParameterType, Is.EqualTo(typeof(int)));
+            Assert.That(swap.GetParameters().Length, Is.EqualTo(3));
         }
 
         private static void Set(object target, string field, object value)

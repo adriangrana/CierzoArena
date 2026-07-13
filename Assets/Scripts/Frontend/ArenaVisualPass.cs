@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections.Generic;
+using CierzoArena.Units;
 
 namespace CierzoArena.Frontend
 {
@@ -32,6 +33,7 @@ namespace CierzoArena.Frontend
                 }
                 if(renderer.gameObject.name.Contains("River")&&renderer.GetComponent<RiverSurfaceVisual>()==null)renderer.gameObject.AddComponent<RiverSurfaceVisual>();
             }
+            EnvironmentRuntimePresentation.Apply(root);
         }
         private static Color ResolveSliceColor(string name,Color fallback)
         {
