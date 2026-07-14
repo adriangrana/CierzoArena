@@ -9,11 +9,11 @@ namespace CierzoArena.Tests.Editor
     public sealed class HeroRosterTests
     {
         [Test]
-        public void DevelopmentCatalogContainsSixStableHeroesWithCompleteKits()
+        public void DevelopmentCatalogContainsTwentyStableHeroesWithCompleteKits()
         {
             HeroCatalog catalog=HeroCatalog.Shared;
             Assert.IsTrue(catalog.Validate(out string reason),reason);
-            Assert.AreEqual(6,catalog.Heroes.Count);
+            Assert.GreaterOrEqual(catalog.Heroes.Count,20);
             foreach(HeroDefinition hero in catalog.Heroes)
             {
                 Assert.IsFalse(string.IsNullOrWhiteSpace(hero.HeroId));

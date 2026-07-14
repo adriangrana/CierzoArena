@@ -22,6 +22,8 @@ namespace CierzoArena.Online.Room
         public int JoinOrder;
         public string BuildVersion;
         public int ProtocolVersion;
+        // Serialized through the owner's session properties. See RoomChatHistory.
+        public string ChatHistory;
 
         public MatchPlayerSlot Clone() => (MatchPlayerSlot)MemberwiseClone();
     }
@@ -63,7 +65,7 @@ namespace CierzoArena.Online.Room
             player.JoinOrder = players.Count;
             players.Add(player); Changed?.Invoke(); return true;
         }
-        public bool TryAssign(MatchPlayerSlot player, TeamId target, OnlineServicesSettings settings, out OnlineErrorCode error)
+        public bool TryAssign(MatchPlayerSlot player, TeamId target, OnlineServicesSettings settings, out OnlineErrorCode error, int requestedSlot = -1)
         {
             error = OnlineErrorCode.None;
             if (player == null || (target != TeamId.Azure && target != TeamId.Ember)) { error = OnlineErrorCode.Unknown; return false; }
@@ -71,13 +73,15 @@ namespace CierzoArena.Online.Room
             int used = 0;
             foreach (MatchPlayerSlot item in players) if (!ReferenceEquals(item, player) && item.Team == target) used++;
             if (used >= capacity) { error = OnlineErrorCode.SessionFull; return false; }
-            player.Team = target; player.StableSlot = FirstAvailableSlot(target, player, capacity); player.IsReady = false; return true;
+            int slot = requestedSlot >= 0 ? requestedSlot : FirstAvailableSlot(target, player, capacity);
+            if (slot < 0 || slot >= capacity || IsSlotOccupied(target, player, slot)) { error = OnlineErrorCode.SessionFull; return false; }
+            player.Team = target; player.StableSlot = slot; player.IsReady = false; return true;
         }
-        public bool TryChangeTeam(string playerId, TeamId target, OnlineServicesSettings settings, out OnlineErrorCode error)
+        public bool TryChangeTeam(string playerId, TeamId target, OnlineServicesSettings settings, out OnlineErrorCode error, int requestedSlot = -1)
         {
             MatchPlayerSlot player = Find(playerId); if (player == null) { error = OnlineErrorCode.Unknown; return false; }
             if (!IsJoinable) { error = OnlineErrorCode.MatchStarted; return false; }
-            bool changed = TryAssign(player, target, settings, out error); if (changed) Changed?.Invoke(); return changed;
+            bool changed = TryAssign(player, target, settings, out error, requestedSlot); if (changed) Changed?.Invoke(); return changed;
         }
         public bool TrySetReady(string actorId, string playerId, bool ready, out OnlineErrorCode error)
         {
@@ -111,6 +115,12 @@ namespace CierzoArena.Online.Room
                 if (!used) return i;
             }
             return -1;
+        }
+        private bool IsSlotOccupied(TeamId team, MatchPlayerSlot ignored, int slot)
+        {
+            foreach (MatchPlayerSlot item in players)
+                if (!ReferenceEquals(item, ignored) && item.Team == team && item.StableSlot == slot) return true;
+            return false;
         }
     }
 }

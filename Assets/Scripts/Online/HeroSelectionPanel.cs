@@ -208,7 +208,7 @@ namespace CierzoArena.Online
         private void OnChanged(MultiplayerSessionCoordinator _) => Refresh();
         private void OnDestroy() { if (coordinator != null) coordinator.Changed -= OnChanged; }
         private static List<MatchPlayerSlot> AlternatingOrder(IReadOnlyList<MatchPlayerSlot> players) { List<MatchPlayerSlot> azure = players.Where(player => player.Team == TeamId.Azure).OrderBy(player => player.StableSlot).ToList(); List<MatchPlayerSlot> ember = players.Where(player => player.Team == TeamId.Ember).OrderBy(player => player.StableSlot).ToList(); List<MatchPlayerSlot> order = new(); for (int index = 0; index < Math.Max(azure.Count, ember.Count); index++) { if (index < azure.Count) order.Add(azure[index]); if (index < ember.Count) order.Add(ember[index]); } return order; }
-        private static string Role(HeroRole role) => role switch { HeroRole.Vanguard => "Vanguardia", HeroRole.Carry => "Carry", HeroRole.Duelist => "Duelista", HeroRole.Mage => "Mago", HeroRole.Support => "Apoyo", _ => "Control" };
+        private static string Role(HeroRole role) => role switch { HeroRole.Vanguard => "Vanguardia", HeroRole.Carry => "Carry", HeroRole.Duelist => "Duelista", HeroRole.Mage => "Mago", HeroRole.Support => "Apoyo", HeroRole.Controller => "Control", HeroRole.Assassin => "Asesino", HeroRole.Utility => "Utilidad", _ => role.ToString() };
         private static string Attack(HeroAttackStyle style) => style == HeroAttackStyle.Melee ? "Cuerpo a cuerpo" : "A distancia";
         private Image Image(string name, Transform parent, Vector2 min, Vector2 max, Color color) { GameObject item = new GameObject(name, typeof(RectTransform), typeof(Image)); item.transform.SetParent(parent, false); RectTransform rect = item.GetComponent<RectTransform>(); rect.anchorMin = min; rect.anchorMax = max; rect.offsetMin = rect.offsetMax = Vector2.zero; Image image = item.GetComponent<Image>(); image.color = color; return image; }
         private static RawImage Raw(string name, Transform parent) { GameObject item = new GameObject(name, typeof(RectTransform), typeof(RawImage)); item.transform.SetParent(parent, false); return item.GetComponent<RawImage>(); }
@@ -222,7 +222,18 @@ namespace CierzoArena.Online
             fitter.aspectRatio = texture != null && texture.height > 0 ? (float)texture.width / texture.height : 1f;
         }
         private Text Label(string name, string value, int size, FontStyle style, TextAnchor alignment, Color color, Vector2 min, Vector2 max, Transform parent = null) { GameObject item = new GameObject(name, typeof(RectTransform), typeof(Text)); item.transform.SetParent(parent ?? transform, false); RectTransform rect = item.GetComponent<RectTransform>(); rect.anchorMin = min; rect.anchorMax = max; rect.offsetMin = rect.offsetMax = Vector2.zero; Text text = item.GetComponent<Text>(); text.font = font; text.text = value; text.fontSize = size; text.fontStyle = style; text.alignment = alignment; text.color = color; text.horizontalOverflow = HorizontalWrapMode.Wrap; text.verticalOverflow = VerticalWrapMode.Overflow; return text; }
-        private Button Button(string name, string value, Vector2 min, Vector2 max, Color color, Transform parent) { Image image = Image(name, parent, min, max, color); Button button = image.gameObject.AddComponent<Button>(); Label("Label", value, 14, FontStyle.Bold, TextAnchor.MiddleCenter, Color.white, Vector2.zero, Vector2.one, image.transform); return button; }
+        private Button Button(string name, string value, Vector2 min, Vector2 max, Color color, Transform parent)
+        {
+            Image image = Image(name, parent, min, max, color);
+            Button button = image.gameObject.AddComponent<Button>();
+            ColorBlock states = button.colors; states.normalColor = Color.white; states.highlightedColor = new Color(.72f,.90f,1f,1f); states.pressedColor = new Color(.45f,.70f,.90f,1f); states.fadeDuration = .08f; button.colors = states;
+            AddOutline(image.gameObject, new Color(.35f,.62f,.80f,.5f), 1f);
+            Shadow shadow = image.gameObject.AddComponent<Shadow>(); shadow.effectColor = new Color(0f,0f,0f,.66f); shadow.effectDistance = new Vector2(1.5f,-1.5f);
+            Image topBevel = Image("Top Bevel", image.transform, new Vector2(.025f,.92f), new Vector2(.975f,.965f), new Color(1f,1f,1f,.16f)); topBevel.raycastTarget = false;
+            Image bottomBevel = Image("Bottom Bevel", image.transform, new Vector2(.025f,.035f), new Vector2(.975f,.09f), new Color(0f,0f,0f,.34f)); bottomBevel.raycastTarget = false;
+            Label("Label", value, 14, FontStyle.Bold, TextAnchor.MiddleCenter, Color.white, Vector2.zero, Vector2.one, image.transform);
+            return button;
+        }
         private static void AddOutline(GameObject target, Color color, float distance) { Outline outline = target.AddComponent<Outline>(); outline.effectColor = color; outline.effectDistance = new Vector2(distance, -distance); }
     }
 }

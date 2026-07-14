@@ -15,6 +15,8 @@ namespace CierzoArena.Units
         [SerializeField] private HeroRole primaryRole;
         [SerializeField] private HeroRole secondaryRole;
         [SerializeField] private HeroAttackStyle attackStyle;
+        [SerializeField] private HeroDamageType damageType;
+        [SerializeField] private HeroPowerCurve powerCurve;
         [SerializeField, Range(1, 3)] private int difficulty = 1;
         [SerializeField] private Color themeColor = Color.cyan;
         [SerializeField] private Texture2D portrait;
@@ -45,6 +47,8 @@ namespace CierzoArena.Units
         public HeroRole PrimaryRole => primaryRole;
         public HeroRole SecondaryRole => secondaryRole;
         public HeroAttackStyle AttackStyle => attackStyle;
+        public HeroDamageType DamageType => damageType;
+        public HeroPowerCurve PowerCurve => powerCurve;
         public int Difficulty => Mathf.Clamp(difficulty, 1, 3);
         public Color ThemeColor => themeColor;
         public Texture2D Portrait => portrait;
@@ -78,13 +82,25 @@ namespace CierzoArena.Units
             reason = string.Empty; return true;
         }
 
-        public void ConfigureRuntime(string id, string name, string title, string text, HeroRole primary, HeroRole secondary, HeroAttackStyle style, int skill, Color color, HeroStats stats, AbilityDefinition[] kit)
+        public void ConfigureRuntime(string id, string name, string title, string text, HeroRole primary, HeroRole secondary, HeroAttackStyle style, int skill, Color color, HeroStats stats, AbilityDefinition[] kit, HeroDamageType damage = HeroDamageType.Magical, HeroPowerCurve curve = HeroPowerCurve.Mid, string[] tags = null)
         {
-            heroId = id; displayName = name; epithet = title; description = text; primaryRole = primary; secondaryRole = secondary; attackStyle = style; difficulty = skill; themeColor = color;
+            heroId = id; displayName = name; epithet = title; description = text; primaryRole = primary; secondaryRole = secondary; attackStyle = style; difficulty = skill; themeColor = color; damageType = damage; powerCurve = curve; styleTags = tags ?? new string[0];
             baseHealth = stats.BaseHealth; healthPerLevel = stats.HealthPerLevel; baseMana = stats.BaseMana; manaPerLevel = stats.ManaPerLevel; healthRegen = stats.HealthRegen; manaRegen = stats.ManaRegen; baseDamage = stats.BaseDamage; damagePerLevel = stats.DamagePerLevel; moveSpeed = stats.MoveSpeed; moveSpeedPerLevel = stats.MoveSpeedPerLevel; attackRange = stats.AttackRange; attackInterval = stats.AttackInterval; attackPoint = stats.AttackPoint; backswing = stats.Backswing; projectileSpeed = stats.ProjectileSpeed; abilities = kit;
         }
         public void SetPrefab(GameObject value) => prefab = value;
         public void SetPresentation(Texture2D large, Texture2D icon) { portrait=large;smallIcon=icon; }
+        /// <summary>Rebinds presentation after an editor art build. Gameplay data
+        /// remains untouched, so this is safe while the menu rebuilds its UI.</summary>
+        public bool TryRefreshPresentationFromResources()
+        {
+            if (string.IsNullOrWhiteSpace(heroId)) return false;
+            string[] words=heroId.Split(new[]{'.','_'},System.StringSplitOptions.RemoveEmptyEntries);
+            string fileName=string.Empty;
+            for(int i=0;i<words.Length;i++) fileName+=char.ToUpperInvariant(words[i][0])+words[i].Substring(1);
+            Texture2D loaded=Resources.Load<Texture2D>($"Art/UI/HeroPortraits/{fileName}Portrait");
+            if(loaded==null) return false;
+            SetPresentation(loaded,loaded);return true;
+        }
     }
 
     public readonly struct HeroStats

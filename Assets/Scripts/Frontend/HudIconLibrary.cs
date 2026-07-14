@@ -12,15 +12,9 @@ namespace CierzoArena.Frontend
         private static Texture2D abilityAtlas;
         private static Texture2D itemAtlas;
 
-        private static readonly string[] AbilityIds =
-        {
-            "rampart_strike", "windward_guard", "grounding_ring", "citadel_crash",
-            "rift_lunge", "duelist_wind", "counterveil", "redline",
-            "piercing_gale", "tailwind", "updraft_step", "horizon_breaker",
-            "arc_bolt", "storm_mark", "gale_step", "tempest_fall",
-            "kindling_orb", "cairn_barrier", "restoring_draft", "sanctuary_field",
-            "pressure_drop", "static_lattice", "crosswind", "eye_of_tempest"
-        };
+        private const int AbilityAtlasColumns = 10;
+        private const int AbilityAtlasRows = 8;
+        private const int AbilityAtlasCapacity = AbilityAtlasColumns * AbilityAtlasRows;
 
         private static readonly string[] ItemIds =
         {
@@ -30,9 +24,39 @@ namespace CierzoArena.Frontend
         public static bool TryGetAbility(AbilityDefinition ability, out Texture2D texture, out Rect uv)
         {
             texture = LoadAbilityAtlas();
-            int index = ability == null ? -1 : Array.IndexOf(AbilityIds, ability.AbilityId);
-            uv = index >= 0 ? Cell(index, 6, 4, .006f, .012f) : new Rect(0f, 0f, 1f / 6f, 1f / 4f);
-            return texture != null;
+            int index = AbilityAtlasIndex(ability);
+            if (texture != null) { uv = Cell(index, AbilityAtlasColumns, AbilityAtlasRows, .003f, .006f); return true; }
+            if (ability != null && ability.Icon != null) { texture = ability.Icon; uv = new Rect(0f, 0f, 1f, 1f); return true; }
+            uv = new Rect(0f, 0f, 1f, 1f); return false;
+        }
+
+        // Atlas cells follow the data-driven roster order: every hero has four
+        // dedicated cells, so the HUD and the hero detail always address the
+        // exact same image source.
+        private static int AbilityAtlasIndex(AbilityDefinition ability)
+        {
+            if (ability == null) return 0;
+            int index = 0;
+            foreach (HeroDefinition hero in HeroCatalog.Shared.Heroes)
+            {
+                if (hero == null) continue;
+                for (int slot = 0; slot < 4; slot++, index++)
+                {
+                    AbilityDefinition candidate = hero.GetAbility(slot);
+                    if (candidate != null && candidate.AbilityId == ability.AbilityId) return index;
+                }
+            }
+            return StableHash(ability.AbilityId) % AbilityAtlasCapacity;
+        }
+
+        private static int StableHash(string value)
+        {
+            unchecked
+            {
+                int hash = 17;
+                foreach (char character in value ?? string.Empty) hash = hash * 31 + character;
+                return hash & int.MaxValue;
+            }
         }
 
         public static bool TryGetItem(ItemDefinition item, out Texture2D texture, out Rect uv)
@@ -57,7 +81,7 @@ namespace CierzoArena.Frontend
             int row = index / columns;
             float width = 1f / columns;
             float height = 1f / rows;
-            return new Rect(column * width + insetX, row * height + insetY, width - insetX * 2f, height - insetY * 2f);
+            return new Rect(column * width + insetX, 1f - (row + 1) * height + insetY, width - insetX * 2f, height - insetY * 2f);
         }
     }
 }

@@ -25,6 +25,7 @@ namespace CierzoArena.Online.Sessions
         private const string PhaseKey = "phase";
         private const string DisplayNameKey = "name";
         private const string TeamKey = "team";
+        private const string SlotKey = "slot";
         private const string ReadyKey = "ready";
         private const string HeroKey = "hero";
         private const string HeroIntentKey = "hero_intent";
@@ -34,6 +35,11 @@ namespace CierzoArena.Online.Sessions
         private const string HeroDeadlineKey = "hero_deadline";
         private const string HeroTurnSecondsKey = "hero_turn_seconds";
         private const string HeroPicksKey = "hero_picks";
+        private const string ChatHistoryKey = "room_chat";
+        // Sessions accept at most ten player properties. Keep the build and
+        // protocol together so the room can also persist the chosen slot and
+        // its chat history without exceeding that service limit.
+        private const string PlayerVersionKey = "version";
 
         private readonly UnityServicesBootstrap services;
         private readonly OnlineServicesSettings settings;
@@ -93,8 +99,16 @@ namespace CierzoArena.Online.Sessions
                 return OnlineErrorCode.None;
             }
             catch (OperationCanceledException) { return OnlineErrorCode.Timeout; }
-            catch (SessionException exception) { return MapSessionError(exception); }
-            catch { return OnlineErrorCode.RelayUnavailable; }
+            catch (SessionException exception)
+            {
+                Debug.LogWarning($"[Online] No se pudo crear la sala: {exception.Error} — {exception.Message}");
+                return MapSessionError(exception);
+            }
+            catch (Exception exception)
+            {
+                Debug.LogException(exception);
+                return OnlineErrorCode.RelayUnavailable;
+            }
         }
 
         public async Task<OnlineErrorCode> JoinByCodeAsync(string joinCode, MatchPlayerSlot player, CancellationToken cancellationToken)
@@ -355,13 +369,18 @@ namespace CierzoArena.Online.Sessions
             if (session == null) return;
             List<MatchPlayerSlot> slots = new List<MatchPlayerSlot>();
             Dictionary<string, CommittedHeroPick> committedPicks = ReadCommittedPicks();
-            int azureSlot = 0;
-            int emberSlot = 0;
+            HashSet<int> azureSlots = new HashSet<int>();
+            HashSet<int> emberSlots = new HashSet<int>();
             int index = 0;
             foreach (IReadOnlyPlayer member in session.Players.OrderBy(member => member.Joined))
             {
                 TeamId team = ReadTeam(member, TeamId.Azure);
-                int stableSlot = team == TeamId.Ember ? emberSlot++ : azureSlot++;
+                HashSet<int> occupiedSlots = team == TeamId.Ember ? emberSlots : azureSlots;
+                int persistedSlot = int.TryParse(Read(member, SlotKey, "-1"), out int parsedSlot) ? parsedSlot : -1;
+                int stableSlot = persistedSlot >= 0 && persistedSlot < settings.MaxPlayersPerTeam && !occupiedSlots.Contains(persistedSlot)
+                    ? persistedSlot
+                    : FirstFreeSlot(occupiedSlots, settings.MaxPlayersPerTeam);
+                occupiedSlots.Add(stableSlot);
                 string heroId = Read(member, HeroKey, "storm_warden");
                 HeroPickState pickState = ReadPickState(member);
                 int pickOrder = int.TryParse(Read(member, HeroPickOrderKey, "-1"), out int parsedPickOrder) ? parsedPickOrder : -1;
@@ -371,6 +390,7 @@ namespace CierzoArena.Online.Sessions
                     pickState = committed.State;
                     pickOrder = committed.Order;
                 }
+                (string playerBuildVersion, int playerProtocolVersion) = ReadPlayerVersion(member);
                 slots.Add(new MatchPlayerSlot
                 {
                     PlayerId = member.Id,
@@ -385,8 +405,9 @@ namespace CierzoArena.Online.Sessions
                     HeroPickState = pickState,
                     HeroPickOrder = pickOrder,
                     JoinOrder = index++,
-                    BuildVersion = Read(member, BuildKey, settings.BuildVersion),
-                    ProtocolVersion = int.TryParse(Read(member, ProtocolKey, settings.ProtocolVersion.ToString()), out int protocol) ? protocol : -1
+                    BuildVersion = playerBuildVersion,
+                    ProtocolVersion = playerProtocolVersion,
+                    ChatHistory = Read(member, ChatHistoryKey, string.Empty)
                 });
             }
             bool joinable = !session.IsLocked && string.Equals(Read(session.Properties, PhaseKey, "room"), "room", StringComparison.Ordinal);
@@ -415,15 +436,36 @@ namespace CierzoArena.Online.Sessions
         {
             { DisplayNameKey, new PlayerProperty(NormalizeDisplayName(player.DisplayName)) },
             { TeamKey, new PlayerProperty(((int)player.Team).ToString()) },
+            { SlotKey, new PlayerProperty(player.StableSlot.ToString()) },
             { ReadyKey, new PlayerProperty(player.IsReady ? "1" : "0") },
             { HeroKey, new PlayerProperty(player.HeroId ?? "storm_warden") },
             { HeroIntentKey, new PlayerProperty(player.HeroIntentId ?? string.Empty) },
             { HeroPickStateKey, new PlayerProperty(((int)player.HeroPickState).ToString()) },
             { HeroPickOrderKey, new PlayerProperty(player.HeroPickOrder.ToString()) },
-            { BuildKey, new PlayerProperty(player.BuildVersion ?? string.Empty) },
-            { ProtocolKey, new PlayerProperty(player.ProtocolVersion.ToString()) }
+            { ChatHistoryKey, new PlayerProperty(player.ChatHistory ?? string.Empty) },
+            { PlayerVersionKey, new PlayerProperty(SerializePlayerVersion(player.BuildVersion, player.ProtocolVersion)) }
         };
+        private (string BuildVersion, int ProtocolVersion) ReadPlayerVersion(IReadOnlyPlayer player)
+        {
+            // Read the old two-property shape as a fallback so any room that
+            // was created before this change remains understandable.
+            string buildVersion = Read(player, BuildKey, settings.BuildVersion);
+            int protocolVersion = int.TryParse(Read(player, ProtocolKey, settings.ProtocolVersion.ToString()), out int legacyProtocol)
+                ? legacyProtocol
+                : -1;
+            string packedVersion = Read(player, PlayerVersionKey, string.Empty);
+            int separator = packedVersion.LastIndexOf('|');
+            if (separator <= 0 || separator >= packedVersion.Length - 1) return (buildVersion, protocolVersion);
+            if (!int.TryParse(packedVersion.Substring(separator + 1), out int parsedProtocol)) return (buildVersion, protocolVersion);
+            return (packedVersion.Substring(0, separator), parsedProtocol);
+        }
+        private static string SerializePlayerVersion(string buildVersion, int protocolVersion) => $"{buildVersion ?? string.Empty}|{protocolVersion}";
         private static string Read(IReadOnlyDictionary<string, PlayerProperty> values, string key, string fallback) => values != null && values.TryGetValue(key, out PlayerProperty value) && !string.IsNullOrWhiteSpace(value?.Value) ? value.Value : fallback;
+        private static int FirstFreeSlot(HashSet<int> occupied, int capacity)
+        {
+            for (int slot = 0; slot < capacity; slot++) if (!occupied.Contains(slot)) return slot;
+            return 0;
+        }
         private static string Read(IReadOnlyDictionary<string, SessionProperty> values, string key, string fallback) => values != null && values.TryGetValue(key, out SessionProperty value) && !string.IsNullOrWhiteSpace(value?.Value) ? value.Value : fallback;
         private static string Read(IReadOnlyPlayer player, string key, string fallback) => Read(player?.Properties, key, fallback);
         private static TeamId ReadTeam(IReadOnlyPlayer player, TeamId fallback) => int.TryParse(Read(player, TeamKey, ((int)fallback).ToString()), out int value) && value == (int)TeamId.Ember ? TeamId.Ember : TeamId.Azure;

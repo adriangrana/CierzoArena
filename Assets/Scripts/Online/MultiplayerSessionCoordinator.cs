@@ -170,10 +170,11 @@ namespace CierzoArena.Online
             }
             finally { EndOperation(); }
         }
-        public async Task ChangeTeamAsync(TeamId team)
+        public Task ChangeTeamAsync(TeamId team) => ChangeTeamAsync(team, -1);
+        public async Task ChangeTeamAsync(TeamId team, int targetSlot)
         {
             if (sessions?.Roster == null || Identity == null) return;
-            if (!sessions.Roster.TryChangeTeam(sessions.LocalPlayerId, team, settings, out OnlineErrorCode error)) { Fail(error); return; }
+            if (!sessions.Roster.TryChangeTeam(sessions.LocalPlayerId, team, settings, out OnlineErrorCode error, targetSlot)) { Fail(error); return; }
             await sessions.SetPlayerDataAsync(sessions.Roster.Find(sessions.LocalPlayerId), CancellationToken.None); State = OnlineState.InRoom; Notify();
         }
         public async Task ToggleReadyAsync()
@@ -182,6 +183,17 @@ namespace CierzoArena.Online
             MatchPlayerSlot player = sessions.Roster.Find(sessions.LocalPlayerId); if (player == null) return;
             if (!sessions.Roster.TrySetReady(sessions.LocalPlayerId, sessions.LocalPlayerId, !player.IsReady, out OnlineErrorCode error)) { Fail(error); return; }
             await sessions.SetPlayerDataAsync(player, CancellationToken.None); Notify();
+        }
+        public async Task SendRoomChatAsync(string message)
+        {
+            if (sessions?.Roster == null || !sessions.IsInSession) return;
+            string normalized = RoomChatHistory.NormalizeMessage(message);
+            if (string.IsNullOrWhiteSpace(normalized)) return;
+            MatchPlayerSlot player = sessions.Roster.Find(sessions.LocalPlayerId);
+            if (player == null) return;
+            player.ChatHistory = RoomChatHistory.Append(player.ChatHistory, normalized, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+            OnlineErrorCode result = await sessions.SetPlayerDataAsync(player, CancellationToken.None);
+            if (result != OnlineErrorCode.None) Fail(result);
         }
         public async Task StartGameAsync()
         {
