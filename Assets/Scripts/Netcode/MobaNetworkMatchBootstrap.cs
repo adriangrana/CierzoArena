@@ -1,14 +1,19 @@
+using System.Collections;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading.Tasks;
 using CierzoArena.Combat;
 using CierzoArena.CameraSystem;
 using CierzoArena.Core;
 using CierzoArena.Frontend;
+using CierzoArena.Online;
+using CierzoArena.Online.Identity;
 using CierzoArena.Structures;
 using CierzoArena.Units;
 using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace CierzoArena.Netcode
 {
@@ -41,17 +46,27 @@ namespace CierzoArena.Netcode
 
         private readonly Dictionary<ulong, NetworkObject> heroes = new();
         private readonly Dictionary<ulong, TeamId> clientTeams = new();
+        private readonly Dictionary<ulong, int> clientMatchSlots = new();
         private readonly Dictionary<ulong, string> clientHeroIds = new();
+        private readonly Dictionary<ulong, string> clientDisplayNames = new();
         private readonly List<NetworkObject> infrastructure = new();
         private NetworkManager manager;
         private bool networkMode;
         private bool localDevelopmentMode;
         private bool launchedFromFrontend;
+        // NGO can surface its server-start callback more than once while a peer is
+        // synchronizing the scene. Reinitializing here used to clear `heroes` and
+        // spawn another authoritative hero for every connected client.
+        private bool serverWorldInitialized;
+        private bool serverGameplaySourcesActivated;
         private GUIStyle labelStyle;
         private GUIStyle buttonStyle;
         private TeamId requestedTeam = TeamId.Azure;
         private string requestedHeroId = "storm_warden";
         private TeamId localAssignedTeam = TeamId.Neutral;
+        private bool returningToRoom;
+        private bool mainMenuSceneLoading;
+        private MultiplayerSessionCoordinator observedCoordinator;
 
         public static MobaNetworkMatchBootstrap Active { get; private set; }
         public bool IsNetworkMatchMode => networkMode;
@@ -71,6 +86,10 @@ namespace CierzoArena.Netcode
         private void Start()
         {
             Active=this;
+            MatchEndExitRequest.Requested+=RequestMatchExit;
+            MatchNavigationState.DisconnectRequested+=RequestActiveMatchDisconnect;
+            MatchNavigationState.Changed+=OnNavigationStateChanged;
+            ApplyArenaShadowDefaults();
             SetSceneLocalHeroRegistration(false);
             manager=NetworkManager.Singleton;
             if(manager==null)return;
@@ -91,14 +110,33 @@ namespace CierzoArena.Netcode
             if(FrontendLaunchRequest.TryConsume(out FrontendMatchMode mode,out TeamId team,out string address,out ushort port,out string heroId))
             {
                 launchedFromFrontend=true;requestedTeam=team;requestedHeroId=ValidateRequestedHeroId(heroId);
-                if(manager.TryGetComponent(out UnityTransport frontendTransport))frontendTransport.SetConnectionData(address,port);
+                bool relayLaunch=mode==FrontendMatchMode.RelayHost||mode==FrontendMatchMode.RelayClient;
+                if(relayLaunch)
+                {
+                    if(!TryConfigureRelayTransport())
+                    {
+                        State=ArenaStartupState.Failed;
+                        Debug.LogError("[M24 Relay] La arena no recibió una asignación Relay válida desde la sala.",this);
+                        return;
+                    }
+                }
+                else if(manager.TryGetComponent(out UnityTransport frontendTransport))frontendTransport.SetConnectionData(address,port);
                 if(mode==FrontendMatchMode.LocalDevelopment)StartLocalDevelopment();
-                else if(mode==FrontendMatchMode.Host)StartHost();
+                else if(mode==FrontendMatchMode.Host||mode==FrontendMatchMode.RelayHost)StartHost();
                 else StartClient();
+                if(relayLaunch)
+                {
+                    observedCoordinator=MultiplayerSessionCoordinator.Active;
+                    if(observedCoordinator!=null)observedCoordinator.Changed+=OnRelayCoordinatorChanged;
+                }
             }
         }
         private void OnDestroy()
         {
+            MatchEndExitRequest.Requested-=RequestMatchExit;
+            MatchNavigationState.DisconnectRequested-=RequestActiveMatchDisconnect;
+            MatchNavigationState.Changed-=OnNavigationStateChanged;
+            if(observedCoordinator!=null)observedCoordinator.Changed-=OnRelayCoordinatorChanged;
             ShutdownTransportIfListening();
             if(manager==null)return;
             manager.OnServerStarted-=OnServerStarted;manager.OnServerStopped-=OnServerStopped;
@@ -107,6 +145,59 @@ namespace CierzoArena.Netcode
             if(Active==this)Active=null;
         }
         private void OnApplicationQuit()=>ShutdownTransportIfListening();
+
+        private void OnRelayCoordinatorChanged(MultiplayerSessionCoordinator coordinator)
+        {
+            // A transient room/session update must never eject the authority from
+            // its own match.  Only a connected peer can lose its host; the host is
+            // responsible for the running simulation and remains in the arena until
+            // it deliberately ends the match or shuts down.
+            if(returningToRoom||coordinator.State!=OnlineState.Disconnected||manager==null||manager.IsHost||manager.IsServer)return;
+            _=ReturnToMenuAfterHostLossAsync();
+        }
+        private async Task ReturnToMenuAfterHostLossAsync()
+        {
+            returningToRoom=true;
+            await Task.Yield();
+            if(manager!=null&&manager.IsListening)manager.Shutdown();
+            MatchNavigationState.CompleteExit();
+            SceneManager.LoadScene("MainMenu");
+        }
+        private void RequestMatchExit()
+        {
+            Debug.Log($"[M24 MatchEnd] Bootstrap received return request: networkMode={networkMode}, returning={returningToRoom}, listening={manager!=null&&manager.IsListening}.",this);
+            if(returningToRoom||!networkMode)return;
+            _=ReturnToRoomAfterMatchAsync();
+        }
+        private async Task ReturnToRoomAfterMatchAsync()
+        {
+            returningToRoom=true;
+            MultiplayerSessionCoordinator coordinator=MultiplayerSessionCoordinator.Active;
+            if(coordinator?.Sessions!=null&&coordinator.Sessions.IsInSession)
+                await coordinator.ReturnToRoomAfterMatchAsync();
+            Debug.Log("[M24 MatchEnd] Session handoff ended; loading MainMenu.",this);
+            if(manager!=null&&manager.IsListening)manager.Shutdown();
+            MatchNavigationState.CompleteExit();
+            SceneManager.LoadScene("MainMenu");
+        }
+
+        /// <summary>Owns the destructive part of leaving an active arena.  The
+        /// overlay only raises intent; it never touches Relay, NGO, or scenes.</summary>
+        private async void RequestActiveMatchDisconnect()
+        {
+            if (returningToRoom) return;
+            returningToRoom = true;
+            MultiplayerSessionCoordinator coordinator = MultiplayerSessionCoordinator.Active;
+            if (coordinator?.Sessions != null && coordinator.Sessions.IsInSession)
+            {
+                if (coordinator.Sessions.IsLocalHost) await coordinator.CloseRoomAsync();
+                else await coordinator.LeaveAsync();
+            }
+
+            if (manager != null && manager.IsListening) manager.Shutdown();
+            MatchNavigationState.CompleteExit();
+            SceneManager.LoadScene("MainMenu");
+        }
 
         /// <summary>
         /// A NetworkManager can be marked DontDestroyOnLoad while this scene
@@ -121,6 +212,16 @@ namespace CierzoArena.Netcode
             if(manager!=null)manager.Shutdown();
         }
 
+        private bool TryConfigureRelayTransport()
+        {
+            MultiplayerSessionCoordinator coordinator=MultiplayerSessionCoordinator.Active;
+            if(coordinator?.Sessions==null||!coordinator.Sessions.TryConsumeRelayConfiguration(out Unity.Services.Multiplayer.NetworkConfiguration configuration))return false;
+            if(!manager.TryGetComponent(out UnityTransport transport))return false;
+            transport.SetRelayServerData(configuration.RelayServerData);
+            Debug.Log("[M24 Relay] UnityTransport configurado desde la asignación Relay de la sala.",this);
+            return true;
+        }
+
         public void StartHost()
         {
             if(!EnterNetworkMode(ArenaStartupState.StartingHost))return;
@@ -130,7 +231,7 @@ namespace CierzoArena.Netcode
             // Ember (and subsequently reject the actual Ember client).
             clientTeams.Remove(NetworkManager.ServerClientId);
             clientHeroIds[NetworkManager.ServerClientId]=ValidateRequestedHeroId(requestedHeroId);
-            manager.NetworkConfig.ConnectionData=BuildConnectionPayload(requestedTeam,requestedHeroId);
+            manager.NetworkConfig.ConnectionData=BuildConnectionPayload(requestedTeam,requestedHeroId,GetRequestedDisplayName());
             localAssignedTeam=TeamId.Neutral;
             bool started=manager.StartHost();
             Debug.Log($"[M18 Spawn] StartHost result={started} IsServer={manager.IsServer} IsHost={manager.IsHost} LocalClientId={manager.LocalClientId}",this);
@@ -141,25 +242,65 @@ namespace CierzoArena.Netcode
                 State=ArenaStartupState.Failed;
                 return;
             }
-            // NGO connects the host immediately. Cover both callback orderings: when
-            // OnServerStarted ran synchronously it is already idempotently spawned;
-            // otherwise this is a harmless no-op until that callback runs.
-            if(started&&manager.IsServer)EnsureConnectedPlayersSpawned();
+            BeginActiveMatchNavigation(true, true, false);
         }
         public void StartClient()
         {
             if(!EnterNetworkMode(ArenaStartupState.StartingClient))return;
-            manager.NetworkConfig.ConnectionData=BuildConnectionPayload(requestedTeam,requestedHeroId);manager.StartClient();
+            manager.NetworkConfig.ConnectionData=BuildConnectionPayload(requestedTeam,requestedHeroId,GetRequestedDisplayName());manager.StartClient();
+            BeginActiveMatchNavigation(true, false, true);
         }
         public void StartLocalDevelopment()
         {
             if(networkMode||localDevelopmentMode)return;
             State=ArenaStartupState.StartingLocal;
             localDevelopmentMode=true;
+            SetNetworkInputMode(false);
             SetSceneLocalHeroRegistration(true);
             EnableLocalGameplay();
             ConfigureLocalSelectedHero();
             State=ArenaStartupState.RunningLocal;
+            BeginActiveMatchNavigation(false, false, false);
+        }
+
+        private static void BeginActiveMatchNavigation(bool online, bool host, bool client)
+        {
+            MatchNavigationState.BeginMatch(online, host, client);
+        }
+
+        private void OnNavigationStateChanged()
+        {
+            if (!MatchNavigationState.IsMatchActive || returningToRoom) return;
+            if (MatchNavigationState.IsMainMenuVisible)
+                StartCoroutine(ShowMainMenuOverMatch());
+            else
+                StartCoroutine(HideMainMenuOverMatch());
+        }
+
+        private IEnumerator ShowMainMenuOverMatch()
+        {
+            if (mainMenuSceneLoading) yield break;
+
+            Scene menuScene = SceneManager.GetSceneByName("MainMenu");
+            if (menuScene.isLoaded) yield break;
+
+            mainMenuSceneLoading = true;
+            AsyncOperation operation = SceneManager.LoadSceneAsync("MainMenu", LoadSceneMode.Additive);
+            if (operation != null) yield return operation;
+            mainMenuSceneLoading = false;
+        }
+
+        private IEnumerator HideMainMenuOverMatch()
+        {
+            if (mainMenuSceneLoading) yield break;
+
+            Scene menuScene = SceneManager.GetSceneByName("MainMenu");
+            if (!menuScene.isLoaded) yield break;
+
+            mainMenuSceneLoading = true;
+            AsyncOperation operation = SceneManager.UnloadSceneAsync(menuScene);
+            if (operation != null) yield return operation;
+            mainMenuSceneLoading = false;
         }
         private bool EnterNetworkMode(ArenaStartupState startingState)
         {
@@ -168,6 +309,7 @@ namespace CierzoArena.Netcode
             manager=NetworkManager.Singleton;if(manager==null||manager.IsListening)return false;
             networkMode=true;
             State=startingState;
+            SetNetworkInputMode(true);
             SetSceneLocalHeroRegistration(false);
             ClearLocalDynamicUnits();
             for(int i=0;i<localOnlyObjects.Length;i++)if(localOnlyObjects[i]!=null)localOnlyObjects[i].SetActive(false);
@@ -226,6 +368,18 @@ namespace CierzoArena.Netcode
                 if(registrar!=null)registrar.enabled=enabled;
             }
         }
+        /// <summary>
+        /// Local and network command controllers both read the same input bindings.
+        /// A network match must use only the network request controller; otherwise a
+        /// key press can target a different owned replica than the HUD is showing.
+        /// </summary>
+        private static void SetNetworkInputMode(bool networkMode)
+        {
+            foreach(PlayerCommandController controller in FindObjectsByType<PlayerCommandController>(FindObjectsInactive.Include))
+                if(controller!=null)controller.enabled=!networkMode;
+            foreach(NetworkPlayerCommandController controller in FindObjectsByType<NetworkPlayerCommandController>(FindObjectsInactive.Include))
+                if(controller!=null)controller.enabled=networkMode;
+        }
         private static void ClearLocalDynamicUnits()
         {
             foreach(CreepController creep in FindObjectsByType<CreepController>())
@@ -236,28 +390,31 @@ namespace CierzoArena.Netcode
 
         private void OnServerStarted()
         {
+            if(manager==null||!manager.IsServer)return;
+            if(serverWorldInitialized)
+            {
+                Debug.LogWarning("[M18 Spawn] Duplicate OnServerStarted ignored; the active match world is preserved.",this);
+                return;
+            }
+            serverWorldInitialized=true;
             heroes.Clear();infrastructure.Clear();
             Spawn(matchPrefab,Vector3.zero,Quaternion.identity);
             Debug.Log($"[M18 Spawn] OnServerStarted IsServer={manager.IsServer} IsHost={manager.IsHost} LocalClientId={manager.LocalClientId} connected={manager.ConnectedClientsIds.Count}",this);
-            // The host is already connected when StartHost completes, but NGO does not
-            // guarantee that OnClientConnected is observed in a particular order.
-            // EnsureConnectedPlayersSpawned covers that initial connection explicitly.
-            EnsureConnectedPlayersSpawned();
-            if(!heroes.TryGetValue(NetworkManager.ServerClientId,out NetworkObject hostHero)||hostHero==null||!hostHero.IsSpawned)
-            {
-                State=ArenaStartupState.Failed;
-                Debug.LogError("[M18 Spawn] Server started without a spawned host hero; world sources remain disabled.",this);
-                return;
-            }
             for(int i=0;i<localStructures.Length;i++)SpawnStructure(localStructures[i]);
-            ActivateServerGameplaySources();
-            State=ArenaStartupState.RunningNetwork;
+            TryActivateServerGameplaySources();
         }
         private void OnServerStopped(bool _)
         {
-            heroes.Clear();infrastructure.Clear();clientTeams.Clear();clientHeroIds.Clear();
+            heroes.Clear();infrastructure.Clear();clientTeams.Clear();clientMatchSlots.Clear();clientHeroIds.Clear();clientDisplayNames.Clear();
+            serverWorldInitialized=false;serverGameplaySourcesActivated=false;
             networkMode=false;
             if(State!=ArenaStartupState.Failed)State=ArenaStartupState.WaitingForMode;
+
+            // When the host disappears NGO despawns the replicated world before the
+            // client necessarily receives a coordinator update.  Do not leave that
+            // client looking at an empty arena with no way back to the room.
+            if(launchedFromFrontend&&!returningToRoom&&manager!=null&&manager.IsClient&&!manager.IsHost)
+                HandleUnexpectedHostLoss("server stopped");
         }
         private void OnClientConnected(ulong clientId)
         {
@@ -268,24 +425,33 @@ namespace CierzoArena.Netcode
                 return;
             }
             TeamId assigned=GetAssignedTeam(clientId);
-            Debug.Log($"[M18 Spawn] OnClientConnected clientId={clientId} alreadyRegistered={heroes.ContainsKey(clientId)} requested={requestedTeam} assigned={assigned}",this);
+            Debug.Log($"[M18 Spawn] OnClientConnected clientId={clientId} alreadyRegistered={heroes.ContainsKey(clientId)} assigned={assigned}",this);
             EnsurePlayerSpawned(clientId);
+            TryActivateServerGameplaySources();
         }
         private void OnClientDisconnected(ulong clientId)
         {
             if(manager==null)return;
             if(!manager.IsServer)
             {
-                if(clientId==manager.LocalClientId)State=ArenaStartupState.Failed;
+                if(clientId==manager.LocalClientId)
+                {
+                    State=ArenaStartupState.Failed;
+                    HandleUnexpectedHostLoss("local client disconnected");
+                }
                 return;
             }
             if(!heroes.TryGetValue(clientId,out NetworkObject hero))return;
-            if(hero!=null&&hero.IsSpawned)hero.Despawn(true);heroes.Remove(clientId);
+            if(hero!=null&&hero.IsSpawned)hero.Despawn(true);heroes.Remove(clientId);clientMatchSlots.Remove(clientId);
         }
-        private void EnsureConnectedPlayersSpawned()
+
+        private void HandleUnexpectedHostLoss(string reason)
         {
-            if(manager==null||!manager.IsServer)return;
-            foreach(ulong clientId in manager.ConnectedClientsIds)EnsurePlayerSpawned(clientId);
+            if(!launchedFromFrontend||returningToRoom||manager==null||manager.IsHost)return;
+            returningToRoom=true;
+            Debug.LogWarning($"[M24 Relay] El anfitrión dejó de estar disponible ({reason}); se vuelve al menú.",this);
+            MultiplayerSessionCoordinator.Active?.NotifyHostLost();
+            _=ReturnToMenuAfterHostLossAsync();
         }
         /// <summary>Idempotent server-side spawn boundary for one connected player.</summary>
         private void EnsurePlayerSpawned(ulong clientId)
@@ -294,6 +460,7 @@ namespace CierzoArena.Netcode
             if(heroes.TryGetValue(clientId,out NetworkObject existing)&&existing!=null&&existing.IsSpawned)return;
 
             TeamId team=GetAssignedTeam(clientId);
+            int matchSlot=GetAssignedMatchSlot(clientId,team);
             HeroDefinition definition=HeroCatalog.Shared.ResolveOrFallback(GetRequestedHeroId(clientId));
             NetworkObject prefab=definition != null && definition.Prefab != null ? definition.Prefab.GetComponent<NetworkObject>() : null;
             if(prefab==null)prefab=azureHeroPrefab;
@@ -308,8 +475,9 @@ namespace CierzoArena.Netcode
 
             NetworkObject hero=Instantiate(prefab,position,Quaternion.identity);
             ArenaVisualPass.Repair(hero.gameObject);
-            if(hero.TryGetComponent(out HeroMatchIdentity identity))identity.ConfigureHero(definition);
-            if(hero.TryGetComponent(out NetworkUnitController networkUnit))networkUnit.ConfigureHeroDefinitionServer(definition?.HeroId);
+            if(hero.TryGetComponent(out HeroMatchIdentity identity)){identity.Configure(matchSlot);identity.ConfigureHero(definition);}
+            if(hero.TryGetComponent(out HeroMatchIdentity playerIdentity))playerIdentity.ConfigurePlayerDisplayName(GetRequestedDisplayName(clientId));
+            if(hero.TryGetComponent(out NetworkUnitController networkUnit)){networkUnit.ConfigureMatchSlotServer(matchSlot);networkUnit.ConfigureHeroDefinitionServer(definition?.HeroId);}
             Debug.Log($"[M18 Spawn] After Instantiate clientId={clientId} instance={(hero!=null?hero.name:"null")} networkObjectFound={hero!=null} isSpawnedBefore={(hero!=null&&hero.IsSpawned)}",this);
             if(hero==null)
             {
@@ -338,17 +506,52 @@ namespace CierzoArena.Netcode
                 return;
             }
             heroes[clientId]=hero;
+            if(hero.TryGetComponent(out HeroMatchStatistics heroStatistics))MatchStatisticsController.Active?.RegisterHero(heroStatistics);
             Debug.Log($"[M18 Spawn] After SpawnWithOwnership clientId={clientId} IsSpawned={hero.IsSpawned} OwnerClientId={hero.OwnerClientId} NetworkObjectId={hero.NetworkObjectId} position={hero.transform.position}",this);
         }
-        private void ActivateServerGameplaySources()
+        private void TryActivateServerGameplaySources()
         {
             // Do not begin the world simulation unless the host owns a spawned hero.
             // This preserves the same complete match loop for host and clients without
             // allowing creeps/camps to run in an incomplete session.
-            if(!heroes.TryGetValue(NetworkManager.ServerClientId,out NetworkObject hostHero)||hostHero==null||!hostHero.IsSpawned)return;
+            if(!serverWorldInitialized||serverGameplaySourcesActivated||!heroes.TryGetValue(NetworkManager.ServerClientId,out NetworkObject hostHero)||hostHero==null||!hostHero.IsSpawned)return;
             for(int i=0;i<waveSpawners.Length;i++)waveSpawners[i]?.ActivateNetworkMode();
             for(int i=0;i<campSpawners.Length;i++)campSpawners[i]?.ActivateNetworkMode();
             bossSpawner?.ActivateNetworkMode();
+            serverGameplaySourcesActivated=true;
+            State=ArenaStartupState.RunningNetwork;
+        }
+
+        // The arena uses the Built-in renderer.  The scene authoring tool applies
+        // these values to its Editor session, but that does not guarantee the same
+        // runtime state in a fresh Windows player.  Keep the prototype's contact
+        // shadows deterministic without restoring URP or adding shader variants.
+        private static void ApplyArenaShadowDefaults()
+        {
+            QualitySettings.shadows=ShadowQuality.All;
+            QualitySettings.shadowResolution=ShadowResolution.High;
+            QualitySettings.shadowDistance=65f;
+            QualitySettings.shadowProjection=ShadowProjection.StableFit;
+
+            int casters=0;
+            foreach(Renderer renderer in FindObjectsByType<Renderer>(FindObjectsInactive.Exclude))
+            {
+                // UI and particle renderers are deliberately excluded; the arena's
+                // mesh renderers need an explicit contract after runtime material repair.
+                if(renderer is not MeshRenderer&&renderer is not SkinnedMeshRenderer)continue;
+                renderer.shadowCastingMode=UnityEngine.Rendering.ShadowCastingMode.On;
+                renderer.receiveShadows=true;
+                casters++;
+            }
+            int directionalLights=0;
+            foreach(Light light in FindObjectsByType<Light>(FindObjectsInactive.Exclude))
+            {
+                if(light.type!=LightType.Directional)continue;
+                light.shadows=LightShadows.Soft;
+                light.shadowStrength=.46f;
+                directionalLights++;
+            }
+            Debug.Log($"[Render] Built-in shadows: quality={QualitySettings.names[QualitySettings.GetQualityLevel()]}, mode={QualitySettings.shadows}, distance={QualitySettings.shadowDistance:0}, casters={casters}, directionalLights={directionalLights}.");
         }
         private TeamId GetAssignedTeam(ulong clientId)
         {
@@ -357,17 +560,30 @@ namespace CierzoArena.Netcode
             TeamId resolved=IsTeamAvailable(requested)?requested:TeamId.Ember;
             clientTeams[clientId]=resolved;return resolved;
         }
+        private int GetAssignedMatchSlot(ulong clientId,TeamId team)
+        {
+            if(clientMatchSlots.TryGetValue(clientId,out int assigned))return assigned;
+            for(int slot=0;slot<5;slot++)
+            {
+                bool used=false;
+                foreach(KeyValuePair<ulong,int> entry in clientMatchSlots)
+                    if(entry.Key!=clientId&&entry.Value==slot&&GetAssignedTeam(entry.Key)==team){used=true;break;}
+                if(!used){clientMatchSlots[clientId]=slot;return slot;}
+            }
+            clientMatchSlots[clientId]=4;return 4;
+        }
         private bool IsTeamAvailable(TeamId team)
         {
-            foreach(KeyValuePair<ulong,TeamId> entry in clientTeams)if(entry.Value==team)return false;
-            return true;
+            int count=0;
+            foreach(KeyValuePair<ulong,TeamId> entry in clientTeams)if(entry.Value==team)count++;
+            return count<5;
         }
         private void ApproveConnection(NetworkManager.ConnectionApprovalRequest request,NetworkManager.ConnectionApprovalResponse response)
         {
-            ParseConnectionPayload(request.Payload,out TeamId requested,out string heroId);
+            ParseConnectionPayload(request.Payload,out TeamId requested,out string heroId,out string displayName);
             TeamId assigned=IsTeamAvailable(requested)?requested:(requested==TeamId.Azure&&IsTeamAvailable(TeamId.Ember)?TeamId.Ember:TeamId.Neutral);
             response.Approved=assigned!=TeamId.Neutral;response.CreatePlayerObject=false;
-            if(response.Approved){clientTeams[request.ClientNetworkId]=assigned;clientHeroIds[request.ClientNetworkId]=ValidateRequestedHeroId(heroId);}
+            if(response.Approved){clientTeams[request.ClientNetworkId]=assigned;GetAssignedMatchSlot(request.ClientNetworkId,assigned);clientHeroIds[request.ClientNetworkId]=ValidateRequestedHeroId(heroId);clientDisplayNames[request.ClientNetworkId]=NormalizeDisplayName(displayName);}
             Debug.Log($"[M18 Spawn] Approval clientId={request.ClientNetworkId} alreadyRegistered={heroes.ContainsKey(request.ClientNetworkId)} requested={requested} assigned={assigned} approved={response.Approved}",this);
         }
         public void NotifyLocalOwner(TeamId team)
@@ -378,14 +594,25 @@ namespace CierzoArena.Netcode
         }
 
         private string GetRequestedHeroId(ulong clientId) => clientHeroIds.TryGetValue(clientId,out string heroId) ? heroId : requestedHeroId;
-        private static byte[] BuildConnectionPayload(TeamId team,string heroId) => Encoding.UTF8.GetBytes($"{(int)team}|{heroId ?? string.Empty}");
-        private static void ParseConnectionPayload(byte[] payload,out TeamId team,out string heroId)
+        private string GetRequestedDisplayName(ulong clientId) => clientDisplayNames.TryGetValue(clientId,out string displayName) ? displayName : GetRequestedDisplayName();
+        private static string GetRequestedDisplayName()
         {
-            team=TeamId.Azure;heroId=string.Empty;
+            string value=MultiplayerSessionCoordinator.Active?.Identity?.DisplayName;
+            return NormalizeDisplayName(value);
+        }
+        private static string NormalizeDisplayName(string value)
+        {
+            return PlayerDisplayName.TryNormalize(value,out string normalized,out _) ? normalized : "Jugador";
+        }
+        private static byte[] BuildConnectionPayload(TeamId team,string heroId,string displayName) => Encoding.UTF8.GetBytes($"{(int)team}|{heroId ?? string.Empty}|{NormalizeDisplayName(displayName)}");
+        private static void ParseConnectionPayload(byte[] payload,out TeamId team,out string heroId,out string displayName)
+        {
+            team=TeamId.Azure;heroId=string.Empty;displayName="Jugador";
             if(payload==null||payload.Length==0)return;
             string value=Encoding.UTF8.GetString(payload);string[] split=value.Split('|');
             if(split.Length>0&&int.TryParse(split[0],out int raw)&&raw==(int)TeamId.Ember)team=TeamId.Ember;
             if(split.Length>1)heroId=split[1];
+            if(split.Length>2)displayName=NormalizeDisplayName(split[2]);
         }
         private void ConfigureLocalSelectedHero()
         {

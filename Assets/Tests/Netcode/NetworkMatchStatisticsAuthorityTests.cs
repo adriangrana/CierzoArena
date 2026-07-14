@@ -31,6 +31,9 @@ namespace CierzoArena.Netcode.Tests
             System.Type publicRow=typeof(NetworkMatchStatisticsController).GetNestedType("NetworkHeroStatistics",BindingFlags.NonPublic);
             Assert.That(publicRow.GetField("CurrentGold",BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic),Is.Null);
             Assert.That(publicRow.GetField("GoldEarned",BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic),Is.Null);
+            FieldInfo displayName=publicRow.GetField("DisplayName",BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic);
+            Assert.That(displayName,Is.Not.Null,"The public scoreboard must preserve a sanitized player name without sending an authentication ID.");
+            Assert.That(displayName.FieldType.Name,Is.EqualTo("FixedString64Bytes"));
         }
         [Test]
         public void IndividualHeroGoldIsOwnerOnlyRatherThanPublic()

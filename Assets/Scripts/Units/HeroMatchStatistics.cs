@@ -31,7 +31,16 @@ namespace CierzoArena.Units
             progression = GetComponent<HeroProgression>(); economy = GetComponent<HeroEconomy>(); life = GetComponent<HeroLifeCycle>();
         }
         private void Awake(){Ensure();}
-        private void OnEnable(){MatchStatisticsController.Active?.RegisterHero(this);}
+        private void OnEnable()
+        {
+            // A transport can activate a prefab before it applies the authoritative
+            // team and match slot. Runtime stays transport-agnostic through this
+            // small optional interface rather than referencing Netcode directly.
+            MonoBehaviour[] behaviours=GetComponents<MonoBehaviour>();
+            for(int i=0;i<behaviours.Length;i++)
+                if(behaviours[i] is IHeroMatchRegistrationGate gate&&!gate.IsHeroMatchRegistrationReady)return;
+            MatchStatisticsController.Active?.RegisterHero(this);
+        }
         private void OnDisable(){MatchStatisticsController.Active?.UnregisterHero(this);}
 
         public MatchStatisticsSnapshot Snapshot => new MatchStatisticsSnapshot(HeroId, Team, Identity.DisplayName,

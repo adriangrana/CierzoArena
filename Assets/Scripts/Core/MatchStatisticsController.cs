@@ -23,6 +23,7 @@ namespace CierzoArena.Core
         private readonly Dictionary<Health, Dictionary<int, Contribution>> contributions = new();
         private readonly HashSet<Health> deathObserved = new();
         private readonly Dictionary<int, MatchStatisticsSnapshot> replicatedSnapshots = new();
+        private readonly List<int> staleHeroRegistrationIds = new();
         // Team-scoped gold arrives separately from the public scoreboard snapshot.
         // It is intentionally not merged into replicatedSnapshots, which prevents a
         // remote client from treating enemy current gold as public match data.
@@ -115,23 +116,41 @@ namespace CierzoArena.Core
         {
             EnsureInitialized();
             if(hero==null)return;hero.Ensure();int id=hero.HeroId;
+            // Runtime network prefabs become active before the bootstrap can assign
+            // their final team. Re-index the same component when that team assignment
+            // changes its deterministic HeroId; never leave it stranded under the
+            // temporary prefab team key.
+            staleHeroRegistrationIds.Clear();
+            foreach(KeyValuePair<int,HeroMatchStatistics> entry in heroesById)
+                if(ReferenceEquals(entry.Value,hero)&&entry.Key!=id)staleHeroRegistrationIds.Add(entry.Key);
+            for(int i=0;i<staleHeroRegistrationIds.Count;i++)heroesById.Remove(staleHeroRegistrationIds[i]);
             if(heroesById.TryGetValue(id,out HeroMatchStatistics existing))
             {
                 if(existing==hero)return;
                 Debug.LogWarning($"Duplicate match hero id {id}; configure distinct HeroMatchIdentity slots.",hero);
                 return;
             }
-            heroesById.Add(id,hero);heroOrder.Add(hero);heroOrder.Sort(CompareHeroes);ObserveDeath(hero.Health);
-            if(hero.TryGetComponent(out HeroEconomy economy)){economy.GoldGained+=OnGoldGained;economy.Changed+=OnGoldChanged;}
-            if(hero.TryGetComponent(out HeroProgression progression))progression.ExperienceGained+=OnExperienceGained;
-            if(hero.TryGetComponent(out HeroLifeCycle life))life.StateChanged+=OnHeroLifeStateChanged;
+            heroesById.Add(id,hero);
+            if(!heroOrder.Contains(hero))
+            {
+                heroOrder.Add(hero);heroOrder.Sort(CompareHeroes);ObserveDeath(hero.Health);
+                if(hero.TryGetComponent(out HeroEconomy economy)){economy.GoldGained+=OnGoldGained;economy.Changed+=OnGoldChanged;}
+                if(hero.TryGetComponent(out HeroProgression progression))progression.ExperienceGained+=OnExperienceGained;
+                if(hero.TryGetComponent(out HeroLifeCycle life))life.StateChanged+=OnHeroLifeStateChanged;
+            }
             if(!authorityEnabled&&replicatedSnapshots.TryGetValue(id,out MatchStatisticsSnapshot remote))hero.ApplyReplicated(remote);
             Changed();
         }
         public void UnregisterHero(HeroMatchStatistics hero)
         {
-            if(hero==null||!heroesById.TryGetValue(hero.HeroId,out HeroMatchStatistics current)||current!=hero)return;
-            Unsubscribe(hero);heroesById.Remove(hero.HeroId);heroOrder.Remove(hero);
+            if(hero==null)return;
+            staleHeroRegistrationIds.Clear();
+            foreach(KeyValuePair<int,HeroMatchStatistics> entry in heroesById)
+                if(ReferenceEquals(entry.Value,hero))staleHeroRegistrationIds.Add(entry.Key);
+            if(staleHeroRegistrationIds.Count==0)return;
+            Unsubscribe(hero);
+            for(int i=0;i<staleHeroRegistrationIds.Count;i++)heroesById.Remove(staleHeroRegistrationIds[i]);
+            heroOrder.Remove(hero);
         }
         public void CopySnapshotsTo(List<MatchStatisticsSnapshot> destination)
         {
@@ -277,6 +296,10 @@ namespace CierzoArena.Core
         private void ObserveDeath(Health health){if(health!=null&&deathObserved.Add(health))health.DiedWithContext+=OnAnyDied;}
         private void Unsubscribe(HeroMatchStatistics hero)
         {
+            // Network despawns can destroy a hero before the match controller is
+            // torn down. Unity then keeps a managed reference that throws when any
+            // Component API is accessed, so guard it before TryGetComponent.
+            if(hero==null)return;
             if(hero.TryGetComponent(out HeroEconomy economy)){economy.GoldGained-=OnGoldGained;economy.Changed-=OnGoldChanged;}
             if(hero.TryGetComponent(out HeroProgression progression))progression.ExperienceGained-=OnExperienceGained;
             if(hero.TryGetComponent(out HeroLifeCycle life))life.StateChanged-=OnHeroLifeStateChanged;

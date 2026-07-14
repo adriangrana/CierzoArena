@@ -1,5 +1,6 @@
 using CierzoArena.Combat;
 using CierzoArena.CameraSystem;
+using CierzoArena.Core;
 using CierzoArena.Units;
 using Unity.Netcode;
 using UnityEngine;
@@ -39,6 +40,12 @@ namespace CierzoArena.Netcode
 
         private void Update()
         {
+            if (!MatchNavigationState.IsGameplayInputAllowed)
+            {
+                pendingAbilitySlot = -1;
+                pendingAttackMove = false;
+                return;
+            }
             if (NetworkManager.Singleton == null || !NetworkManager.Singleton.IsClient)
             {
                 return;
@@ -179,6 +186,15 @@ namespace CierzoArena.Netcode
             }
 
             ownedUnit = null;
+            // The HUD and camera are bound through LocalHeroProvider. Prefer that
+            // exact transform over a scene-wide first-match search so input can never
+            // target another owned object during a transient replication overlap.
+            Transform localHero=LocalHeroProvider.Active!=null?LocalHeroProvider.Active.CurrentHero:null;
+            if(localHero!=null&&localHero.TryGetComponent(out NetworkUnitController localUnit)&&localUnit.IsSpawned&&localUnit.IsOwner)
+            {
+                ownedUnit=localUnit;
+                return ownedUnit;
+            }
             foreach (NetworkUnitController candidate in FindObjectsByType<NetworkUnitController>(FindObjectsInactive.Exclude))
             {
                 if (candidate.IsSpawned && candidate.IsOwner)

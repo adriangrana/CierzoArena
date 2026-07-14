@@ -11,10 +11,10 @@ EditorBuildSettings:
   - enabled: 0
     path: Assets/Scenes/PrototypeArena.unity
     guid: 91dc8d6be89eabf48875498ae28758f3
-  - enabled: 1
+  - enabled: 0
     path: Assets/Scenes/MultiplayerSpikeArena.unity
     guid: e153b65d68a0e44438b49f02f4ac4d84
-  - enabled: 1
+  - enabled: 0
     path: Assets/Scenes/NavigationScaleSpike.unity
     guid: 026b2ae23d08a1543b1fd26b4cde1bcc
   - enabled: 1

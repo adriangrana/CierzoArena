@@ -85,9 +85,9 @@ namespace CierzoArena.Units
         {
             Color accent=team==TeamId.Azure?new Color(.22f,.78f,1f):new Color(1f,.35f,.25f);DrawPanel(rect,new Color(.025f,.065f,.105f,.78f),accent);
             GUI.Label(new Rect(rect.x+10f*scale,rect.y+6f*scale,rect.width,22f*scale),$"{(team==TeamId.Azure?"◇":"◆")} EQUIPO {team.ToString().ToUpperInvariant()}  ·  {values.Count}/{capacity}",headerLeft);
-            Rect headerRect=new Rect(rect.x+12f*scale,rect.y+29f*scale,rect.width-24f*scale,18f*scale);
+            Rect headerRect=new Rect(rect.x+12f*scale,rect.y+29f*scale,rect.width-24f*scale,23f*scale);
             DrawColumnHeader(headerRect);
-            float rowHeight=31f*scale;for(int i=0;i<capacity;i++){Rect rowRect=new Rect(rect.x+9f*scale,rect.y+49f*scale+i*rowHeight,rect.width-18f*scale,rowHeight-2f*scale);if(i<values.Count)DrawPlayerRow(rowRect,values[i],team,i,accent,scale);else DrawEmptyRow(rowRect,team,i,scale);}
+            float rowHeight=31f*scale;for(int i=0;i<capacity;i++){Rect rowRect=new Rect(rect.x+9f*scale,rect.y+55f*scale+i*rowHeight,rect.width-18f*scale,rowHeight-2f*scale);if(i<values.Count)DrawPlayerRow(rowRect,values[i],team,i,accent,scale);else DrawEmptyRow(rowRect,team,i,scale);}
         }
 
         private void DrawColumnHeader(Rect rect)
@@ -107,8 +107,8 @@ namespace CierzoArena.Units
             Color old=GUI.color;GUI.color=hero!=null?Color.white:new Color(.4f,.45f,.5f);
             Rect iconRect=new Rect(playerCell.x+5f*scale,rect.y+3f*scale,25f*scale,25f*scale);
             GUI.DrawTexture(iconRect,hero!=null&&hero.SmallIcon!=null?hero.SmallIcon:Texture2D.whiteTexture,ScaleMode.ScaleAndCrop);GUI.color=old;
-            string player=$"{team} {StableSlot(value,rowIndex)+1}";
-            GUI.Label(new Rect(playerCell.x+35f*scale,playerCell.y,Mathf.Max(0f,playerCell.width-38f*scale),playerCell.height),$"{player}  ·  {value.DisplayName}",rowLeft);
+            string player=string.IsNullOrWhiteSpace(value.DisplayName)?$"Jugador {StableSlot(value,rowIndex)+1}":value.DisplayName;
+            GUI.Label(new Rect(playerCell.x+35f*scale,playerCell.y,Mathf.Max(0f,playerCell.width-38f*scale),playerCell.height),player,rowLeft);
             DrawCell(rect,ScoreboardColumn.Level,value.Level.ToString());
             DrawCell(rect,ScoreboardColumn.Kills,value.Kills.ToString());
             DrawCell(rect,ScoreboardColumn.Deaths,value.Deaths.ToString());
@@ -176,7 +176,7 @@ namespace CierzoArena.Units
             rowLeft=new GUIStyle(GUI.skin.box){fontSize=Mathf.RoundToInt(18*scale),alignment=TextAnchor.MiddleLeft,wordWrap=false,clipping=TextClipping.Clip,normal={textColor=Color.white}};
             rowCenter=new GUIStyle(rowLeft){alignment=TextAnchor.MiddleCenter};
             rowRight=new GUIStyle(rowLeft){alignment=TextAnchor.MiddleRight};
-            headerLeft=new GUIStyle(rowLeft){fontSize=Mathf.RoundToInt(19*scale),fontStyle=FontStyle.Bold,normal={textColor=new Color(.95f,.86f,.3f)}};
+            headerLeft=new GUIStyle(rowLeft){fontSize=Mathf.RoundToInt(16*scale),fontStyle=FontStyle.Bold,normal={textColor=new Color(.95f,.86f,.3f)}};
             headerCenter=new GUIStyle(headerLeft){alignment=TextAnchor.MiddleCenter};
             headerRight=new GUIStyle(headerLeft){alignment=TextAnchor.MiddleRight};
             feedStyle=new GUIStyle(rowCenter){fontSize=Mathf.RoundToInt(20*scale),normal={textColor=Color.white}};
@@ -208,7 +208,7 @@ namespace CierzoArena.Units
         // Player, level, K/D/A, last hits, gold, status. These fractions add up
         // to one and reserve readable space for every column at low resolutions.
         private static readonly float[] WidthFractions = { .46f, .065f, .045f, .045f, .045f, .065f, .105f, .17f };
-        private static readonly string[] Headers = { "JUGADOR / HÉROE", "NIV.", "K", "D", "A", "LH", "ORO", "ESTADO" };
+        private static readonly string[] Headers = { "JUGADOR", "NIV.", "K", "D", "A", "LH", "ORO", "ESTADO" };
 
         public static float GetWidthFraction(ScoreboardColumn column) => WidthFractions[(int)column];
         public static string GetHeader(ScoreboardColumn column) => Headers[(int)column];

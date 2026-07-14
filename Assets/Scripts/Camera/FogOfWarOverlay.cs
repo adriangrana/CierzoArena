@@ -105,11 +105,16 @@ namespace CierzoArena.CameraSystem
             maskResolution = Mathf.Clamp(maskResolution, MinimumMaskResolution, MaximumMaskResolution);
 
             CreatePersistentResources();
-            Shader fogShader = Shader.Find("CierzoArena/Fog Of War Soft Overlay");
-            Shader blendShader = Shader.Find("Hidden/CierzoArena/Fog Mask Blend");
-            if (fogShader == null || !fogShader.isSupported || blendShader == null || !blendShader.isSupported)
+            // The serialized Resources asset is the player-build dependency. Shader.Find
+            // remains only as an Editor/recovery fallback, never as the only reference.
+            FogOfWarShaderReferences references = Resources.Load<FogOfWarShaderReferences>("Rendering/FogOfWarShaders");
+            Shader fogShader = references != null && references.OverlayShader != null ? references.OverlayShader : Shader.Find("CierzoArena/Fog Of War Soft Overlay");
+            Shader blendShader = references != null && references.MaskBlendShader != null ? references.MaskBlendShader : Shader.Find("Hidden/CierzoArena/Fog Mask Blend");
+            bool fogShaderSupported = fogShader != null && fogShader.isSupported;
+            bool blendShaderSupported = blendShader != null && blendShader.isSupported;
+            if (!fogShaderSupported || !blendShaderSupported)
             {
-                Debug.LogError("[FogOfWar] Built-in soft fog shaders are missing or unsupported; the overlay was disabled.", this);
+                Debug.LogError($"[FogOfWar] Soft fog overlay unavailable: references={DescribeReferences(references)}, overlay={DescribeShader(fogShader)}, blend={DescribeShader(blendShader)}. The overlay was disabled.", this);
                 enabled = false;
                 return;
             }
@@ -117,6 +122,18 @@ namespace CierzoArena.CameraSystem
             fogMaterial = new Material(fogShader) { name = "Fog Of War Soft Material", hideFlags = HideFlags.DontSave };
             maskBlendMaterial = new Material(blendShader) { name = "Fog Mask Blend Material", hideFlags = HideFlags.DontSave };
             ConfigureFogMaterial();
+            Debug.Log($"[FogOfWar] Soft overlay ready: overlay={fogShader.name}, blend={blendShader.name}.", this);
+        }
+
+        private static string DescribeShader(Shader shader)
+        {
+            return shader == null ? "missing" : $"{shader.name} (supported={shader.isSupported})";
+        }
+
+        private static string DescribeReferences(FogOfWarShaderReferences references)
+        {
+            if (references == null) return "missing";
+            return $"loaded (overlay={DescribeShader(references.OverlayShader)}, blend={DescribeShader(references.MaskBlendShader)})";
         }
 
         private void LateUpdate()

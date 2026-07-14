@@ -43,6 +43,15 @@ namespace CierzoArena.Units
 
         private void Update()
         {
+            // The active-match menu is a real input boundary, not a visual mask.
+            // Clear pending targeting so closing it cannot release an old command on
+            // the first click back in the arena.
+            if (!MatchNavigationState.IsGameplayInputAllowed)
+            {
+                pendingAbilitySlot = -1;
+                pendingAttackMove = false;
+                return;
+            }
             if (selectedUnit == null && LocalHeroProvider.Active != null && LocalHeroProvider.Active.CurrentHero != null)
             {
                 Select(LocalHeroProvider.Active.CurrentHero.GetComponent<SelectableUnit>());

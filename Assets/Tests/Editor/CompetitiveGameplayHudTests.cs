@@ -10,13 +10,29 @@ namespace CierzoArena.Tests.Editor
         [Test]
         public void HudHasOneLocalBindingAndExpectedCommandSlots()
         {
-            GameObject providerObject=new GameObject("Provider");LocalHeroProvider provider=providerObject.AddComponent<LocalHeroProvider>();
-            GameObject hudObject=new GameObject("GameplayHUD");CompetitiveGameplayHud hud=hudObject.AddComponent<CompetitiveGameplayHud>();
-            GameObject hero=new GameObject("Local Hero");provider.Register(hero.transform);
-            hud.BindHero(hero.transform);
-            Assert.That(hud.BoundHero,Is.EqualTo(hero.transform));Assert.That(hud.IsBoundToLocalHero,Is.True);
-            Assert.That(hud.AbilitySlotCount,Is.EqualTo(4));Assert.That(hud.InventorySlotCount,Is.EqualTo(6));
-            Object.DestroyImmediate(hero);Object.DestroyImmediate(hudObject);Object.DestroyImmediate(providerObject);
+            LocalHeroProvider provider=LocalHeroProvider.Active;
+            GameObject providerObject=null;
+            if(provider==null)
+            {
+                providerObject=new GameObject("Provider");
+                provider=providerObject.AddComponent<LocalHeroProvider>();
+            }
+
+            Transform previousHero=provider.CurrentHero;
+            GameObject hudObject=new GameObject("GameplayHUD");
+            GameObject hero=new GameObject("Local Hero");
+            try
+            {
+                CompetitiveGameplayHud hud=hudObject.AddComponent<CompetitiveGameplayHud>();
+                provider.Register(hero.transform);
+                Assert.That(hud.BoundHero,Is.EqualTo(hero.transform));Assert.That(hud.IsBoundToLocalHero,Is.True);
+                Assert.That(hud.AbilitySlotCount,Is.EqualTo(4));Assert.That(hud.InventorySlotCount,Is.EqualTo(6));
+            }
+            finally
+            {
+                if(previousHero!=null)provider.Register(previousHero);else provider.Unregister(hero.transform);
+                Object.DestroyImmediate(hero);Object.DestroyImmediate(hudObject);if(providerObject!=null)Object.DestroyImmediate(providerObject);
+            }
         }
         [Test]
         public void HudBindingCanBeClearedAndReassignedWithoutGlobalHeroSearch()

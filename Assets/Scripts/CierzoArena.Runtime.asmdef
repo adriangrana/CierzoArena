@@ -2,6 +2,7 @@
   "name": "CierzoArena.Runtime",
   "rootNamespace": "CierzoArena",
   "references": [
-    "UnityEngine.UI"
+    "UnityEngine.UI",
+    "GUID:37e17ffe38d86ae48bc3207e83ffef88"
   ]
 }

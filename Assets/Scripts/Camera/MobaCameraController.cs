@@ -1,3 +1,4 @@
+using CierzoArena.Core;
 using UnityEngine;
 
 namespace CierzoArena.CameraSystem
@@ -230,6 +231,14 @@ namespace CierzoArena.CameraSystem
 
         private void Update()
         {
+            if (!MatchNavigationState.IsGameplayInputAllowed)
+            {
+                frameKeyboardDirection = Vector2.zero;
+                frameEdgeDirection = Vector2.zero;
+                frameZoomDelta = 0f;
+                frameRecenterPressed = false;
+                return;
+            }
             frameKeyboardDirection = input.ReadKeyboardDirection();
             frameEdgeDirection = edgeScrollingEnabled
                 ? input.ReadEdgeDirection(edgeBorderPixels)

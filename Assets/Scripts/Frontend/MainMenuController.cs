@@ -1,6 +1,8 @@
 using CierzoArena.Core;
 using CierzoArena.Units;
+using CierzoArena.Online;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
@@ -10,6 +12,8 @@ namespace CierzoArena.Frontend
     /// existing arena; it never creates a NetworkManager or starts a session itself.</summary>
     public sealed class MainMenuController : MonoBehaviour
     {
+        private enum MatchMenuDialog { None, Disconnect, Quit }
+
         [SerializeField] private CierzoVisualTheme theme;
         [SerializeField] private HeroPresentationDefinition[] heroes;
         [SerializeField] private Texture2D logoImage;
@@ -28,6 +32,7 @@ namespace CierzoArena.Frontend
         private HeroCatalog heroCatalog;
         private HeroDefinition selectedHero;
         private int heroFilter;
+        private MatchMenuDialog matchMenuDialog;
         private readonly string[] navigation={"Inicio","Héroes","Jugar","Aprender","Ajustes"};
 
         public int ActiveSection=>section;
@@ -42,6 +47,18 @@ namespace CierzoArena.Frontend
             uiFont=Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             heroCatalog=HeroCatalog.Shared;selectedHero=heroCatalog.ResolveOrFallback(FrontendLaunchRequest.HeroId);
             BuildCanvasPresentation();
+        }
+        private void OnEnable() => MatchNavigationState.Changed += RefreshMatchPresentation;
+        private void OnDisable() => MatchNavigationState.Changed -= RefreshMatchPresentation;
+
+        private bool IsActiveMatchMenu => MatchNavigationState.IsMatchActive && MatchNavigationState.IsMainMenuVisible;
+
+        private void RefreshMatchPresentation()
+        {
+            if (menuCanvas == null || !IsActiveMatchMenu) return;
+            menuCanvas.overrideSorting = true;
+            menuCanvas.sortingOrder = 100;
+            BuildContent();
         }
         private void OnGUI()
         {
@@ -123,14 +140,34 @@ namespace CierzoArena.Frontend
         // only as a development fallback should the Canvas be unavailable.
         private void BuildCanvasPresentation()
         {
-            menuCanvas=FindAnyObjectByType<Canvas>();
-            if(menuCanvas==null){GameObject canvasObject=new GameObject("Main Menu Canvas",typeof(Canvas),typeof(CanvasScaler),typeof(GraphicRaycaster));menuCanvas=canvasObject.GetComponent<Canvas>();}
-            menuCanvas.renderMode=RenderMode.ScreenSpaceOverlay;CanvasScaler scaler=menuCanvas.GetComponent<CanvasScaler>()??menuCanvas.gameObject.AddComponent<CanvasScaler>();scaler.uiScaleMode=CanvasScaler.ScaleMode.ScaleWithScreenSize;scaler.referenceResolution=new Vector2(1920,1080);scaler.screenMatchMode=CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;scaler.matchWidthOrHeight=.5f;if(menuCanvas.GetComponent<GraphicRaycaster>()==null)menuCanvas.gameObject.AddComponent<GraphicRaycaster>();
+            // The MainMenu scene owns its existing screen-space Canvas. Never use
+            // FindAnyObjectByType here: an additive menu over the arena would then
+            // steal a world-space health-bar Canvas.
+            menuCanvas=FindCanvasInOwnScene();
+            if(menuCanvas==null){Debug.LogError("[MainMenu] The MainMenu scene has no Canvas.",this);return;}
+            menuCanvas.renderMode=RenderMode.ScreenSpaceOverlay;CanvasScaler scaler=menuCanvas.GetComponent<CanvasScaler>();
+            if(scaler!=null){scaler.uiScaleMode=CanvasScaler.ScaleMode.ScaleWithScreenSize;scaler.referenceResolution=new Vector2(1920,1080);scaler.screenMatchMode=CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;scaler.matchWidthOrHeight=.5f;}
+            menuCanvas.overrideSorting=IsActiveMatchMenu;menuCanvas.sortingOrder=IsActiveMatchMenu?100:0;
+            ConfigureEmbeddedMenuScene();
             menuRoot=CreateRect("MainMenu Layers",menuCanvas.transform,Vector2.zero,Vector2.one,Vector2.zero,Vector2.zero);RawImage keyArt=CreateRaw("Background Key Art",menuRoot,Vector2.zero,Vector2.one,Vector2.zero,Vector2.zero,keyVisual);AspectRatioFitter keyFit=keyArt.gameObject.AddComponent<AspectRatioFitter>();keyFit.aspectMode=AspectRatioFitter.AspectMode.FitInParent;keyFit.aspectRatio=keyVisual!=null?(float)keyVisual.width/keyVisual.height:16f/9f;keyArt.rectTransform.pivot=new Vector2(1f,.5f);
             CreateImage("Atmospheric Overlay",menuRoot,Vector2.zero,Vector2.one,Vector2.zero,Vector2.zero,new Color(.01f,.03f,.07f,.18f));
             leftFadeTex??=MakeAxisGradient(new Color(.004f,.012f,.028f),.92f,0f,true);
             RawImage leftFade=CreateRaw("Left Readability Fade",menuRoot,new Vector2(0,0),new Vector2(.62f,1),Vector2.zero,Vector2.zero,leftFadeTex);leftFade.raycastTarget=false;
-            BuildTopNavigation();contentRoot=CreateRect("Main Content",menuRoot,new Vector2(.045f,.11f),new Vector2(.955f,.88f),Vector2.zero,Vector2.zero);BuildContent();canvasPresentation=true;
+            BuildTopNavigation();contentRoot=CreateRect("Main Content",menuRoot,new Vector2(.045f,.11f),new Vector2(.955f,.88f),Vector2.zero,Vector2.zero);BuildContent();BuildActiveMatchControls();canvasPresentation=true;
+            OpenExistingPrivateRoom();
+        }
+
+        private void OpenExistingPrivateRoom()
+        {
+            if (MatchNavigationState.IsMatchActive) return;
+            MultiplayerSessionCoordinator coordinator = MultiplayerSessionCoordinator.Active;
+            if (coordinator?.Sessions == null || !coordinator.Sessions.IsInSession) return;
+
+            // A completed match returns to the same private room. Do this from the
+            // menu scene itself so the host is not left on Inicio while clients see
+            // the room panel, and so UI role labels come from the session SDK.
+            section = 2;
+            MultiplayerRoomPanel.Show(menuCanvas, selectedHero, team);
         }
         private void BuildTopNavigation()
         {
@@ -139,14 +176,110 @@ namespace CierzoArena.Frontend
             CreateImage("Navigation Bottom Accent",top,new Vector2(0,0),new Vector2(1,.02f),Vector2.zero,Vector2.zero,new Color(Accent.r,Accent.g,Accent.b,.55f)).raycastTarget=false;
             if(logoImage!=null){RectTransform logoSlot=CreateRect("Brand Logo Slot",top,new Vector2(.02f,.12f),new Vector2(.2f,.9f),Vector2.zero,Vector2.zero);RawImage logo=CreateRaw("Brand Logo",logoSlot,new Vector2(0,0),new Vector2(1,1),Vector2.zero,Vector2.zero,logoImage);logo.raycastTarget=false;AspectRatioFitter logoFit=logo.gameObject.AddComponent<AspectRatioFitter>();logoFit.aspectMode=AspectRatioFitter.AspectMode.FitInParent;logoFit.aspectRatio=logoImage.height>0?(float)logoImage.width/logoImage.height:3.4f;logo.rectTransform.pivot=new Vector2(0f,.5f);}
             else{Text brand=CreateText("Brand",top,"CIERZO\nARENA",30,FontStyle.Bold,TextAnchor.MiddleLeft,Color.white,new Vector2(.025f,.08f),new Vector2(.19f,.92f));AddShadow(brand.gameObject,new Color(0,0,0,.8f),2f);CreateText("Brand Tag",top,"ARENA OF THE NORTH WIND",10,FontStyle.Bold,TextAnchor.LowerLeft,Accent,new Vector2(.028f,.04f),new Vector2(.19f,.34f));}
-            for(int i=0;i<navigation.Length;i++){int index=i;float x0=.22f+i*.095f,x1=.31f+i*.095f;Button tab=CreateButton("Tab "+navigation[i],top,navigation[i],new Vector2(x0,.22f),new Vector2(x1,.78f),i==section?Selected:Panel);if(i==section)CreateImage("Tab Underline",top,new Vector2(x0+.012f,.15f),new Vector2(x1-.012f,.185f),Vector2.zero,Vector2.zero,Accent).raycastTarget=false;tab.onClick.AddListener(()=>{section=index;BuildContent();BuildTopNavigationRefresh();});}
+            for(int i=0;i<navigation.Length;i++){int index=i;float x0=.22f+i*.095f,x1=.31f+i*.095f;Button tab=CreateButton("Tab "+navigation[i],top,navigation[i],new Vector2(x0,.22f),new Vector2(x1,.78f),i==section?Selected:Panel);tab.onClick.AddListener(()=>{section=index;BuildContent();BuildTopNavigationRefresh();});}
             CreateText("Currencies",top,"◆ 3 450     ◈ 18 760",14,FontStyle.Bold,TextAnchor.MiddleRight,Accent,new Vector2(.72f,.34f),new Vector2(.84f,.75f));CreateImage("Profile Divider",top,new Vector2(.845f,.18f),new Vector2(.846f,.82f),Vector2.zero,Vector2.zero,new Color(.4f,.7f,.86f,.5f));CreateText("Profile",top,"AERIN\nNIVEL 12",15,FontStyle.Bold,TextAnchor.MiddleLeft,Color.white,new Vector2(.855f,.25f),new Vector2(.94f,.8f));CreateText("Profile Icons",top,"◉   ✉   ⚙",16,FontStyle.Bold,TextAnchor.MiddleCenter,Muted,new Vector2(.94f,.25f),new Vector2(.995f,.8f));
+            if(IsActiveMatchMenu){Button quit=CreateButton("Quit Game",top,"⏻  SALIR",new Vector2(.88f,.08f),new Vector2(.985f,.22f),new Color(.28f,.08f,.10f,.95f));quit.onClick.AddListener(()=>{matchMenuDialog=MatchMenuDialog.Quit;BuildContent();});}
         }
         private void BuildTopNavigationRefresh(){if(menuRoot==null)return;Transform old=menuRoot.Find("Top Navigation");if(old!=null)Destroy(old.gameObject);BuildTopNavigation();}
         private void BuildContent()
         {
             if(contentRoot==null)return;for(int i=contentRoot.childCount-1;i>=0;i--)Destroy(contentRoot.GetChild(i).gameObject);
+            if(IsActiveMatchMenu&&matchMenuDialog!=MatchMenuDialog.None){BuildActiveMatchConfirmation();return;}
             if(section==0)BuildHome();else if(section==1)BuildHeroes();else if(section==2)BuildPlay();else BuildPlaceholder(navigation[section]);
+        }
+
+        private void BuildActiveMatchControls()
+        {
+            if(!IsActiveMatchMenu||menuRoot==null)return;
+            RectTransform controls=CreateRect("Active Match Controls",menuRoot,new Vector2(.83f,.025f),new Vector2(.985f,.095f),Vector2.zero,Vector2.zero);
+            Button disconnect=CreateButton("Disconnect Match",controls,"DESCONECTARSE  ×",new Vector2(0f,.54f),Vector2.one,new Color(.32f,.075f,.085f,.96f));
+            disconnect.onClick.AddListener(()=>{matchMenuDialog=MatchMenuDialog.Disconnect;BuildContent();});
+            Button resume=CreateButton("Return To Match",controls,"VOLVER A LA PARTIDA",Vector2.zero,new Vector2(1f,.46f),new Color(.08f,.38f,.26f,.98f));
+            resume.interactable=MatchNavigationState.CanReturnToMatch;resume.onClick.AddListener(MatchNavigationState.ReturnToMatch);
+        }
+
+        private void BuildActiveMatchContent()
+        {
+            if(matchMenuDialog!=MatchMenuDialog.None){BuildActiveMatchConfirmation();return;}
+
+            Image surface=CreateImage("Active Match Surface",contentRoot,new Vector2(.06f,.14f),new Vector2(.73f,.86f),Vector2.zero,Vector2.zero,new Color(.012f,.035f,.07f,.92f));
+            AddOutline(surface.gameObject,new Color(Accent.r,Accent.g,Accent.b,.75f),1.5f);
+            Transform view=surface.transform;
+            CreateText("Match Status",view,"PARTIDA EN CURSO",42,FontStyle.Bold,TextAnchor.UpperLeft,Color.white,new Vector2(.07f,.70f),new Vector2(.93f,.90f));
+            string connection=MatchNavigationState.IsOnline
+                ? (MatchNavigationState.IsHost?"ANFITRIÓN · La partida sigue simulándose para todos.":"CLIENTE · La conexión continúa activa.")
+                : "PARTIDA LOCAL · La simulación continúa en segundo plano.";
+            CreateText("Match Detail",view,connection+"\nEl menú bloquea órdenes de juego, pero no pausa la arena.",18,FontStyle.Normal,TextAnchor.UpperLeft,Muted,new Vector2(.07f,.48f),new Vector2(.90f,.64f));
+            Image status=CreateImage("Active Match Indicator",view,new Vector2(.07f,.38f),new Vector2(.78f,.44f),Vector2.zero,Vector2.zero,new Color(.05f,.24f,.14f,.95f));
+            status.raycastTarget=false;CreateText("Label",status.transform,"●  PARTIDA EN CURSO",15,FontStyle.Bold,TextAnchor.MiddleCenter,new Color(.55f,.95f,.72f),Vector2.zero,Vector2.one);
+            Button resume=CreateButton("Return To Match",view,"←  VOLVER A LA PARTIDA",new Vector2(.07f,.19f),new Vector2(.78f,.31f),Selected);
+            resume.interactable=MatchNavigationState.CanReturnToMatch;resume.onClick.AddListener(MatchNavigationState.ReturnToMatch);
+            Button disconnect=CreateButton("Disconnect Match",view,"DESCONECTARSE DE LA PARTIDA",new Vector2(.42f,.06f),new Vector2(.93f,.14f),new Color(.38f,.08f,.10f,.96f));
+            disconnect.onClick.AddListener(()=>{matchMenuDialog=MatchMenuDialog.Disconnect;BuildContent();});
+            CreateText("Match Safety",view,"Las opciones para iniciar, crear o unirse a otra partida están bloqueadas hasta desconectarte.",13,FontStyle.Normal,TextAnchor.LowerLeft,Muted,new Vector2(.07f,.06f),new Vector2(.39f,.14f));
+        }
+
+        private void BuildActiveMatchReadOnly(string title,string message)
+        {
+            Image surface=CreateImage("Read Only Surface",contentRoot,new Vector2(.06f,.14f),new Vector2(.73f,.86f),Vector2.zero,Vector2.zero,new Color(.012f,.035f,.07f,.92f));
+            AddOutline(surface.gameObject,new Color(Accent.r,Accent.g,Accent.b,.75f),1.5f);
+            CreateText("Heading",surface.transform,title,42,FontStyle.Bold,TextAnchor.UpperLeft,Color.white,new Vector2(.07f,.68f),new Vector2(.93f,.88f));
+            CreateText("Description",surface.transform,message,19,FontStyle.Normal,TextAnchor.UpperLeft,Muted,new Vector2(.07f,.48f),new Vector2(.86f,.61f));
+            Button resume=CreateButton("Return To Match",surface.transform,"←  VOLVER A LA PARTIDA",new Vector2(.07f,.20f),new Vector2(.78f,.32f),Selected);
+            resume.onClick.AddListener(MatchNavigationState.ReturnToMatch);
+        }
+
+        private void BuildActiveMatchConfirmation()
+        {
+            bool quit=matchMenuDialog==MatchMenuDialog.Quit;
+            bool host=MatchNavigationState.IsOnline&&MatchNavigationState.IsHost;
+            string title=quit?"¿SALIR DE CIERZO ARENA?":host?"ERES EL ANFITRIÓN":"¿DESCONECTARTE DE LA PARTIDA?";
+            string message=quit
+                ? (host?"También cerrarás la partida y la sala para todos.":"También te desconectarás de la partida actual.")
+                : (host?"Al desconectarte, la partida y la sala se cerrarán para todos.":"La partida continuará sin ti.");
+            CreateText("Confirmation Title",contentRoot,title,38,FontStyle.Bold,TextAnchor.UpperLeft,Color.white,new Vector2(.13f,.70f),new Vector2(.87f,.87f));
+            CreateText("Confirmation Text",contentRoot,message,20,FontStyle.Normal,TextAnchor.UpperLeft,Muted,new Vector2(.13f,.51f),new Vector2(.82f,.65f));
+            Button cancel=CreateButton("Cancel Confirmation",contentRoot,"CANCELAR",new Vector2(.13f,.29f),new Vector2(.43f,.40f),Panel);cancel.onClick.AddListener(()=>{matchMenuDialog=MatchMenuDialog.None;BuildContent();});
+            Button confirm=CreateButton("Confirm Confirmation",contentRoot,quit?"SALIR":"DESCONECTARSE",new Vector2(.49f,.29f),new Vector2(.87f,.40f),new Color(.46f,.10f,.11f,.96f));
+            confirm.onClick.AddListener(quit?(UnityEngine.Events.UnityAction)QuitApplication:MatchNavigationState.RequestDisconnect);
+        }
+
+        private void QuitApplication()
+        {
+            if(MatchNavigationState.IsMatchActive) MatchNavigationState.RequestDisconnect();
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.isPlaying=false;
+#else
+            Application.Quit();
+#endif
+        }
+
+        private Canvas FindCanvasInOwnScene()
+        {
+            foreach(GameObject root in gameObject.scene.GetRootGameObjects())
+            {
+                Canvas candidate=root.GetComponentInChildren<Canvas>(true);
+                if(candidate!=null)return candidate;
+            }
+            return null;
+        }
+
+        private void ConfigureEmbeddedMenuScene()
+        {
+            if(!IsActiveMatchMenu)return;
+            foreach(GameObject root in gameObject.scene.GetRootGameObjects())
+            {
+                foreach(Camera camera in root.GetComponentsInChildren<Camera>(true))camera.gameObject.SetActive(false);
+                EventSystem eventSystem=root.GetComponentInChildren<EventSystem>(true);
+                if(eventSystem!=null&&HasExternalEventSystem())eventSystem.gameObject.SetActive(false);
+            }
+        }
+
+        private bool HasExternalEventSystem()
+        {
+            foreach(EventSystem candidate in FindObjectsByType<EventSystem>(FindObjectsInactive.Exclude))
+                if(candidate.gameObject.scene.handle!=gameObject.scene.handle)return true;
+            return false;
         }
         private void BuildHome()
         {
@@ -158,7 +291,6 @@ namespace CierzoArena.Frontend
             Button play=CreateButton("Play Now",left,"✦  JUGAR AHORA",new Vector2(0,.2f),new Vector2(.51f,.32f),Selected);AddOutline(play.gameObject,new Color(Accent.r,Accent.g,Accent.b,.95f),2f);play.onClick.AddListener(()=>{section=2;BuildContent();BuildTopNavigationRefresh();});Button heroesButton=CreateButton("View Heroes",left,"⚔  VER HÉROES",new Vector2(.54f,.2f),new Vector2(.93f,.32f),Panel);AddOutline(heroesButton.gameObject,new Color(.32f,.6f,.78f,.55f),1.5f);heroesButton.onClick.AddListener(()=>{section=1;BuildContent();BuildTopNavigationRefresh();});
             RectTransform cards=CreateRect("Information Cards",contentRoot,new Vector2(0,0),new Vector2(.44f,.22f),Vector2.zero,Vector2.zero);CreateInfoCard(cards,"◈","Noticias","NUEVO PARCHE 1.1.0","Balance de héroes, mejoras y correcciones.","LEER MÁS  ›",0);CreateInfoCard(cards,"◉","Grupo","2 / 5 EN LÍNEA","Grupo provisional · social próximamente.","VER GRUPO  ›",1);CreateInfoCard(cards,"◆","Versión","M19 FRONTEND","Vertical slice visual disponible.","NOTAS  ›",2);
             RectTransform featured=CreateRect("Featured Event",contentRoot,new Vector2(.6f,.12f),new Vector2(.99f,.34f),Vector2.zero,Vector2.zero);CreateImage("Event Veil",featured,new Vector2(0,0),new Vector2(1,.9f),Vector2.zero,Vector2.zero,new Color(.004f,.014f,.03f,.5f));Text eventTitle=CreateText("Event Title",featured,"GUARDIÁN DEL CIERZO",26,FontStyle.Bold,TextAnchor.UpperRight,Color.white,new Vector2(0,.6f),new Vector2(.97f,.98f));AddShadow(eventTitle.gameObject,new Color(0,0,0,.9f),2f);Text eventDesc=CreateText("Event Description",featured,"DOMINA LA FOSA. RECLAMA EL ASCENDENTE.",14,FontStyle.Bold,TextAnchor.UpperRight,Muted,new Vector2(0,.4f),new Vector2(.97f,.62f));AddShadow(eventDesc.gameObject,new Color(0,0,0,.85f),1.5f);CreateText("Event State",featured,"◆  EVENTO ACTIVO",13,FontStyle.Bold,TextAnchor.UpperRight,Accent,new Vector2(0,.2f),new Vector2(.97f,.4f));CreateText("Event Dots",featured,"◇    ◇    ◇    ◆",14,FontStyle.Bold,TextAnchor.UpperRight,new Color(Accent.r,Accent.g,Accent.b,.85f),new Vector2(0,.03f),new Vector2(.97f,.2f));
-            CreateDailyChallenges();
         }
         private void CreateInfoCard(RectTransform parent,string icon,string titleText,string headline,string detail,string action,int index)
         {
@@ -171,7 +303,6 @@ namespace CierzoArena.Frontend
             CreateRaw("Thumbnail",card,new Vector2(.07f,.44f),new Vector2(.93f,.78f),Vector2.zero,Vector2.zero,keyVisual);
             CreateText("Headline",card,headline,13,FontStyle.Bold,TextAnchor.UpperLeft,Color.white,new Vector2(.07f,.26f),new Vector2(.93f,.42f));CreateText("Detail",card,detail,11,FontStyle.Normal,TextAnchor.UpperLeft,Muted,new Vector2(.07f,.11f),new Vector2(.93f,.26f));CreateText("Action",card,action,11,FontStyle.Bold,TextAnchor.LowerLeft,Accent,new Vector2(.07f,.02f),new Vector2(.93f,.12f));
         }
-        private void CreateDailyChallenges(){RectTransform panel=CreateRect("Daily Challenges",contentRoot,new Vector2(.76f,-.02f),new Vector2(1,.09f),Vector2.zero,Vector2.zero);CreateImage("Challenge Surface",panel,Vector2.zero,Vector2.one,Vector2.zero,Vector2.zero,new Color(.01f,.03f,.055f,.9f));AddOutline(panel.gameObject,new Color(.24f,.5f,.68f,.5f),1f);CreateImage("Top Accent",panel,new Vector2(0,.94f),Vector2.one,Vector2.zero,Vector2.zero,new Color(Accent.r,Accent.g,Accent.b,.85f)).raycastTarget=false;CreateText("Challenge Icon",panel,"▣",16,FontStyle.Bold,TextAnchor.MiddleLeft,Accent,new Vector2(.04f,.15f),new Vector2(.16f,.9f));CreateText("Challenge",panel,"DESAFÍOS DIARIOS\n3 / 5 COMPLETADOS",13,FontStyle.Bold,TextAnchor.MiddleLeft,Color.white,new Vector2(.17f,.15f),new Vector2(.95f,.9f));CreateImage("Progress Track",panel,new Vector2(.17f,.12f),new Vector2(.7f,.16f),Vector2.zero,Vector2.zero,new Color(.1f,.16f,.24f,.9f)).raycastTarget=false;CreateImage("Progress",panel,new Vector2(.17f,.12f),new Vector2(.49f,.16f),Vector2.zero,Vector2.zero,Accent).raycastTarget=false;}
         private void BuildHeroes()
         {
             heroCatalog??=HeroCatalog.Shared;selectedHero??=heroCatalog.DefaultHero;
@@ -259,7 +390,29 @@ namespace CierzoArena.Frontend
             string effect=ability.Effect switch { AbilityEffect.ProjectileDamage=>"Lanza un proyectil que inflige daño.",AbilityEffect.AreaDamage=>"Daña a los enemigos en el área objetivo.",AbilityEffect.SelfMoveSpeed=>"Aumenta temporalmente la velocidad de movimiento.",AbilityEffect.StrongAreaDamage=>"Inflige gran daño en un área.",AbilityEffect.AreaSlow=>"Ralentiza a los enemigos dentro del área.",AbilityEffect.StrongAreaStun=>"Aturde a los enemigos dentro del área.",AbilityEffect.SelfShield=>"Otorga un escudo protector.",_=>"Habilidad de combate."};
             return $"{effect}\nAlcance {ability.Range:0.#} · Efecto {ability.EffectValue(1):0} · {ability.MaximumLevel} niveles";
         }
-        private void BuildPlay(){selectedHero??=HeroCatalog.Shared.DefaultHero;CreateText("Play Heading",contentRoot,"JUGAR",42,FontStyle.Bold,TextAnchor.UpperLeft,Color.white,new Vector2(0,.9f),Vector2.one);CreateText("Selected Hero",contentRoot,$"HÉROE SELECCIONADO · {selectedHero.DisplayName}\n{selectedHero.PrimaryRole} · {selectedHero.AttackStyle} · {selectedHero.Epithet}",20,FontStyle.Bold,TextAnchor.UpperLeft,Accent,new Vector2(0,.76f),new Vector2(.72f,.87f));Button heroSelect=CreateButton("Change Hero",contentRoot,"CAMBIAR HÉROE",new Vector2(.58f,.77f),new Vector2(.82f,.84f),Panel);heroSelect.onClick.AddListener(()=>{section=1;BuildContent();BuildTopNavigationRefresh();});CreateText("Team",contentRoot,"EQUIPO SOLICITADO",13,FontStyle.Bold,TextAnchor.UpperLeft,Muted,new Vector2(0,.58f),new Vector2(.25f,.63f));Button azure=CreateButton("Azure Team",contentRoot,"AZURE",new Vector2(0,.53f),new Vector2(.2f,.58f),team==TeamId.Azure?Selected:Panel);azure.onClick.AddListener(()=>{team=TeamId.Azure;BuildContent();});Button ember=CreateButton("Ember Team",contentRoot,"EMBER",new Vector2(.22f,.53f),new Vector2(.42f,.58f),team==TeamId.Ember?Selected:Panel);ember.onClick.AddListener(()=>{team=TeamId.Ember;BuildContent();});Button local=CreateButton("Local",contentRoot,"PARTIDA LOCAL DE DESARROLLO",new Vector2(0,.42f),new Vector2(.42f,.51f),Selected);local.onClick.AddListener(()=>Launch(FrontendMatchMode.LocalDevelopment));Button host=CreateButton("Host",contentRoot,"CREAR PARTIDA COMO HOST",new Vector2(0,.26f),new Vector2(.42f,.37f),Panel);host.onClick.AddListener(()=>Launch(FrontendMatchMode.Host));Button client=CreateButton("Client",contentRoot,"UNIRSE COMO CLIENT",new Vector2(0,.1f),new Vector2(.42f,.21f),Panel);client.onClick.AddListener(()=>Launch(FrontendMatchMode.Client));CreateText("Play Note",contentRoot,"La selección es una preferencia individual de desarrollo. El servidor valida solo el HeroId y crea el prefab registrado. Se permiten duplicados hasta que exista draft.",16,FontStyle.Normal,TextAnchor.UpperLeft,Muted,new Vector2(.48f,.38f),new Vector2(.92f,.7f));}
+        private void BuildPlay()
+        {
+            selectedHero ??= HeroCatalog.Shared.DefaultHero;
+            CreateText("Play Heading",contentRoot,"JUGAR",42,FontStyle.Bold,TextAnchor.UpperLeft,Color.white,new Vector2(0,.9f),Vector2.one);
+            CreateText("Selected Hero",contentRoot,$"HÉROE FAVORITO · {selectedHero.DisplayName}\nSolo se usa como preferencia para auto-pick; la elección final ocurre dentro de la sala.",18,FontStyle.Bold,TextAnchor.UpperLeft,Accent,new Vector2(0,.76f),new Vector2(.72f,.87f));
+            Button heroSelect=CreateButton("Change Hero",contentRoot,"VER HÉROES",new Vector2(.58f,.77f),new Vector2(.82f,.84f),Panel);
+            heroSelect.onClick.AddListener(()=>{section=1;BuildContent();BuildTopNavigationRefresh();});
+            Button multiplayer=CreateButton("Private Multiplayer",contentRoot,"MULTIJUGADOR · SALA PRIVADA",new Vector2(0,.60f),new Vector2(.53f,.69f),Selected);
+            multiplayer.interactable=!IsActiveMatchMenu;if(!IsActiveMatchMenu)multiplayer.onClick.AddListener(()=>MultiplayerRoomPanel.Show(menuCanvas,selectedHero,team));
+            Button local=CreateButton("Local",contentRoot,"PARTIDA LOCAL DE DESARROLLO",new Vector2(0,.48f),new Vector2(.53f,.57f),Panel);
+            local.interactable=!IsActiveMatchMenu;if(!IsActiveMatchMenu)local.onClick.AddListener(()=>Launch(FrontendMatchMode.LocalDevelopment));
+            CreateText("Development Heading",contentRoot,"HERRAMIENTAS DE DESARROLLO",12,FontStyle.Bold,TextAnchor.UpperLeft,Muted,new Vector2(0,.38f),new Vector2(.53f,.43f));
+            Button azure=CreateButton("Azure Team",contentRoot,"AZURE",new Vector2(0,.30f),new Vector2(.25f,.36f),team==TeamId.Azure?Selected:Panel);
+            azure.interactable=!IsActiveMatchMenu;if(!IsActiveMatchMenu)azure.onClick.AddListener(()=>{team=TeamId.Azure;BuildContent();});
+            Button ember=CreateButton("Ember Team",contentRoot,"EMBER",new Vector2(.28f,.30f),new Vector2(.53f,.36f),team==TeamId.Ember?Selected:Panel);
+            ember.interactable=!IsActiveMatchMenu;if(!IsActiveMatchMenu)ember.onClick.AddListener(()=>{team=TeamId.Ember;BuildContent();});
+            if(Debug.isDebugBuild||Application.isEditor)
+            {
+                Button host=CreateButton("Host",contentRoot,"HOST DIRECTO",new Vector2(0,.19f),new Vector2(.25f,.27f),Panel);host.interactable=!IsActiveMatchMenu;if(!IsActiveMatchMenu)host.onClick.AddListener(()=>Launch(FrontendMatchMode.Host));
+                Button client=CreateButton("Client",contentRoot,"CLIENTE DIRECTO",new Vector2(.28f,.19f),new Vector2(.53f,.27f),Panel);client.interactable=!IsActiveMatchMenu;if(!IsActiveMatchMenu)client.onClick.AddListener(()=>Launch(FrontendMatchMode.Client));
+            }
+            CreateText("Play Note",contentRoot,"Las salas privadas usan identidad de invitado, código de unión y Relay. Local Development y Host/Client directo permanecen disponibles para pruebas técnicas.",16,FontStyle.Normal,TextAnchor.UpperLeft,Muted,new Vector2(.60f,.32f),new Vector2(.94f,.68f));
+        }
         private void BuildPlaceholder(string name){CreateText("Placeholder",contentRoot,name.ToUpperInvariant()+"\n\nPRÓXIMAMENTE",42,FontStyle.Bold,TextAnchor.UpperLeft,Color.white,new Vector2(0,.55f),new Vector2(.7f,.9f));}
         private Color Accent=>theme!=null?theme.azure:new Color(.18f,.72f,1f);private Color Muted=>theme!=null?theme.muted:new Color(.64f,.72f,.8f);private Color Panel=>theme!=null?theme.panel:new Color(.075f,.105f,.16f,.94f);private Color Selected=>theme!=null?theme.selected:new Color(.1f,.42f,.62f);
         private RectTransform CreateRect(string name,Transform parent,Vector2 min,Vector2 max,Vector2 offsetMin,Vector2 offsetMax){GameObject item=new GameObject(name,typeof(RectTransform));RectTransform rect=item.GetComponent<RectTransform>();rect.SetParent(parent,false);rect.anchorMin=min;rect.anchorMax=max;rect.offsetMin=offsetMin;rect.offsetMax=offsetMax;return rect;}

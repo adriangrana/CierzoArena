@@ -26,6 +26,14 @@ namespace CierzoArena.Units
             if (!string.IsNullOrWhiteSpace(visibleName)) displayName = visibleName;
         }
 
+        /// <summary>Assigns the player-facing name independently from the selected
+        /// hero. This is used by the online hand-off so the scoreboard never exposes
+        /// an authentication identifier or replaces a player's name with the hero name.</summary>
+        public void ConfigurePlayerDisplayName(string visibleName)
+        {
+            if (!string.IsNullOrWhiteSpace(visibleName)) displayName = visibleName.Trim();
+        }
+
         /// <summary>Configures the existing common hero components from one
         /// definition. Team stays untouched: Azure/Ember is presentation and spawn
         /// ownership, never a hero archetype.</summary>

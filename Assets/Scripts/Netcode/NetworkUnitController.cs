@@ -26,7 +26,7 @@ namespace CierzoArena.Netcode
     /// </summary>
     [RequireComponent(typeof(UnitOrderController))]
     [RequireComponent(typeof(Health))]
-    public sealed class NetworkUnitController : NetworkBehaviour
+    public sealed class NetworkUnitController : NetworkBehaviour, IHeroMatchRegistrationGate
     {
         private readonly NetworkVariable<float> replicatedHealth =
             new NetworkVariable<float>(0f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
@@ -34,6 +34,8 @@ namespace CierzoArena.Netcode
             new NetworkVariable<FixedString64Bytes>(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
         private readonly NetworkVariable<byte> replicatedTeam =
             new NetworkVariable<byte>((byte)TeamId.Neutral, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private readonly NetworkVariable<int> replicatedMatchSlot =
+            new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
         private UnitOrderController orderController;
         private Health health;
@@ -43,8 +45,10 @@ namespace CierzoArena.Netcode
         private float lastReplicatedHealth;
         private string pendingHeroDefinitionId;
         private TeamId pendingTeam = TeamId.Neutral;
+        private int pendingMatchSlot;
 
         public string HeroDefinitionId => replicatedHeroDefinitionId.Value.ToString();
+        public bool IsHeroMatchRegistrationReady => IsSpawned;
         /// <summary>Server-only setup before SpawnWithOwnership. Clients never send a
         /// prefab or archetype payload; they only receive this validated ID.</summary>
         public void ConfigureHeroDefinitionServer(string heroId)
@@ -57,6 +61,12 @@ namespace CierzoArena.Netcode
             pendingTeam=team;
             if(TryGetComponent(out TeamMember member))member.ConfigureTeam(team);
             if(IsSpawned&&IsServer)replicatedTeam.Value=(byte)team;
+        }
+        public void ConfigureMatchSlotServer(int slot)
+        {
+            pendingMatchSlot=Mathf.Max(0,slot);
+            if(TryGetComponent(out HeroMatchIdentity identity))identity.Configure(pendingMatchSlot);
+            if(IsSpawned&&IsServer)replicatedMatchSlot.Value=pendingMatchSlot;
         }
 
         private void Awake()
@@ -76,6 +86,7 @@ namespace CierzoArena.Netcode
             {
                 if(pendingTeam==TeamId.Neutral&&TryGetComponent(out TeamMember spawnedMember))pendingTeam=spawnedMember.Team;
                 replicatedTeam.Value=(byte)pendingTeam;
+                replicatedMatchSlot.Value=pendingMatchSlot;
                 if(string.IsNullOrWhiteSpace(pendingHeroDefinitionId)&&TryGetComponent(out HeroMatchIdentity spawnedIdentity))pendingHeroDefinitionId=spawnedIdentity.HeroDefinitionId;
                 replicatedHeroDefinitionId.Value=new FixedString64Bytes(pendingHeroDefinitionId ?? string.Empty);
                 processor = new AuthoritativeOrderProcessor(orderController, OwnerClientId);
@@ -103,6 +114,7 @@ namespace CierzoArena.Netcode
                 replicatedHealth.OnValueChanged += OnReplicatedHealthChanged;
                 replicatedHeroDefinitionId.OnValueChanged += OnReplicatedHeroDefinitionChanged;
                 replicatedTeam.OnValueChanged += OnReplicatedTeamChanged;
+                replicatedMatchSlot.OnValueChanged += OnReplicatedMatchSlotChanged;
                 ApplyReplicatedHeroDefinition();
             }
 
@@ -111,7 +123,8 @@ namespace CierzoArena.Netcode
             // here (not per frame) via the scene provider's small access point, keeping
             // Runtime Netcode-agnostic.
             RegisterAsLocalHeroIfOwner(LocalHeroProvider.Active, IsOwner);
-            ApplyReplicatedTeam();
+            ApplyReplicatedIdentity();
+            RegisterFinalMatchStatistics();
             if(IsOwner&&TryGetComponent(out TeamMember ownerTeam))MobaNetworkMatchBootstrap.Active?.NotifyLocalOwner(ownerTeam.Team);
             if (IsOwner && TryGetComponent(out SelectableUnit selectable))
             {
@@ -134,6 +147,7 @@ namespace CierzoArena.Netcode
                 replicatedHealth.OnValueChanged -= OnReplicatedHealthChanged;
                 replicatedHeroDefinitionId.OnValueChanged -= OnReplicatedHeroDefinitionChanged;
                 replicatedTeam.OnValueChanged -= OnReplicatedTeamChanged;
+                replicatedMatchSlot.OnValueChanged -= OnReplicatedMatchSlotChanged;
             }
 
             // Clear the local-hero reference if this owned unit despawns, so the camera
@@ -321,13 +335,24 @@ namespace CierzoArena.Netcode
             if(TryGetComponent(out NetworkHeroAbilities networkAbilities))networkAbilities.ReapplyReplicatedState();
             if(TryGetComponent(out NetworkHeroProgression networkProgression))networkProgression.ReapplyReplicatedState();
         }
-        private void OnReplicatedTeamChanged(byte _, byte __) => ApplyReplicatedTeam();
+        private void OnReplicatedTeamChanged(byte _, byte __) => ApplyReplicatedIdentity();
+        private void OnReplicatedMatchSlotChanged(int _, int __) => ApplyReplicatedIdentity();
+        private void ApplyReplicatedIdentity()
+        {
+            if(!IsServer&&TryGetComponent(out HeroMatchIdentity identity))identity.Configure(Mathf.Max(0,replicatedMatchSlot.Value));
+            ApplyReplicatedTeam();
+            RegisterFinalMatchStatistics();
+        }
         private void ApplyReplicatedTeam()
         {
             TeamId team=(TeamId)replicatedTeam.Value;
             if(team!=TeamId.Azure&&team!=TeamId.Ember&&team!=TeamId.Neutral)return;
             if(TryGetComponent(out TeamMember member))member.ConfigureTeam(team);
             if(TryGetComponent(out HeroMatchIdentity identity))identity.ApplyTeamPresentation(team);
+        }
+        private void RegisterFinalMatchStatistics()
+        {
+            if(TryGetComponent(out HeroMatchStatistics statistics))MatchStatisticsController.Active?.RegisterHero(statistics);
         }
 
         /// <summary>

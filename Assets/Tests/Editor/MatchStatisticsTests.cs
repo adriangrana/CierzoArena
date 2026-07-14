@@ -66,6 +66,20 @@ namespace CierzoArena.Tests.Editor
             Assert.That(Snapshot(stats,killer.HeroId).MajorObjectiveSecures,Is.EqualTo(1));Assert.That(Snapshot(stats,killer.HeroId).BossParticipations,Is.EqualTo(1));Assert.That(Snapshot(stats,ally.HeroId).BossParticipations,Is.EqualTo(1));Assert.That(Snapshot(stats,enemy.HeroId).BossParticipations,Is.Zero);
         }
 
+        [Test]
+        public void ReRegisteringAfterRuntimeTeamAssignmentKeepsBothScoreboardRows()
+        {
+            MatchStatisticsController stats=CreateMatch();
+            HeroMatchStatistics azure=CreateHero(stats,"Azure",TeamId.Azure,0);
+            HeroMatchStatistics pending=CreateHero(stats,"Pending",TeamId.Azure,0);
+            pending.GetComponent<TeamMember>().ConfigureTeam(TeamId.Ember);
+            stats.RegisterHero(pending);
+            List<MatchStatisticsSnapshot> rows=new();stats.CopySnapshotsTo(rows);
+            Assert.That(rows.Count,Is.EqualTo(2));
+            Assert.That(rows.Exists(value=>value.HeroId==azure.HeroId),Is.True);
+            Assert.That(rows.Exists(value=>value.HeroId==pending.HeroId&&value.Team==TeamId.Ember),Is.True);
+        }
+
         private MatchStatisticsController CreateMatch(){GameObject go=Track(new GameObject("Match"));go.AddComponent<MatchStateController>();return go.AddComponent<MatchStatisticsController>();}
         private HeroMatchStatistics CreateHero(MatchStatisticsController stats,string name,TeamId team,int slot,bool fullProgression=false)
         {

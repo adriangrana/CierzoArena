@@ -8,7 +8,7 @@ namespace CierzoArena.EditorTools
     /// <summary>Play-mode-only inspector for diagnosing lane-end navigation without
     /// emitting per-frame console logs.</summary>
     [CustomEditor(typeof(CreepController))]
-    public sealed class CreepControllerEditor : Editor
+    public sealed class CreepControllerEditor : UnityEditor.Editor
     {
         public override void OnInspectorGUI()
         {

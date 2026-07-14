@@ -63,6 +63,7 @@ namespace CierzoArena.CameraSystem
         }
         private void OnGUI()
         {
+            if (CierzoArena.Core.MatchNavigationState.IsMainMenuVisible) return;
             if(LocalHeroProvider.Active==null||LocalHeroProvider.Active.CurrentHero==null)return;
             TeamMember observer=LocalHeroProvider.Active.CurrentHero.GetComponent<TeamMember>(); if(observer==null)return;
             Rect map=GetMapRect(); DrawFrame(map); DrawTerrain(map); VisionSource.CopySourcesTo(sources);

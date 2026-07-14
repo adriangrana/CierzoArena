@@ -1089,3 +1089,17 @@ Estado: Núcleo de gameplay y builder implementados; ambientación artística y 
 Documentación: `Docs/M23_BASE_REWORK.md`.
 
 > El antiguo hito online pasa a ser **Milestone 24 — Identidad, salas privadas mundiales y Relay** (Unity Authentication, Relay, Lobby, Sessions, Matchmaking, MMR, medallas, Steam, servidores dedicados quedan fuera de M23).
+
+# Milestone 24 — Identidad, salas privadas mundiales y Relay
+
+Estado: Implementación integrada; pendiente de vincular Unity Cloud y realizar la validación remota con dos builds.
+
+- `UnityServicesBootstrap` persistente con identidad anónima y perfil de desarrollo (`-cierzoProfile` / `CIERZO_PROFILE`);
+- configuración segura: si el Cloud Project no está vinculado, el flujo online muestra estado de configuración y Local/Direct no se alteran;
+- salas privadas con código, máximo 10 jugadores y máximo 5 por Azure/Ember;
+- roster estable, nombre visible, ready, compatibilidad de build/protocolo, cierre de sala y manejo de pérdida de host;
+- Relay configurado por Multiplayer Sessions y aplicado a `UnityTransport` sin mostrar ni persistir IP pública, host o puertos;
+- transición sala → selección existente → arena NGO, y retorno de partida a la sala para revancha;
+- M24 no incorpora matchmaking, migración de host, reconexión avanzada, MMR, medallas, Steam ni servidores dedicados.
+
+Documentación operativa: `Docs/M24_UGS_SETUP.md`, `Docs/M24_ARCHITECTURE.md`, `Docs/M24_REMOTE_TEST_CHECKLIST.md` y `Docs/M24_TROUBLESHOOTING.md`.

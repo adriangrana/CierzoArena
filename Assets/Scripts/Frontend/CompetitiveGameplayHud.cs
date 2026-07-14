@@ -42,6 +42,7 @@ namespace CierzoArena.Frontend
         private float styleScale = -1f;
         private bool shopOpen;
         private int draggedInventorySlot = -1;
+        private bool matchExitRequested;
 
         private struct Notice { public string Text; public float Until; public Color Color; }
 
@@ -68,9 +69,20 @@ namespace CierzoArena.Frontend
         {
             TryAttachProvider();
             if (provider != null && provider.CurrentHero != hero) BindHero(provider.CurrentHero);
-            if (Input.GetKeyDown(KeyCode.B) && hero != null) ToggleShop();
-            if (Input.GetKeyDown(KeyCode.Escape)) shopOpen = false;
-            HandleInventoryHotkeys();
+            if (MatchNavigationState.IsGameplayInputAllowed)
+            {
+                if (Input.GetKeyDown(KeyCode.B) && hero != null) ToggleShop();
+                if (Input.GetKeyDown(KeyCode.Escape))
+                {
+                    // Escape always gives a currently open modal priority.  This
+                    // prevents the same keypress from closing the shop and opening
+                    // the main menu underneath it.
+                    if (shopOpen) shopOpen = false;
+                    else MatchNavigationState.OpenMainMenu();
+                }
+                HandleInventoryHotkeys();
+            }
+            else shopOpen = false;
             for (int i = notices.Count - 1; i >= 0; i--) if (notices[i].Until <= Time.unscaledTime) notices.RemoveAt(i);
         }
 
@@ -190,10 +202,25 @@ namespace CierzoArena.Frontend
         private void OnGUI()
         {
             if (hero == null || provider == null || provider.CurrentHero != hero) return;
+            if (MatchNavigationState.IsMainMenuVisible) return;
             EnsureStyles();
-            DrawScoreboard(); DrawCommandBar(); DrawNotices(); DrawMatchEnd();
+            DrawBackToMenuButton(); DrawScoreboard(); DrawCommandBar(); DrawNotices(); DrawMatchEnd();
             if (shopOpen) DrawShop();
             DrawDeathState();
+        }
+
+        private void DrawBackToMenuButton()
+        {
+            if (!MatchNavigationState.IsMatchActive || MatchNavigationState.IsMatchFinished) return;
+
+            float s = Scale();
+            Rect rect = new(24f * s, 24f * s, 154f * s, 38f * s);
+            if (GUI.Button(rect, "←  ATRÁS", buttonStyle)) MatchNavigationState.OpenMainMenu();
+            if (rect.Contains(Event.current.mousePosition))
+            {
+                GUI.Label(new Rect(rect.x, rect.yMax + 4f * s, 220f * s, 20f * s),
+                    "Abrir menú principal", smallStyle);
+            }
         }
 
         private void DrawScoreboard()
@@ -384,7 +411,46 @@ namespace CierzoArena.Frontend
         private void DrawItemTooltip(ItemDefinition item,Rect slot,float s){Rect rect=new(slot.x-135f*s,slot.y-125f*s,260f*s,126f*s);if(rect.x<12f*s)rect.x=12f*s;Panel(rect,new Color(.01f,.03f,.06f,.98f),new Color(.75f,.63f,.28f));GUI.Label(new Rect(rect.x+10f*s,rect.y+8f*s,rect.width-20f*s,22f*s),item.DisplayName,tooltipTitleStyle);GUI.Label(new Rect(rect.x+10f*s,rect.y+34f*s,rect.width-20f*s,42f*s),item.Description,smallStyle);GUI.Label(new Rect(rect.x+10f*s,rect.y+80f*s,rect.width-20f*s,18f*s),$"Precio {item.PurchasePrice}  ·  Venta {item.SalePrice}",smallStyle);GUI.Label(new Rect(rect.x+10f*s,rect.y+101f*s,rect.width-20f*s,18f*s),"Arrastra para reorganizar · objeto pasivo",smallStyle);}
         private void DrawNotices(){float s=Scale();float y=85f*s;for(int i=0;i<notices.Count;i++){Notice n=notices[i];Rect rect=new Rect(Screen.width*.5f-180f*s,y,360f*s,25f*s);Panel(rect,new Color(.02f,.05f,.09f,.8f),n.Color);Color old=GUI.color;GUI.color=n.Color;GUI.Label(rect,n.Text,centerStyle);GUI.color=old;y+=29f*s;}}
         private void DrawDeathState(){if(life==null||life.State==HeroLifeState.Alive)return;float s=Scale();Rect rect=new Rect(Screen.width*.5f-150f*s,Screen.height*.5f-38f*s,300f*s,76f*s);Panel(rect,new Color(.05f,.01f,.02f,.92f),new Color(1f,.32f,.25f));GUI.Label(new Rect(rect.x,rect.y+10f*s,rect.width,25f*s),"HÉROE CAÍDO",titleStyle);GUI.Label(new Rect(rect.x,rect.y+38f*s,rect.width,24f*s),$"Reaparición en {Mathf.CeilToInt(life.RespawnRemaining)}",centerStyle);}
-        private void DrawMatchEnd(){MatchStateController state=MatchStateController.Active;if(state==null||state.IsPlaying)return;float s=Scale();bool won=(state.CurrentState==MatchState.AzureVictory&&team!=null&&team.Team==TeamId.Azure)||(state.CurrentState==MatchState.EmberVictory&&team!=null&&team.Team==TeamId.Ember);Rect rect=new Rect(Screen.width*.5f-190f*s,92f*s,380f*s,56f*s);Panel(rect,new Color(.02f,.04f,.08f,.94f),won?new Color(.35f,.9f,.75f):new Color(1f,.34f,.3f));GUI.Label(rect,won?"VICTORIA":"DERROTA",titleStyle);}
+        private void DrawMatchEnd()
+        {
+            MatchStateController state=MatchStateController.Active;
+            if(state==null||state.IsPlaying){matchExitRequested=false;return;}
+            MatchNavigationState.MarkMatchFinished();
+            float s=Scale();
+            TeamId winner=state.CurrentState==MatchState.AzureVictory?TeamId.Azure:TeamId.Ember;
+            bool won=team!=null&&team.Team==winner;
+            Color accent=won?new Color(.35f,.9f,.75f):new Color(1f,.34f,.3f);
+            Rect shade=new Rect(0f,0f,Screen.width,Screen.height);
+            GUI.color=new Color(0f,0f,0f,.36f);GUI.DrawTexture(shade,Texture2D.whiteTexture);GUI.color=Color.white;
+            Rect panel=new Rect(Screen.width*.5f-265f*s,Screen.height*.5f-150f*s,530f*s,300f*s);
+            Panel(panel,new Color(.012f,.035f,.07f,.98f),accent);
+            GUI.Label(new Rect(panel.x+18f*s,panel.y+22f*s,panel.width-36f*s,50f*s),won?"VICTORIA":"DERROTA",titleStyle);
+            GUI.Label(new Rect(panel.x+18f*s,panel.y+78f*s,panel.width-36f*s,28f*s),$"{winner.ToString().ToUpperInvariant()} HA DESTRUIDO EL NÚCLEO",centerStyle);
+            int kills=heroStatistics!=null?heroStatistics.Snapshot.Kills:0;
+            int deaths=heroStatistics!=null?heroStatistics.Snapshot.Deaths:0;
+            int assists=heroStatistics!=null?heroStatistics.Snapshot.Assists:0;
+            GUI.Label(new Rect(panel.x+18f*s,panel.y+112f*s,panel.width-36f*s,26f*s),$"{DisplayName()}  ·  K/D/A {kills}/{deaths}/{assists}",centerStyle);
+            Rect button=new Rect(panel.x+82f*s,panel.yMax-84f*s,panel.width-164f*s,42f*s);
+            if(matchExitRequested)
+            {
+                GUI.enabled=false;GUI.Button(button,"VOLVIENDO A LA SALA...",buttonStyle);GUI.enabled=true;
+                GUI.Label(new Rect(panel.x+18f*s,panel.yMax-33f*s,panel.width-36f*s,20f*s),"Cerrando la partida de forma segura",centerStyle);
+                return;
+            }
+            if(GUI.Button(button,"VOLVER A LA SALA",buttonStyle))RequestReturnToRoom();
+            GUI.Label(new Rect(panel.x+18f*s,panel.yMax-33f*s,panel.width-36f*s,20f*s),"También puedes pulsar ENTER",centerStyle);
+            Event input=Event.current;
+            if(input.type==EventType.KeyDown&&(input.keyCode==KeyCode.Return||input.keyCode==KeyCode.KeypadEnter))
+            {
+                RequestReturnToRoom();
+                input.Use();
+            }
+        }
+        private void RequestReturnToRoom()
+        {
+            matchExitRequested=MatchEndExitRequest.Request();
+            if(!matchExitRequested)PushNotice("No se encontró el controlador de salida",new Color(1f,.45f,.35f));
+        }
         private MatchStatisticsSnapshot GetOwnSnapshot(){MatchStatisticsController stats=MatchStatisticsController.Active;if(stats==null||heroStatistics==null)return default;stats.CopySnapshotsTo(scoreRows);for(int i=0;i<scoreRows.Count;i++)if(scoreRows[i].HeroId==heroStatistics.HeroId)return scoreRows[i];return default;}
         private float HealthRegen()=>definition!=null?definition.HealthRegen:0f; private string DisplayName()=>definition!=null?definition.DisplayName:identity!=null?identity.DisplayName:"Hero"; private static string ShortName(string value)=>string.IsNullOrWhiteSpace(value)?"—":value.Length>13?value.Substring(0,12)+"…":value; private static string Initials(string value)=>string.IsNullOrWhiteSpace(value)?"·":value.Substring(0,1).ToUpperInvariant();
         // At 4K the bar must still occupy a useful 55–70% of the screen rather

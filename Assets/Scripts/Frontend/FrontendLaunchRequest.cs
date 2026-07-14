@@ -2,7 +2,7 @@ using CierzoArena.Core;
 
 namespace CierzoArena.Frontend
 {
-    public enum FrontendMatchMode { LocalDevelopment, Host, Client }
+    public enum FrontendMatchMode { LocalDevelopment, Host, Client, RelayHost, RelayClient }
 
     /// <summary>One-shot handoff from MainMenu to the arena. It deliberately contains
     /// only connection intent, never gameplay state or authority.</summary>
